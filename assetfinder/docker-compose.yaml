@@ -1,0 +1,9 @@
+name: assetfinder
+services:
+  assetfinder:
+    image: assetfinder
+    pull_policy: never
+    build:
+      context: .
+    volumes:
+    - ${PWD:?}:/opt/app/workdir
