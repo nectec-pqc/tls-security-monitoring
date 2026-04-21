@@ -1,8 +1,31 @@
 # assetfinder
 
-ค้นหา subdomain ของเว็บไซต์เป้าหมาย ใช้สำหรับงาน Bug Bounty / Pentest
+[Assetfinder](https://github.com/tomnomnom/assetfinder)
+เป็น script ช่วยค้นหา subdomain ของเว็บไซต์เป้าหมาย ใช้สำหรับงาน Bug Bounty / Pentest
+
+เราได้ทดลอง, สรุปวิธีใช้, และสรุปคุณสมบัติที่พบไว้ดังนี้
 
 ## ติดตั้ง
+
+### using docker
+
+We have defined
+
+- Dockerfile
+- docker-compose.yaml
+- and run.sh
+
+for using assetfinder through docker.
+To get a shell inside container with assetfinder installed, run:
+
+```bash
+bash run.sh
+```
+
+### build from source
+
+Alternatively, if you have `git` and `go` installed, you can also build
+assetfinder from source:
 
 ```bash
 git clone https://github.com/tomnomnom/assetfinder.git
@@ -13,6 +36,17 @@ go build -o assetfinder .
 ```
 
 ## วิธีใช้
+
+### TL;DR
+
+Gather all domain names related to given `DOMAIN` and save to file.
+
+```shell
+mkdir result
+assetfinder DOMAIN > result/$(date -Is)
+```
+
+### วิธีใช้อื่นๆ
 
 ```bash
 # ค้นหา subdomain ทั้งหมด
