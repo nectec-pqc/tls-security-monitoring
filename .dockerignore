@@ -1,0 +1,26 @@
+# NOTE: unlike gitignore, dockerignore 
+# needs `**/` prefix to apply pattern to all subdirectories.
+
+# version control
+.git
+**/.gitignore
+
+# Python-generated files
+**/__pycache__/
+**/*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Python virtual environment created by `uv`
+.venv
+
+# NOTE: unlike gitignore, dockerignore
+# has no user-specific ignore list for editor files.
+
+# Vim Temporary files.
+**/.*.swp
+
+.DS_Store
+.vscode

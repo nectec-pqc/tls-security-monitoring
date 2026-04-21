@@ -1,0 +1,27 @@
+[project]
+name = "tlssec"
+version = "0.1.0"
+description = "TLS security monitoring toolkit"
+readme = "README.md"
+authors = [
+    { name = "Apiwat Chantawibul", email = "billiska@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "click>=8.3.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
+
+[project.scripts]
+tlssec = "tlssec.cli:cli"
+
+[build-system]
+requires = ["uv_build>=0.9.16,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+cache_dir = "./workdir"

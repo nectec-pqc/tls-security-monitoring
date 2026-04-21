@@ -1,0 +1,20 @@
+name: tlssec
+services:
+  dev-cli:
+    image: tlssec:dev
+    pull_policy: never
+    build:
+      context: .
+      target: dev
+    # Mount source code for live editing
+    volumes:
+    - ./src:/opt/app/src
+    entrypoint:
+    - sh
+  prod-cli:
+    image: uv-docker-default
+    pull_policy: never
+    build:
+      context: .
+    entrypoint:
+    - sh
