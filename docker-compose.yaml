@@ -11,8 +11,8 @@ services:
     - ./src:/opt/app/src
     entrypoint:
     - sh
-  prod-cli:
-    image: uv-docker-default
+  cli:
+    image: tlssec
     pull_policy: never
     build:
       context: .
