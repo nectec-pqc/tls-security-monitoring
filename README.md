@@ -19,13 +19,6 @@ To get into container environment with TLS security toolkit install, run:
 docker compose run --build --rm cli
 ```
 
-For development environment where you can use dev tools and automated tests,
-use `dev-cli` service instead like this:
-
-```shell
-docker compose run --build --rm dev-cli
-```
-
 The rest of "Usage" section assumes you are already inside container
 environment.
 
@@ -38,3 +31,25 @@ For more information, run:
 ```shell
 tlssec --help
 ```
+
+# Development
+
+For development environment where you can use dev tools and automated tests,
+use `dev-cli` service instead like this:
+
+```shell
+docker compose run --build --rm dev-cli
+```
+
+Python source code will be mounted inside container so you can live edit and
+execute new version immediately without rebuilding container image.
+
+## Testing
+
+In dev environment, run:
+
+```shell
+pytest ..
+```
+
+To run all automated tests contained in `src` directory.
