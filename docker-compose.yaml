@@ -18,3 +18,24 @@ services:
       context: .
     entrypoint:
     - sh
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:18.3-alpine
+    environment:
+      POSTGRES_PASSWORD: local-test-password-PZ9dVzwew3Xe
+      POSTGRES_DB: tlssec
+  adminer:
+    image: adminer
+    ports:
+    - 8080:8080
+    links:
+    - db
+
+# TODO: try pgadmin
+# TODO: try using docker compose secret instead of env var
+# TODO: use named volume
+
+secrets:
+  db_root_password:
