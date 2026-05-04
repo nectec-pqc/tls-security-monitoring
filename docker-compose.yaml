@@ -11,6 +11,9 @@ services:
     - ./src:/opt/app/src
     entrypoint:
     - sh
+    depends_on:
+      db:
+        condition: service_healthy
   cli:
     image: tlssec
     pull_policy: never
@@ -26,16 +29,19 @@ services:
     environment:
       POSTGRES_PASSWORD: local-test-password-PZ9dVzwew3Xe
       POSTGRES_DB: tlssec
-  adminer:
-    image: adminer
+    # TODO: add healthcheck
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@test.local
+      PGADMIN_DEFAULT_PASSWORD: local-test-password-FKl7sfIpbEpD
+      PGADMIN_CONFIG_ALLOW_SPECIAL_EMAIL_DOMAINS: "['local']"
     ports:
-    - 8080:8080
+    - 8080:80
     links:
     - db
 
-# TODO: try pgadmin
-# TODO: try using docker compose secret instead of env var
+# TODO: use docker compose secret instead of env var
 # TODO: use named volume
-
-secrets:
-  db_root_password:
+# TODO: autoconnect pgadmin
+# TODO: create schema `tlssec` and user specific to schema
