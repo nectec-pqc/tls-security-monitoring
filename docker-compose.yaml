@@ -29,6 +29,8 @@ services:
     environment:
       POSTGRES_PASSWORD: local-test-password-PZ9dVzwew3Xe
       POSTGRES_DB: tlssec
+    volumes:
+    - db:/var/lib/postgresql
     healthcheck:
       test:
       - CMD
@@ -55,6 +57,8 @@ services:
       uid: "5050"
       gid: "5050"
       mode: 0400
+    volumes:
+    - pgadmin:/var/lib/pgadmin
     ports:
     - 8080:80
     links:
@@ -82,6 +86,10 @@ configs:
       db:5432:*:postgres:local-test-password-PZ9dVzwew3Xe
 
 
+volumes:
+  db:
+  pgadmin:
+
+
 # TODO: use docker compose secret instead of env var
-# TODO: use named volume
 # TODO: create schema `tlssec` and user specific to schema
