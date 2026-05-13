@@ -33,6 +33,7 @@ services:
       test:
       - CMD
       - pg_isready
+      - --username=postgres
       interval: 1s
       timeout: 15s
       retries: 10
