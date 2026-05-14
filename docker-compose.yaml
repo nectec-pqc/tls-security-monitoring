@@ -1,29 +1,27 @@
 name: tlssec
+
+x-tlssec-base-service: &tlssec-base-service
+  image: tlssec
+  pull_policy: never
+  build:
+    context: .
+  entrypoint:
+  - sh
+  depends_on:
+    db:
+      condition: service_healthy
+
 services:
+  cli: *tlssec-base-service
   dev-cli:
+    <<: *tlssec-base-service
     image: tlssec:dev
-    pull_policy: never
     build:
       context: .
       target: dev
     # Mount source code for live editing
     volumes:
     - ./src:/opt/app/src
-    entrypoint:
-    - sh
-    depends_on:
-      db:
-        condition: service_healthy
-  cli:
-    image: tlssec
-    pull_policy: never
-    build:
-      context: .
-    entrypoint:
-    - sh
-    depends_on:
-      db:
-        condition: service_healthy
   db:
     image: postgres:18.3-alpine
     environment:
