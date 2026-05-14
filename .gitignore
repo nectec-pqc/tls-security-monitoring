@@ -11,3 +11,6 @@ build/
 dist/
 wheels/
 *.egg-info
+
+# Don't store generated PDF documentation, store source instead
+*.pdf
