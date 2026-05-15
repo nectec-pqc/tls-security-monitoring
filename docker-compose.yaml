@@ -7,9 +7,14 @@ x-tlssec-base-service: &tlssec-base-service
     context: .
   entrypoint:
   - sh
+  volumes:
+  # Persist working directory
+  - ./workdir:/opt/app/workdir
   depends_on:
     db:
       condition: service_healthy
+  profiles:
+  - cli
 
 services:
   cli: *tlssec-base-service
@@ -19,8 +24,9 @@ services:
     build:
       context: .
       target: dev
-    # Mount source code for live editing
     volumes:
+    - ./workdir:/opt/app/workdir
+    # Mount source code for live editing
     - ./src:/opt/app/src
   db:
     image: postgres:18.3-alpine

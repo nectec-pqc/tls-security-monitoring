@@ -14,3 +14,7 @@ wheels/
 
 # Don't store generated PDF documentation, store source instead
 *.pdf
+
+# Persistent working directory for tlssec container
+/workdir/*
+!/workdir/README.md
