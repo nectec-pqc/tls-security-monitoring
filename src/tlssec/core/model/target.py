@@ -1,5 +1,6 @@
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import Field, Relationship
 
+from tlssec.database.sqlmodel import SQLModel
 
 class Target(SQLModel):
     id: int | None = Field(
