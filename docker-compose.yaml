@@ -7,6 +7,9 @@ x-tlssec-base-service: &tlssec-base-service
     context: .
   entrypoint:
   - sh
+  environment:
+    TLSSEC_DB__HOST: db
+    TLSSEC_DB__PASSWORD: local-test-password-PZ9dVzwew3Xe
   volumes:
   # Persist working directory
   - ./workdir:/opt/app/workdir
