@@ -1,8 +1,8 @@
 from sqlmodel import Field, Relationship
 from sqlalchemy import Column, Integer, Identity
 
-
 from tlssec.database.sqlmodel import SQLModel
+
 
 class Target(SQLModel):
     id: int | None = Field(
