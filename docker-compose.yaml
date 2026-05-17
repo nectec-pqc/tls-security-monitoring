@@ -6,9 +6,9 @@ x-tlssec-base-service: &tlssec-base-service
   build:
     context: .
   entrypoint:
-  - sh
+  - bash
   environment:
-    HISTFILE: /opt/app/workdir/.ash_history
+    HISTFILE: /opt/app/workdir/.bash_history
     PYTHON_HISTORY: /opt/app/workdir/.python_history
     TLSSEC_DB__HOST: db
     TLSSEC_DB__PASSWORD: local-test-password-PZ9dVzwew3Xe

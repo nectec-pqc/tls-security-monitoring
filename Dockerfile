@@ -1,6 +1,9 @@
 # NOTE: Can't use distroless to RUN installation
 # because it does not have a shell.
-FROM ghcr.io/astral-sh/uv:python3.14-alpine AS base
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS base
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  testssl.sh \
+  && rm -rf /var/lib/apt/lists/*
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
@@ -40,7 +43,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # Final production image is as small as possible.
 # No uv in final image.
-FROM python:3.14-alpine AS prod
+FROM python:3.14-trixie-slim AS prod
 COPY --from=base-prod /opt/app /opt/app
 ENV PATH="/opt/app/.venv/bin:$PATH"
 USER 1000:1000
