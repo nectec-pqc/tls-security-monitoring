@@ -1,9 +1,18 @@
 import logging
 _logger = logging.getLogger(__name__)
 
-from sqlmodel import Session
+from sqlalchemy import Engine
+from sqlmodel import (
+    SQLModel,
+    Session,
+)
 
 import tlssec.core.model as model
+
+
+def initialize_database(engine: Engine):
+    _logger.info('initializing database')
+    SQLModel.metadata.create_all(engine)
 
 
 def import_scan(

@@ -3,35 +3,48 @@ _logger = logging.getLogger(__name__)
 from pathlib import Path
 
 import click
-from sqlmodel import Session
+import yaml
 
-from tlssec.settings import get_settings
-from tlssec.database.engine import engine
-from tlssec.database.init import initialize_database
+from tlssec.settings import Settings
+from tlssec.database.database import Database
 import tlssec.core.model as model
 import tlssec.core.operation as op
 from .cli_state import CliState
 
 
 @click.group('tlssec')
+@click.option(
+    '--config', 'config_file',
+    default = None,
+    type = click.File('r'),
+    help = 'Override configurations with values from JSON or YAML file',
+)
 @click.pass_context
-def cli(ctx):
+def cli(ctx, config_file):
     """TLS security monitoring toolkit"""
+    state = ctx.ensure_object(CliState)
+    if config_file:
+        setting_overrides = yaml.safe_load(config_file)
+    else:
+        setting_overrides = {}
+    state.settings = Settings(**setting_overrides)
+    state.db = Database(state.settings)
+    ctx.with_resource(state.db.session)
+
     logging.basicConfig(
         format = '%(asctime)s %(name)s %(levelname)s: %(message)s',
         level = logging.INFO,
     )
-    if get_settings().deployment_mode == 'development':
+    if state.settings.deployment_mode == 'development':
         logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-
-    state = ctx.ensure_object(CliState)
-    state.session = ctx.with_resource(Session(engine))
 
 
 @cli.command()
-def init():
+@click.pass_context
+def init(ctx):
     """Initialize database"""
-    initialize_database()
+    state = ctx.find_object(CliState)
+    op.initialize_database(state.db.engine)
 
 
 @cli.command()
@@ -76,12 +89,13 @@ def import_scan(
         return
     state = ctx.find_object(CliState)
     fails = []
+    # NOTE: If slow, try batch commit.
     for path in paths:
         _logger.info(f'importing scan from {path}')
         try:
             scan = model.ScanTable.from_file(path)
-            op.import_scan(scan, session = state.session)
-            state.session.commit()
+            op.import_scan(scan, session = state.db.session)
+            state.db.session.commit()
         except Exception as e:
             _logger.exception(f'Failed to import scan from {path}')
             fails.append(path)
