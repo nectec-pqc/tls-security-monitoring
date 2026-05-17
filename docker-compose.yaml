@@ -7,7 +7,7 @@ x-tlssec-base-service: &tlssec-base-service
     context: .
   entrypoint:
   - bash
-  environment:
+  environment: &tlssec-env
     HISTFILE: /opt/app/workdir/.bash_history
     PYTHON_HISTORY: /opt/app/workdir/.python_history
     TLSSEC_DB__HOST: db
@@ -29,6 +29,9 @@ services:
     build:
       context: .
       target: dev
+    environment:
+      <<: *tlssec-env
+      TLSSEC_DEPLOYMENT_MODE: development
     volumes:
     - ./workdir:/opt/app/workdir
     # Mount source code for live editing
