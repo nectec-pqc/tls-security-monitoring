@@ -16,8 +16,8 @@ x-tlssec-base-service: &tlssec-base-service
   # Persist working directory
   - ./workdir:/opt/app/workdir
   depends_on:
-    db:
-      condition: service_healthy
+    init:
+      condition: service_completed_successfully
   profiles:
   - cli
 
@@ -33,6 +33,14 @@ services:
     - ./workdir:/opt/app/workdir
     # Mount source code for live editing
     - ./src:/opt/app/src
+  init:
+    <<: *tlssec-base-service
+    entrypoint:
+    - tlssec
+    - init
+    depends_on:
+      db:
+        condition: service_healthy
   db:
     image: postgres:18.3-alpine
     environment:

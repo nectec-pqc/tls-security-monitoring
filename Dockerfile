@@ -45,5 +45,5 @@ COPY --from=base-prod /opt/app /opt/app
 ENV PATH="/opt/app/.venv/bin:$PATH"
 USER 1000:1000
 WORKDIR /opt/app/workdir
-ENTRYPOINT ["app"]
+ENTRYPOINT ["tlssec"]
 CMD []
