@@ -18,11 +18,12 @@ x-tlssec-base-service: &tlssec-base-service
   depends_on:
     init:
       condition: service_completed_successfully
-  profiles:
-  - cli
 
 services:
-  cli: *tlssec-base-service
+  cli:
+    <<: *tlssec-base-service
+    profiles:
+    - cli
   dev-cli:
     <<: *tlssec-base-service
     image: tlssec:dev
@@ -36,6 +37,8 @@ services:
     - ./workdir:/opt/app/workdir
     # Mount source code for live editing
     - ./src:/opt/app/src
+    profiles:
+    - cli
   init:
     <<: *tlssec-base-service
     entrypoint:
