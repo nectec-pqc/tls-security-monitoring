@@ -47,6 +47,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+  analysis:
+    image: quay.io/jupyter/scipy-notebook:2026-05-04
+    ports:
+    - 8888:8888
+    working_dir: /home/jovyan/work
+    volumes:
+    - ./workdir:/home/jovyan/work
+    - ./src:/opt/app/src
+    environment:
+      <<: *tlssec-env
+      TLSSEC_DEPLOYMENT_MODE: development
+    profiles:
+    - analysis
   db:
     image: postgres:18.3-alpine
     environment:
