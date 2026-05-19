@@ -3,6 +3,7 @@
 # See https://git-scm.com/docs/gitignore
 .DS_Store
 .vscode
+.claude
 
 # Python temporary files
 __pycache__

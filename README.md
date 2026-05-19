@@ -53,3 +53,30 @@ pytest ..
 ```
 
 To run all automated tests contained in `src` directory.
+There are two folder in src
+
+src
+├── tests
+└── tlssec
+
+tests is for test the code 
+tlssec is where the actual code live in
+
+Let look inside tlssec
+
+tlssec
+├── __init__.py             (empty — marks it as a package)
+├── cli
+│   ├── __init__.py         — CLI commands (click)
+│   └── cli_state.py        — shared state object passed between commands
+├── core
+│   ├── model
+│   │   ├── __init__.py     — re-exports all models
+│   │   ├── scan.py         — Scan data model
+│   │   └── target.py       — Target (domain) data model
+│   └── operation.py        — business logic (DB operations)
+├── database
+│   ├── __init__.py         - empty
+│   ├── database.py         — Database connection wrapper
+│   └── sqlmodel.py         — Custom SQLModel base class
+└── settings.py             — app configuration (env vars)
