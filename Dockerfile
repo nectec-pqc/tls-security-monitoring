@@ -1,6 +1,13 @@
-# NOTE: Can't use distroless to RUN installation
-# because it does not have a shell.
 FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS base
+RUN \
+  groupadd --gid 1000 tlssec && \
+  useradd \
+    --no-log-init \
+    --create-home \
+    --shell /bin/bash \
+    --uid 1000 \
+    --gid 1000 \
+    tlssec
 RUN apt-get update && apt-get install -y --no-install-recommends \
   testssl.sh \
   && rm -rf /var/lib/apt/lists/*
@@ -24,14 +31,15 @@ COPY README.md ./
 COPY src src/
 RUN --mount=type=cache,target=/root/.cache/uv \
   uv sync --locked
-# Switch to non-root executing user, prepare write-able workdir.
 USER 1000:1000
-WORKDIR /opt/app/workdir
+WORKDIR /opt/app/.pytest_cache
+WORKDIR /home/tlssec
 ENTRYPOINT ["tlssec"]
 CMD []
 
 
 FROM base AS analysis
+# TODO: make non-app installation work as separate layer
 #RUN --mount=type=cache,target=/root/.cache/uv \
 #  uv sync --locked --no-install-project --extra analysis
 # Install application source code
@@ -40,7 +48,8 @@ COPY src src/
 RUN --mount=type=cache,target=/root/.cache/uv \
   uv sync --locked --extra analysis
 USER 1000:1000
-WORKDIR /opt/app/workdir
+WORKDIR /opt/app/.pytest_cache
+WORKDIR /home/tlssec
 ENTRYPOINT ["jupyter", "lab", "--ip=0.0.0.0"]
 CMD []
 
@@ -59,6 +68,6 @@ FROM python:3.14-slim-trixie AS prod
 COPY --from=base-prod /opt/app /opt/app
 ENV PATH="/opt/app/.venv/bin:$PATH"
 USER 1000:1000
-WORKDIR /opt/app/workdir
+WORKDIR /home/tlssec
 ENTRYPOINT ["tlssec"]
 CMD []

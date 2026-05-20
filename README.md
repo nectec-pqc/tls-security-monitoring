@@ -69,11 +69,10 @@ execute new version immediately without rebuilding container image.
 In dev environment, run:
 
 ```shell
-pytest ..
+pytest /opt/app/
 ```
 
-To run all automated tests contained in `src` directory.
-There are two folder in src
+to execute all automated tests within the app.
 
 # Directory Structure
 

@@ -6,13 +6,11 @@ x-tlssec-base-service: &tlssec-base-service
   build:
     context: .
   environment: &tlssec-env
-    HISTFILE: /opt/app/workdir/.bash_history
-    PYTHON_HISTORY: /opt/app/workdir/.python_history
     TLSSEC_DB__HOST: db
     TLSSEC_DB__PASSWORD: local-test-password-PZ9dVzwew3Xe
   volumes:
   # Persist working directory
-  - ./workdir:/opt/app/workdir
+  - ./workdir:/home/tlssec
   depends_on:
     init:
       condition: service_completed_successfully
@@ -36,7 +34,7 @@ services:
       <<: *tlssec-env
       TLSSEC_DEPLOYMENT_MODE: development
     volumes:
-    - ./workdir:/opt/app/workdir
+    - ./workdir:/home/tlssec
     # Mount source code for live editing
     - ./src:/opt/app/src
     profiles:
@@ -59,10 +57,6 @@ services:
     environment:
       <<: *tlssec-env
       TLSSEC_DEPLOYMENT_MODE: development
-      JUPYTER_CONFIG_DIR: /opt/app/workdir/.jupyter
-      JUPYTER_DATA_DIR: /opt/app/workdir/.local/share/jupyter
-      JUPYTER_RUNTIME_DIR: /opt/app/workdir/.local/share/jupyter/runtime
-      IPYTHONDIR: /opt/app/workdir/.ipython
     profiles:
     - analysis
   db:
