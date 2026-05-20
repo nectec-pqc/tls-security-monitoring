@@ -19,3 +19,4 @@ wheels/
 # Persistent working directory for tlssec container
 /workdir/*
 !/workdir/README.md
+!/workdir/notebooks/

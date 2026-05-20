@@ -32,6 +32,26 @@ For more information, run:
 tlssec --help
 ```
 
+## Analysis image
+
+Once database is populated with scan results,
+you may start jupyter lab server to do datascience analysis on it by running:
+
+```shell
+docker compose up analysis
+```
+
+The server will output access URL on startup that looks something like:
+
+```
+http://127.0.0.1:8888/lab?token=f28e0902840883301afb40562d771b38c31016593bfa2671
+```
+
+which you can paste into local browser to access jupyter lab.
+Inside the lab's working directory, please take a look at `notebooks/QUICK-START.ipynb`
+notebook and others in the same subdirectory for a guide on how to perform
+analysis and display statistics from tlssec database.
+
 # Development
 
 For development environment where you can use dev tools and automated tests,
