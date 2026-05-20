@@ -55,28 +55,33 @@ pytest ..
 To run all automated tests contained in `src` directory.
 There are two folder in src
 
+# Directory Structure
+
+`src` directory contains source code which are split into:
+
+```
 src
-├── tests
-└── tlssec
+├── tests       - For automated tests
+└── tlssec      - For tlssec package, the main application code
+```
 
-tests is for test the code 
-tlssec is where the actual code live in
+Inside `tlssec` we have:
 
-Let look inside tlssec
-
+```
 tlssec
-├── __init__.py             (empty — marks it as a package)
+├── __init__.py             - Empty (marks it as a package)
 ├── cli
-│   ├── __init__.py         — CLI commands (click)
-│   └── cli_state.py        — shared state object passed between commands
+│   ├── __init__.py         - CLI commands (click)
+│   └── cli_state.py        - Shared state object passed between commands
 ├── core
 │   ├── model
-│   │   ├── __init__.py     — re-exports all models
-│   │   ├── scan.py         — Scan data model
-│   │   └── target.py       — Target (domain) data model
-│   └── operation.py        — business logic (DB operations)
+│   │   ├── __init__.py     - Re-exports all models
+│   │   ├── scan.py         - Scan data model
+│   │   └── target.py       - Target (domain) data model
+│   └── operation.py        - Business logic (DB operations)
 ├── database
-│   ├── __init__.py         - empty
-│   ├── database.py         — Database connection wrapper
-│   └── sqlmodel.py         — Custom SQLModel base class
-└── settings.py             — app configuration (env vars)
+│   ├── __init__.py         - Empty
+│   ├── database.py         - Database connection wrapper
+│   └── sqlmodel.py         - Custom SQLModel base class
+└── settings.py             - App configuration (env vars)
+```
