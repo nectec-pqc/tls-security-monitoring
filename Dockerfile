@@ -11,25 +11,23 @@ ENV UV_LINK_MODE=copy
 # Install libraries
 WORKDIR /opt/app
 COPY pyproject.toml uv.lock ./
-RUN \
-  --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,target=/root/.cache/uv \
   uv sync --locked --no-install-project --no-dev
 ENV PATH="/opt/app/.venv/bin:$PATH"
 
 
 FROM base AS dev
-RUN \
-  --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,target=/root/.cache/uv \
   uv sync --locked --no-install-project
 # Install application source code
 COPY README.md ./
 COPY src src/
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked
+  uv sync --locked
 # Switch to non-root executing user, prepare write-able workdir.
 USER 1000:1000
 WORKDIR /opt/app/workdir
-ENTRYPOINT ["app"]
+ENTRYPOINT ["tlssec"]
 CMD []
 
 
@@ -38,12 +36,12 @@ FROM base AS base-prod
 COPY README.md ./
 COPY --exclude=src/tests src src/
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev
+  uv sync --locked --no-dev
 
 
 # Final production image is as small as possible.
 # No uv in final image.
-FROM python:3.14-trixie-slim AS prod
+FROM python:3.14-slim-trixie AS prod
 COPY --from=base-prod /opt/app /opt/app
 ENV PATH="/opt/app/.venv/bin:$PATH"
 USER 1000:1000
