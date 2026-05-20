@@ -5,8 +5,6 @@ x-tlssec-base-service: &tlssec-base-service
   pull_policy: never
   build:
     context: .
-  entrypoint:
-  - bash
   environment: &tlssec-env
     HISTFILE: /opt/app/workdir/.bash_history
     PYTHON_HISTORY: /opt/app/workdir/.python_history
@@ -22,6 +20,8 @@ x-tlssec-base-service: &tlssec-base-service
 services:
   cli:
     <<: *tlssec-base-service
+    entrypoint:
+    - bash
     profiles:
     - cli
   dev-cli:
@@ -30,6 +30,8 @@ services:
     build:
       context: .
       target: dev
+    entrypoint:
+    - bash
     environment:
       <<: *tlssec-env
       TLSSEC_DEPLOYMENT_MODE: development
@@ -41,23 +43,25 @@ services:
     - cli
   init:
     <<: *tlssec-base-service
-    entrypoint:
-    - tlssec
+    command:
     - init
     depends_on:
       db:
         condition: service_healthy
   analysis:
-    image: quay.io/jupyter/scipy-notebook:2026-05-04
+    <<: *tlssec-base-service
+    image: tlssec:analysis
+    build:
+      context: .
+      target: analysis
     ports:
     - 8888:8888
-    working_dir: /home/jovyan/work
-    volumes:
-    - ./workdir:/home/jovyan/work
-    - ./src:/opt/app/src
     environment:
       <<: *tlssec-env
       TLSSEC_DEPLOYMENT_MODE: development
+      JUPYTER_CONFIG_DIR: /opt/app/workdir/.jupyter
+      JUPYTER_DATA_DIR: /opt/app/workdir/.local/share/jupyter
+      JUPYTER_RUNTIME_DIR: /opt/app/workdir/.local/share/jupyter/runtime
     profiles:
     - analysis
   db:

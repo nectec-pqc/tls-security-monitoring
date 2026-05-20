@@ -31,6 +31,20 @@ ENTRYPOINT ["tlssec"]
 CMD []
 
 
+FROM base AS analysis
+#RUN --mount=type=cache,target=/root/.cache/uv \
+#  uv sync --locked --no-install-project --extra analysis
+# Install application source code
+COPY README.md ./
+COPY src src/
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --locked --extra analysis
+USER 1000:1000
+WORKDIR /opt/app/workdir
+ENTRYPOINT ["jupyter", "lab", "--ip=0.0.0.0"]
+CMD []
+
+
 FROM base AS base-prod
 # Install application source code
 COPY README.md ./
