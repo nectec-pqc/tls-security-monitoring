@@ -20,3 +20,14 @@ wheels/
 /workdir/*
 !/workdir/README.md
 !/workdir/notebooks/
+!/workdir/.ipython/
+!/workdir/.jupyter/
+
+/workdir/.ipython/*
+!/workdir/.ipython/profile_default/
+/workdir/.ipython/profile_default/*
+!/workdir/.ipython/profile_default/ipython_config.py
+
+/workdir/.jupyter/*
+!/workdir/.jupyter/jupyter_lab_config.py
+!/workdir/.jupyter/jupyter_server_config.py

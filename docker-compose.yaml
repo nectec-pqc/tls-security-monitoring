@@ -62,6 +62,7 @@ services:
       JUPYTER_CONFIG_DIR: /opt/app/workdir/.jupyter
       JUPYTER_DATA_DIR: /opt/app/workdir/.local/share/jupyter
       JUPYTER_RUNTIME_DIR: /opt/app/workdir/.local/share/jupyter/runtime
+      IPYTHONDIR: /opt/app/workdir/.ipython
     profiles:
     - analysis
   db:
