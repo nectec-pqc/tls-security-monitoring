@@ -3,6 +3,9 @@
 > Toolkit to continuously monitor TLS security settings of multiple targets and
 > extract statistical insights.
 
+> So this tool is intend to be use for tranfom raw json blob into datamodel with DB to be used 
+for statistical analysis
+
 # Usage
 
 ## Pre-requisite
@@ -31,6 +34,14 @@ For more information, run:
 ```shell
 tlssec --help
 ```
+
+## How to populate DB 
+
+```shell
+tlssec import_scan any_number_of_json_or_yaml
+```
+
+This will import json and yaml into DB.
 
 ## Analysis image
 
