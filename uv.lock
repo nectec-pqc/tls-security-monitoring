@@ -1703,6 +1703,15 @@ wheels = [
 ]
 
 [[package]]
+name = "ssh-audit"
+version = "3.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/3b/ec/e89fdfaaa6f08813e1a5cf926bc0dc155761144ebcac57191b4c8001aae3/ssh_audit-3.3.0.tar.gz", hash = "sha256:b76e36ac9844f45d64986c9f293a4b46766a10412dc29fb43bd52d0f6661a5b0", size = 116958, upload-time = "2024-10-15T21:08:28.632Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4f/21/2b3cd275bc3c09fc765691f6c005a6683edf47f47c18d2f9eb78c39ca7e6/ssh_audit-3.3.0-py3-none-any.whl", hash = "sha256:8d2b22b7bb7c20c9d84452c9f13408015ec76eb025379cc70335e5315e4378d6", size = 121789, upload-time = "2024-10-15T21:08:27.182Z" },
+]
+
+[[package]]
 name = "stack-data"
 version = "0.6.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1753,6 +1762,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pyyaml" },
     { name = "sqlmodel" },
+    { name = "ssh-audit" },
 ]
 
 [package.optional-dependencies]
@@ -1784,6 +1794,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "seaborn", marker = "extra == 'analysis'", specifier = ">=0.13.2" },
     { name = "sqlmodel", specifier = ">=0.0.38" },
+    { name = "ssh-audit", specifier = ">=3.3.0" },
 ]
 provides-extras = ["analysis"]
 
