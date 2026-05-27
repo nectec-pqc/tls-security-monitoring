@@ -1,3 +1,4 @@
+from typing import LiteralString
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -13,6 +14,24 @@ class EndPoint(BaseModel):
     validAfter : datetime # use to track date that this end point start to alive 
     validBefore : datetime # use to track date that this end poin die
 
-
 class Scan(BaseModel):
     scanID : int
+    param : json
+    result : json 
+    start : datetime
+    timeTaken : int
+
+class Service(BaseModel):
+    serviceID : int 
+
+class Service_Tag(BaseModel):
+    tagID : int 
+    ParentID : int # i think about using parentID to be both for tag to reference to other tag. 
+    name : str
+    description : str
+
+class Service_Tag_Map(BaseModel):
+    tagID : int
+    serviceID : int
+
+    
