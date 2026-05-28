@@ -8,10 +8,9 @@ from tlssec.database.sqlmodel import SQLModel
 class EndPoint(SQLModel):
     endPointID : int = Field(
             sa_column=Column(Integer, Identity(always=True), primary_key=True),
-            index=True
             ) 
     partOfService : int = Field(
-            foreign_key="Service.serviceID",
+            foreign_key="service.serviceID",
             index=True
             )
     scheme : str = Field(
@@ -27,12 +26,11 @@ class EndPoint(SQLModel):
 
 class Scan(SQLModel):
     scanID : int = Field(
-            index=True,
             sa_column=Column(Integer, Identity(always=True), primary_key=True)
             )
     endPointID : int = Field(
             index=True,
-            foreign_key="EndPoint.endPointID"
+            foreign_key="end_point.endPointID"
             )
     param : dict | None = Field(
             default = None,
@@ -43,36 +41,28 @@ class Scan(SQLModel):
     timeTaken : int
 
 class Service(SQLModel):
-    serviceID : int
-
-class child_Service_Tag(SQLModel):
-    tagID : int = Field(
-            sa_column=Column(Integer, Identity(always=True), primary_key=True),
-            index=True
+    serviceID : int = Field(
+            sa_column=Column(Integer, Identity(always=True), primary_key=True)
             )
-    ParentID : int = Field(
-            index=True,
-            foreign_key="parent_Service_Tag.tagID"
-            )
-    name : str
-    description : str
-
-class parent_Service_Tag(SQLModel):
-    tagID : int = Field(
-            sa_column=Column(Integer, Identity(always=True), primary_key=True),
-            index=True
-            )
-    name : str
-    description : str
-
 
 class Service_Tag_Map(SQLModel): 
     serviceID : int  = Field(
-            index=True,
+            primary_key=True,
+            foreign_key="service.serviceID"
             )
     tagID : int = Field(
-            index=True,
+            primary_key=True,
+            foreign_key="service_tag.tagID"
             )
 
-
+class ServiceTag(SQLModel):
+    tagID : int = Field(
+        sa_column=Column(Integer, Identity(always=True), primary_key=True)
+    )
+    parentID : int | None = Field(
+        default=None,
+        foreign_key="service_tag.tagID"  
+        )
+    name : str
+    description : str | None = None
     
