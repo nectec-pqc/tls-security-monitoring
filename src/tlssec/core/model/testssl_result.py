@@ -34,6 +34,7 @@ class Scan(SQLModel):
             )
     param : dict | None = Field(
             default = None,
+            sa_type = JSONB,
             description = "How testssl got call, option and arguemnt supply to testssl"
             )
     result : dict | list = Field(sa_type=JSONB)
