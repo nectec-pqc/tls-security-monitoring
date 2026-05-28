@@ -57,6 +57,9 @@ services:
     environment:
       <<: *tlssec-env
       TLSSEC_DEPLOYMENT_MODE: development
+    volumes:
+    - ./workdir:/home/tlssec
+    - ./src:/opt/app/src
     profiles:
     - analysis
   db:
