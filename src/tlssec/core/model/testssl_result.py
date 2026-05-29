@@ -52,7 +52,7 @@ class Service(SQLModel):
         sa_column=Column(Integer, Identity(always=True), primary_key=True),
     )
 
-class Service_Tag_Map(SQLModel): 
+class ServiceTagMap(SQLModel): 
     service_id: int  = Field(
         primary_key=True,
         foreign_key="service.serviceID",
@@ -74,4 +74,18 @@ class ServiceTag(SQLModel):
     name: str
     description: str | None = None
 
+# table starthere
+class EndPointTable(EndPoint, table = True):
+    pass
 
+class ScanTable(Scan, table = True):
+    pass
+
+class ServiceTable(Service, table = True):
+    pass
+
+class ServiceTagMapTable(ServiceTagMap, table = True): 
+    pass
+
+class ServiceTagTable(ServiceTag, table = True):
+    pass  
