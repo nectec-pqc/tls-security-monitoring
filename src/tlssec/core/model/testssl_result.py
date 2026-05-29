@@ -8,12 +8,13 @@ from tlssec.database.sqlmodel import SQLModel
 
 
 class EndPoint(SQLModel):
-    endPointID: int = Field(
+    endPointID: int | None = Field(
+        default = None,
         sa_column=Column(Integer, Identity(always=True), primary_key=True),
      ) 
     partOfService: int = Field(
-        foreign_key="service.serviceID",
-        index=True,
+        foreign_key = "service.serviceID",
+        index = True,
     )
     scheme: str = Field(
         description="What protocol/encryption they handel",
@@ -28,7 +29,8 @@ class EndPoint(SQLModel):
     validBefore: datetime # use to track date that this end poin die
 
 class Scan(SQLModel):
-    scanID: int = Field(
+    scanID: int | None = Field(
+        default=None,
         sa_column=Column(Integer, Identity(always=True), primary_key=True)
     )
     endPointID: int = Field(
@@ -45,7 +47,8 @@ class Scan(SQLModel):
     timeTaken: int
 
 class Service(SQLModel):
-    serviceID: int = Field(
+    serviceID: int | None = Field(
+        default = None,
         sa_column=Column(Integer, Identity(always=True), primary_key=True)
     )
 
@@ -60,7 +63,8 @@ class Service_Tag_Map(SQLModel):
     )
 
 class ServiceTag(SQLModel):
-    tagID: int = Field(
+    tagID: int | None = Field(
+        default = None,
         sa_column=Column(Integer, Identity(always=True), primary_key=True)
     )
     parentID: int | None = Field(
