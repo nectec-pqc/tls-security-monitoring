@@ -12,6 +12,10 @@ class ServiceTagMap(SQLModel):
     tag_id: int = Field(
         primary_key = True,
         foreign_key = 'service_tag.id',
+        # Postgres don't automatically create index on foreign key.
+        # So, unless the foreign key is already a prefix of primary key (like service_id),
+        # we need to explicitly create an index.
+        index = True,
     )
 
 
@@ -51,6 +55,7 @@ class ServiceTag(SQLModel):
     parent_id: int | None = Field(
         default = None,
         foreign_key = 'service_tag.id',
+        index = True,
         ondelete = 'SET NULL',
         description = (
             'Parent tag this tag belongs to.'
