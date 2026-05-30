@@ -4,6 +4,21 @@ from sqlalchemy import Column, Integer, Identity
 from tlssec.database.sqlmodel import SQLModel
 
 
+class ServiceTagMap(SQLModel): 
+    service_id: int  = Field(
+        primary_key = True,
+        foreign_key = 'service.id',
+    )
+    tag_id: int = Field(
+        primary_key = True,
+        foreign_key = 'service_tag.id',
+    )
+
+
+class ServiceTagMapTable(ServiceTagMap, table = True): 
+    pass
+
+
 class Service(SQLModel):
     """A Logical service that does a single application / bussiness function.
 
@@ -21,7 +36,10 @@ class Service(SQLModel):
 
 
 class ServiceTable(Service, table = True):
-    pass
+    tags: list['ServiceTagTable'] = Relationship(
+        back_populates = 'services',
+        link_model = ServiceTagMapTable,
+    )
 
 
 class ServiceTag(SQLModel):
@@ -48,4 +66,8 @@ class ServiceTagTable(ServiceTag, table = True):
         back_populates = 'children',
         sa_relationship_kwargs = {'remote_side': 'service_tag.id'},
     )
-    children: list["ServiceTagTable"] = Relationship(back_populates = 'parent')
+    children: list['ServiceTagTable'] = Relationship(back_populates = 'parent')
+    services: list['ServiceTable'] = Relationship(
+        back_populates = 'tags',
+        link_model = ServiceTagMapTable,
+    )
