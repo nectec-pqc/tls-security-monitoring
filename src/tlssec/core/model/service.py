@@ -69,8 +69,7 @@ class ServiceTag(SQLModel):
 class ServiceTagTable(ServiceTag, table = True):
     parent: ServiceTagTable = Relationship(
         back_populates = 'children',
-        # TODO: check manual on how lambda is used
-        sa_relationship_kwargs = {'remote_side': (lambda: [ServiceTagTable.id])},
+        sa_relationship_kwargs = {'remote_side': (lambda: ServiceTagTable.id)},
     )
     children: list['ServiceTagTable'] = Relationship(back_populates = 'parent')
     services: list['ServiceTable'] = Relationship(
