@@ -10,6 +10,11 @@ from sqlmodel import (
 import tlssec.core.model as model
 
 
+def drop_database(engine: Engine):
+    _logger.info('dropping all existing tables and its content')
+    SQLModel.metadata.drop_all(engine)
+
+
 def initialize_database(engine: Engine):
     _logger.info('initializing database')
     SQLModel.metadata.create_all(engine)

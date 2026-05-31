@@ -40,10 +40,17 @@ def cli(ctx, config_file):
 
 
 @cli.command()
+@click.option(
+    '--reset',
+    is_flag = True,
+    help = 'Discard existing tables first.',
+)
 @click.pass_context
-def init(ctx):
+def init(ctx, reset):
     """Initialize database"""
     state = ctx.find_object(CliState)
+    if reset:
+        op.drop_database(state.db.engine)
     op.initialize_database(state.db.engine)
 
 
