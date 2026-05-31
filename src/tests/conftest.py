@@ -19,7 +19,7 @@ def database():
 def empty_database_session(database):
     connection = database.engine.connect()
     transaction = connection.begin()
-    with Session(bind = connection) as session:
+    with Session(bind = connection, join_transaction_mode = 'create_savepoint') as session:
         session.exec(delete(model.ServiceTagMapTable))
         session.exec(delete(model.ServiceTagTable))
         session.exec(delete(model.ServiceTable))
