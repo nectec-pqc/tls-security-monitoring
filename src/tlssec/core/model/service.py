@@ -63,15 +63,17 @@ class ServiceTag(SQLModel):
         index = True,
         ondelete = 'SET NULL',
         description = (
-            'Parent tag this tag belongs to.'
-            ' Effectively, parent tag is automatically applied when its children tag is applied.',
+            'ID of parent tag.'
+            ' Parent tag must also be applied if child tag is applied.',
         ),
     )
-    name: str
+    name: str = Field(
+        index = True,
+        description = 'Tag name which must be unique among siblings',
+    )
     description: str | None = None
 
     __table_args__ = (
-        # Name must be unique among siblings
         UniqueConstraint('parent_id', 'name'),
     )
 
