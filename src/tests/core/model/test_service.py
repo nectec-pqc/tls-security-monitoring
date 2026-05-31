@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 import tlssec.core.model as m
@@ -57,14 +58,50 @@ def test_traverse_tag_hierarchy(session):
     session.add_all(tags.values())
     
     # Readback and check tag hierarchy can be accessed through relationship attributes
-    result = session.exec(
+    results = session.exec(
         select(m.ServiceTagTable)
             .where(m.ServiceTagTable.name == 'private')
     ).all()
-    assert len(result) == 1
-    result = result[0]
+    assert len(results) == 1
+    result = results[0]
     assert result.parent.name == 'organization'
     assert {child.name for child in result.children} == {'for-profit', 'non-profit ngo'}
     # TODO: Make `children` attribute a dict for easier access
-    # TODO: enforce uniqueness of children name belonging to the same parent
     # See https://docs.sqlalchemy.org/en/21/orm/collection_api.html#dictionary-collections
+
+
+def test_tag_name_can_repeat_if_parents_differ(session):
+    tags = {}
+    def add_tag(**kwargs):
+        tag = m.ServiceTagTable(**kwargs)
+        tags[tag.name] = tag
+
+    add_tag(name = 'root-1')
+    add_tag(name = 'root-2')
+    add_tag(name = 'parent-under-root-1', parent = tags['root-1'])
+    add_tag(name = 'repeat', parent = tags['root-1'])
+    add_tag(name = 'repeat', parent = tags['root-2'])
+    add_tag(name = 'repeat', parent = tags['parent-under-root-1'])
+
+    session.add_all(tags.values())
+
+    results = session.exec(
+        select(m.ServiceTagTable)
+            .where(m.ServiceTagTable.name == 'repeat')
+    ).all()
+    assert len(results) == 3
+
+
+def test_error_tag_name_not_unique_among_sibling(session):
+    tags = {}
+    def add_tag(**kwargs):
+        tag = m.ServiceTagTable(**kwargs)
+        tags[tag.name] = tag
+
+    add_tag(name = 'root')
+    add_tag(name = 'repeat', parent = tags['root'])
+    add_tag(name = 'repeat', parent = tags['root'])
+
+    with pytest.raises(IntegrityError):
+        session.add_all(tags.values())
+        session.flush()

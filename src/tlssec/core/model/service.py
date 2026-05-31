@@ -1,5 +1,10 @@
 from sqlmodel import Field, Relationship
-from sqlalchemy import Column, Integer, Identity
+from sqlalchemy import (
+    Column,
+    Integer,
+    Identity,
+    UniqueConstraint,
+)
 
 from tlssec.database.sqlmodel import SQLModel
 
@@ -64,6 +69,11 @@ class ServiceTag(SQLModel):
     )
     name: str
     description: str | None = None
+
+    __table_args__ = (
+        # Name must be unique among siblings
+        UniqueConstraint('parent_id', 'name'),
+    )
 
 
 class ServiceTagTable(ServiceTag, table = True):
