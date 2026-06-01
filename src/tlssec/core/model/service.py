@@ -1,3 +1,5 @@
+from typing import Optional
+
 from sqlmodel import Field, Relationship
 from sqlalchemy import (
     Column,
@@ -5,6 +7,7 @@ from sqlalchemy import (
     Identity,
     UniqueConstraint,
 )
+from sqlalchemy.orm import attribute_keyed_dict
 
 from tlssec.database.sqlmodel import SQLModel
 
@@ -67,6 +70,7 @@ class ServiceTag(SQLModel):
             ' Parent tag must also be applied if child tag is applied.',
         ),
     )
+    # TODO: restrict name to [a-zA-Z_]
     name: str = Field(
         index = True,
         description = 'Tag name which must be unique among siblings',
@@ -74,17 +78,30 @@ class ServiceTag(SQLModel):
     description: str | None = None
 
     __table_args__ = (
-        UniqueConstraint('parent_id', 'name'),
+        UniqueConstraint(
+            'parent_id', 'name',
+            postgresql_nulls_not_distinct = True,
+        ),
     )
 
 
 class ServiceTagTable(ServiceTag, table = True):
-    parent: ServiceTagTable = Relationship(
+    parent: Optional[ServiceTagTable] = Relationship(
         back_populates = 'children',
         sa_relationship_kwargs = {'remote_side': (lambda: ServiceTagTable.id)},
     )
-    children: list['ServiceTagTable'] = Relationship(back_populates = 'parent')
+    children: dict[str, ServiceTagTable] = Relationship(
+        back_populates = 'parent',
+        sa_relationship_kwargs = {'collection_class': attribute_keyed_dict('name')},
+    )
     services: list['ServiceTable'] = Relationship(
         back_populates = 'tags',
         link_model = ServiceTagMapTable,
     )
+
+    def __init__(self, children = None, **kwargs):
+        if isinstance(children, list):
+            children = {child.name: child for child in children}
+        if children:
+            kwargs['children'] = children
+        super().__init__(**kwargs)

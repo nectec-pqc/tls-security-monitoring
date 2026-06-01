@@ -47,9 +47,7 @@ def test_traverse_tag_hierarchy(session):
     assert len(results) == 1
     result = results[0]
     assert result.parent.name == 'organization'
-    assert {child.name for child in result.children} == {'for-profit', 'non-profit ngo'}
-    # TODO: Make `children` attribute a dict for easier access
-    # See https://docs.sqlalchemy.org/en/21/orm/collection_api.html#dictionary-collections
+    assert result.children.keys() == {'for-profit', 'non-profit ngo'}
 
 
 def test_tag_name_can_repeat_if_parents_differ(session):
@@ -83,15 +81,25 @@ def test_tag_name_can_repeat_if_parents_differ(session):
     }
 
 
-def test_error_tag_name_not_unique_among_sibling(session):
-    tag = m.ServiceTagTable(
-        name = 'root',
-        children = [
-            m.ServiceTagTable(name = 'repeat'),
-            m.ServiceTagTable(name = 'repeat'),
-        ],
-    )
+def test_error_root_tag_name_not_unique(session):
+    tags = [
+        m.ServiceTagTable(name = 'root'),
+        m.ServiceTagTable(name = 'root'),
+    ]
 
     with pytest.raises(IntegrityError):
-        session.add(tag)
+        session.add_all(tags)
+        session.flush()
+
+
+def test_error_tag_name_not_unique_among_sibling(session):
+    # NOTE: Can't test by adding nested tags because
+    # `children` attribute is always converted to dict which forces
+    # each child to have different key / name.
+    root = m.ServiceTagTable(name = 'root')
+    child_a = m.ServiceTagTable(name = 'repeat', parent = root)
+    child_b = m.ServiceTagTable(name = 'repeat', parent = root)
+
+    with pytest.raises(IntegrityError):
+        session.add_all([root, child_a, child_b])
         session.flush()
