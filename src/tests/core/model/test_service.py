@@ -6,56 +6,38 @@ import tlssec.core.model as m
 
 
 def test_traverse_tag_hierarchy(session):
-    tags = {}
-    def add_tag(**kwargs):
-        tag = m.ServiceTagTable(**kwargs)
-        tags[tag.name] = tag
-
-    # Add a hierarchy of tags with `organization` as root
-    add_tag(
-        name = 'organization',
-        description = (
-            'Service is owned by an organization.'
-            ' sub-tag describes organization types.'
+    tags = [
+        m.ServiceTagTable(
+            name = 'organization',
+            description = (
+                'Service is owned by an organization.'
+                ' sub-tag describes organization types.'
+            ),
+            children = [
+                m.ServiceTagTable(name = 'public'),
+                m.ServiceTagTable(
+                    name = 'private',
+                    children = [
+                        m.ServiceTagTable(name = 'for-profit'),
+                        m.ServiceTagTable(
+                            name = 'non-profit ngo',
+                            description = 'non-profit non-governmental organization',
+                            children = [m.ServiceTagTable(name = 'religious')],
+                        ),
+                    ],
+                ),
+            ],
         ),
-    )
-    add_tag(
-        name = 'public',
-        parent = tags['organization'],
-    )
-    add_tag(
-        name = 'private',
-        parent = tags['organization'],
-    )
-    add_tag(
-        name = 'for-profit',
-        parent = tags['private'],
-    )
-    add_tag(
-        name = 'non-profit ngo',
-        description = 'non-profit non-governmental organization',
-        parent = tags['private'],
-    )
-    add_tag(
-        name = 'religious',
-        parent = tags['non-profit ngo'],
-    )
-
-    # Add another hierarchy of tags with `access-control` as root
-    add_tag(
-        name = 'access-control',
-        description = 'tag group describing access control on the service',
-    )
-    add_tag(
-        name = 'no-access-control',
-        parent = tags['access-control'],
-    )
-    add_tag(
-        name = 'restricted-access',
-        parent = tags['access-control'],
-    )
-
-    session.add_all(tags.values())
+        m.ServiceTagTable(
+            name = 'access-control',
+            description = 'tag group describing access control on the service',
+            children = [
+                m.ServiceTagTable(name = 'no-access-control'),
+                m.ServiceTagTable(name = 'restricted-access'),
+            ],
+        ),
+    ]
+    session.add_all(tags)
     
     # Readback and check tag hierarchy can be accessed through relationship attributes
     results = session.exec(
@@ -71,37 +53,45 @@ def test_traverse_tag_hierarchy(session):
 
 
 def test_tag_name_can_repeat_if_parents_differ(session):
-    tags = {}
-    def add_tag(**kwargs):
-        tag = m.ServiceTagTable(**kwargs)
-        tags[tag.name] = tag
-
-    add_tag(name = 'root-1')
-    add_tag(name = 'root-2')
-    add_tag(name = 'parent-under-root-1', parent = tags['root-1'])
-    add_tag(name = 'repeat', parent = tags['root-1'])
-    add_tag(name = 'repeat', parent = tags['root-2'])
-    add_tag(name = 'repeat', parent = tags['parent-under-root-1'])
-
-    session.add_all(tags.values())
+    tags = [
+        m.ServiceTagTable(
+            name = 'root-1',
+            children = [
+                m.ServiceTagTable(
+                    name = 'parent-under-root-1',
+                    children = [m.ServiceTagTable(name = 'repeat')],
+                ),
+                m.ServiceTagTable(name = 'repeat'),
+            ],
+        ),
+        m.ServiceTagTable(
+            name = 'root-2',
+            children = [m.ServiceTagTable(name = 'repeat')],
+        ),
+    ]
+    session.add_all(tags)
 
     results = session.exec(
         select(m.ServiceTagTable)
             .where(m.ServiceTagTable.name == 'repeat')
     ).all()
     assert len(results) == 3
+    assert {result.parent.name for result in results} == {
+        'root-1',
+        'root-2',
+        'parent-under-root-1',
+    }
 
 
 def test_error_tag_name_not_unique_among_sibling(session):
-    tags = {}
-    def add_tag(**kwargs):
-        tag = m.ServiceTagTable(**kwargs)
-        tags[tag.name] = tag
-
-    add_tag(name = 'root')
-    add_tag(name = 'repeat', parent = tags['root'])
-    add_tag(name = 'repeat', parent = tags['root'])
+    tag = m.ServiceTagTable(
+        name = 'root',
+        children = [
+            m.ServiceTagTable(name = 'repeat'),
+            m.ServiceTagTable(name = 'repeat'),
+        ],
+    )
 
     with pytest.raises(IntegrityError):
-        session.add_all(tags.values())
+        session.add(tag)
         session.flush()
