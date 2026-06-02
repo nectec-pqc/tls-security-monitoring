@@ -42,8 +42,9 @@ class Service(SQLModel):
         default = None,
         sa_column = Column(Integer, Identity(always = True), primary_key = True)
     )
-    description: str | None = Field(
+    description: EmptyToNoneStr = Field(
         default = None,
+        max_length = 500,
         description = 'A few sentences on what this service is and what it provides',
     )
 
