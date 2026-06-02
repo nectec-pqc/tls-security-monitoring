@@ -1,8 +1,51 @@
+from contextlib import nullcontext
+
 import pytest
+from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 import tlssec.core.model as m
+
+
+@pytest.mark.parametrize(
+    'args, expectation',
+    [
+        pytest.param(
+            {
+                'name': 'Valid_Name',
+                'description': 'Valid, somewhat long description. สามารถใช้ UTF-8',
+            },
+            nullcontext(),
+            id = 'normal tag construction',
+        ),
+        pytest.param(
+            {'name': ''},
+            pytest.raises(ValidationError),
+            id = 'tag name can not be empty',
+        ),
+        pytest.param(
+            {'name': 'foo', 'description': ''},
+            nullcontext(m.ServiceTag(name = 'foo', description = None)),
+            id = 'empty description normalizes to none',
+        ),
+        pytest.param(
+            {'name': '_012345678901234567890123456789'},
+            pytest.raises(ValidationError),
+            id = 'name too long',
+        ),
+        pytest.param(
+            {'name': 'ใช้ไม่ได้'},
+            pytest.raises(ValidationError),
+            id = 'name can not use UTF-8',
+        ),
+    ],
+)
+def test_tag_validation(args, expectation):
+    with expectation as expected:
+        result = m.ServiceTag(**args)
+        if expected is not None:
+            assert result == expected
 
 
 def test_traverse_tag_hierarchy(session):

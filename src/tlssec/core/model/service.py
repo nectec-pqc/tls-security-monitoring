@@ -10,6 +10,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import attribute_keyed_dict
 
 from tlssec.database.sqlmodel import SQLModel
+from .validator import EmptyToNoneStr
 
 
 class ServiceTagMap(SQLModel): 
@@ -70,12 +71,19 @@ class ServiceTag(SQLModel):
             ' Parent tag must also be applied if child tag is applied.',
         ),
     )
-    # TODO: restrict name to [a-zA-Z_]
     name: str = Field(
         index = True,
+        min_length = 1,
+        max_length = 30,
+        # NOTE: Can not use `regex` or `pattern` option directly because of
+        # https://github.com/fastapi/sqlmodel/pull/1231
+        schema_extra = {'pattern': r'^[a-zA-Z_][a-zA-Z0-9_]*$'},
         description = 'Tag name which must be unique among siblings',
     )
-    description: str | None = None
+    description: EmptyToNoneStr = Field(
+        default = None,
+        max_length = 500,
+    )
 
     __table_args__ = (
         UniqueConstraint(
