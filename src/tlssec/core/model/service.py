@@ -1,4 +1,5 @@
 from typing import Optional
+from pathlib import PurePosixPath
 
 from sqlmodel import Field, Relationship
 from sqlalchemy import (
@@ -114,3 +115,23 @@ class ServiceTagTable(ServiceTag, table = True):
         if children:
             kwargs['children'] = children
         super().__init__(**kwargs)
+
+    @property
+    def fullpath(self) -> PurePosixPath:
+        # TODO: cache and clear cache on orm lifecycle events
+        cursor = self
+        lineage = []
+        visited = set()
+        while cursor != None:
+            # NOTE: use python object ID instead of `cursor.id`
+            # to allow loop detection even before adding to database.
+            # ORM session helps make sure object with same tag ID are not duplicated in python.
+            if id(cursor) in visited:
+                raise ValueError(f'tag loop detected: {lineage}')
+            lineage.append(cursor)
+            visited.add(id(cursor))
+            cursor = cursor.parent
+        return PurePosixPath(
+            '/',
+            *(tag.name for tag in reversed(lineage)),
+        )
