@@ -43,6 +43,13 @@ class Service(SQLModel):
         default = None,
         sa_column = Column(Integer, Identity(always = True), primary_key = True)
     )
+    name: str = Field(
+        index = True,
+        unique = True,
+        min_length = 1,
+        max_length = 50,
+        schema_extra = {'pattern': r'^[a-zA-Z_][a-zA-Z0-9_]*$'},
+    )
     description: EmptyToNoneStr = Field(
         default = None,
         max_length = 500,
