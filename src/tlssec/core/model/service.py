@@ -48,6 +48,10 @@ class Service(SQLModel):
         max_length = 500,
         description = 'A few sentences on what this service is and what it provides',
     )
+    hostname: str = Field(
+        index = True,
+        max_length = 255,
+    )
 
 
 class ServiceTable(Service, table = True):
