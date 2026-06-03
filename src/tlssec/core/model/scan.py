@@ -28,7 +28,7 @@ class Scan(SQLModel):
         description = 'seconds taken to complete the scan',
     )
     # TODO: store error in result?
-    # TODO: link to target, and scan configuration
+    # TODO: link to scan configuration
     # TODO: impose unique constraint on result. Prevent repeated import.
 
     @classmethod

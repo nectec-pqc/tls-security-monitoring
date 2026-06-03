@@ -26,9 +26,9 @@ class EndPoint(Base):
         Identity(always=True),
         primary_key=True,
     )
-    target_id: Mapped[int] = mapped_column(
+    service_id: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("target.id"),
+        ForeignKey("service.id"),
         index=True,
         nullable=False,
     )
@@ -45,8 +45,8 @@ class EndPoint(Base):
     )
 
     # Relationships
-    target: Mapped[Optional["Target"]] = relationship(
-        "Target",
+    service: Mapped[Optional["Service"]] = relationship(
+        "Service",
         back_populates="endpoints",
     )
     scans: Mapped[list["Scan"]] = relationship(
@@ -55,5 +55,5 @@ class EndPoint(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("target_id", "hostname", "port", "protocol"),
+        UniqueConstraint("service_id", "hostname", "port", "protocol"),
     )
