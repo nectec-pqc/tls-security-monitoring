@@ -9,6 +9,7 @@ class Target(SQLModel):
         default = None,
         sa_column = Column(Integer, Identity(always = True), primary_key = True),
     )
+    service_id: int = Field(foreign_key='service.id')
     hostname: str = Field(
         index = True,
         max_length = 253,
@@ -16,4 +17,5 @@ class Target(SQLModel):
 
 
 class TargetTable(Target, table = True):
-    pass
+    service: Optional['ServiceTable'] = Relationship(back_populate='targets')
+    endpoint: list['EndPointTable'] = Relationship(back_populate='target')

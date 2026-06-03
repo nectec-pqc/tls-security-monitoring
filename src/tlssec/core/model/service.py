@@ -55,6 +55,7 @@ class ServiceTable(Service, table = True):
         back_populates = 'services',
         link_model = ServiceTagMapTable,
     )
+    targets: list['TargetTable'] = Relationship(back_populates='service')
 
 
 class ServiceTag(SQLModel):
