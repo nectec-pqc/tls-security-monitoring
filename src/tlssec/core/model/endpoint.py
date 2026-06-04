@@ -28,3 +28,5 @@ class EndPoint(SQLModel):
 class EndPointTable(EndPoint, table=True):
     target: Optional['ServiceTable'] = Relationship(back_populates='endpoints')
     scans: list['ScanTable'] = Relationship(back_populates='scans')
+
+
