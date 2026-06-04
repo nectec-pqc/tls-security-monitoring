@@ -1,12 +1,17 @@
 from datetime import datetime
 from typing import Optional, Literal
+from enum import Enum
 
 from sqlmodel import Field, Relationship
-from sqlalchemy import Column, Integer, Identity, UniqueConstraint
+from sqlalchemy import Column, Integer, Identity, UniqueConstraint, String
 
 from tlssec.database.sqlmodel import SQLModel  
 
-Protocol = Literal['tcp', 'udp', 'http', 'https']
+class Protocol(str, Enum):
+    tcp = 'tcp'
+    udp = 'udp'
+    http = 'http'
+    https = 'https'
 
 class EndPoint(SQLModel):
     id: int | None = Field(
@@ -17,7 +22,7 @@ class EndPoint(SQLModel):
     hostname: str = Field(max_length=253)
     port: int = Field(ge=1)
     path: str = Field(default='/') 
-    protocol: Protocol = 'tcp'
+    protocol: Protocol = Protocol.tcp
     first_seen: datetime
     last_seen: datetime
     retire_at: datetime | None = Field(default=None) 
