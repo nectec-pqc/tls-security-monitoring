@@ -27,3 +27,8 @@ class Settings(BaseSettings):
 
     deployment_mode: Literal['development', 'production'] = 'production'
     db: DatabaseSettings
+    # TODO: Allow string specification, normalize to pandas.Timestamp
+    endpoint_cooldown: int = Field(
+        default = 604800, # 7 days
+        description = 'Seconds to wait from last successful scan before getting scanned again',
+    )

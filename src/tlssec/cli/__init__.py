@@ -54,10 +54,21 @@ def init(ctx, reset):
     op.initialize_database(state.db.engine)
 
 
-@cli.command()
-def status():
-    """Check system status"""
-    raise NotImplementedError
+@cli.group()
+def show():
+    """Show system status"""
+    pass
+
+
+@show.command(name = 'settings')
+@click.pass_context
+def show_settings(ctx):
+    """Show effective settings.
+
+    (after merging defaults, environment variable, cli options together.)
+    """
+    state = ctx.find_object(CliState)
+    print(state.settings.model_dump_json(indent = 2))
 
 
 @cli.command()
