@@ -16,7 +16,7 @@ class EndPoint(SQLModel):
     part_of_service_id: int = Field(foreign_key='service.id', index=True)
     hostname: str = Field(max_length=253)
     port: int = Field(ge=1)
-    part: str = Field(default='/') 
+    path: str = Field(default='/') 
     protocol: Protocol = 'tcp'
     first_seen: datetime
     last_seen: datetime
