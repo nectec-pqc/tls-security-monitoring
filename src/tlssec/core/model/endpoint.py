@@ -11,19 +11,20 @@ class EndPoint(SQLModel):
         default=None,
         sa_column=Column(Integer, Identity(always=True), primary_key=True),
     )
-    target_id: int = Field(foreign_key='target.id', index=True)
+    part_of_service_id: int = Field(foreign_key='service.id', index=True)
     hostname: str = Field(max_length=253)
     port: int
+    part: str 
     protocol: str = Field(default='tcp')
     first_seen: datetime
     last_seen: datetime
-    retired_at: datetime | None = Field(default=None, index=True)
+    retire_at: datetime | None = Field(default=None) 
 
     __table_args__ = (
-        UniqueConstraint('target_id', 'hostname', 'port', 'protocol'),
+        UniqueConstraint('part_of_serviceID', 'hostname', 'port', 'protocol'),
     )
 
 
 class EndPointTable(EndPoint, table=True):
-    target: Optional['TargetTable'] = Relationship(back_populates='endpoints')
+    target: Optional['ServiceTable'] = Relationship(back_populates='endpoints')
     scans: list['ScanTable'] = Relationship(back_populates='scans')

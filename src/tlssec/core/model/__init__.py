@@ -3,5 +3,5 @@ from .service import (
     ServiceTag, ServiceTagTable,
     ServiceTagMap, ServiceTagMapTable,
 )
-from .target import Target, TargetTable
 from .scan import Scan, ScanTable
+from .endpoint import EndPoint, EndPointTable
