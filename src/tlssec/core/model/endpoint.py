@@ -4,6 +4,8 @@ from enum import Enum
 
 from sqlmodel import Field, Relationship
 from sqlalchemy import Column, Integer, Identity, UniqueConstraint, String
+from pydantic import IPvAnyAddress
+from pydantic import model_validator
 
 from tlssec.database.sqlmodel import SQLModel  
 
@@ -24,7 +26,10 @@ class EndPoint(SQLModel):
         foreign_key = 'service.id', 
         index = True,
     )
-    # TODO: What about IP address?
+    ip : IPvAnyAddress = Field(
+        default=None,
+    )
+
     hostname: str = Field(
         min_length = 1,
         max_length = 253,
@@ -39,8 +44,9 @@ class EndPoint(SQLModel):
         default = '/',
         min_length = 1,
     )
-    protocol: Protocol = Protocol.https
-    # TODO: Validate first_seen <= last_seen
+    protocol: Protocol = Field(
+        default=Protocol.https,
+    )
     first_seen: datetime
     last_seen: datetime
     retire_at: datetime | None = Field(default = None) 
@@ -51,6 +57,9 @@ class EndPoint(SQLModel):
     )
 
 
+
+
 class EndPointTable(EndPoint, table = True):
+    __tablename__ = 'endpoint'
     service: Optional['ServiceTable'] = Relationship(back_populates = 'endpoints')
     scans: list['ScanTable'] = Relationship(back_populates = 'endpoint')
