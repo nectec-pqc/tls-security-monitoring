@@ -18,7 +18,10 @@ class EndPoint(SQLModel):
         default=None,
         sa_column=Column(Integer, Identity(always=True), primary_key=True),
     )
-    part_of_service_id: int = Field(foreign_key='service.id', index=True)
+    part_of_service_id: int = Field(
+        foreign_key='service.id', 
+        index=True,
+    )
     hostname: str = Field(max_length=253)
     port: int = Field(ge=1)
     path: str = Field(default='/') 
@@ -32,7 +35,7 @@ class EndPoint(SQLModel):
     )
 
 class EndPointTable(EndPoint, table=True):
-    target: Optional['ServiceTable'] = Relationship(back_populates='endpoints')
+    service: Optional['ServiceTable'] = Relationship(back_populates='endpoints')
     scans: list['ScanTable'] = Relationship(back_populates='endpoint')
 
 

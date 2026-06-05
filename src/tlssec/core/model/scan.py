@@ -1,5 +1,6 @@
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
 from sqlmodel import Field, Relationship
 from sqlalchemy import Column, Integer, Identity
@@ -27,6 +28,10 @@ class Scan(SQLModel):
         default = None,
         description = 'seconds taken to complete the scan',
     )
+    belong_to_endpoint_id: int = Field(
+        foreign_key = 'end_point.id',
+        index = True,
+    )
     # TODO: store error in result?
     # TODO: link to scan configuration
     # TODO: impose unique constraint on result. Prevent repeated import.
@@ -47,4 +52,4 @@ class Scan(SQLModel):
 
 
 class ScanTable(Scan, table = True):
-    pass
+    endpoint: Optional["EndPointTable"] = Relationship(back_populates = "scans",)
