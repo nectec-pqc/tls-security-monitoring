@@ -1,59 +1,41 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
+from enum import Enum
 
-from sqlalchemy import (
-        Column,
-        Integer,
-        Identity,
-        String,
-        UniqueConstraint,
-        ForeignKey,
-        DateTime,
-    )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Relationship
+from sqlmodel import Field, Relationship
+from sqlalchemy import Column, Integer, Identity, UniqueConstraint, String
 
+from tlssec.database.sqlmodel import SQLModel  
 
-class Base(DeclarativeBase):
-    pass
+class Protocol(str, Enum):
+    tcp = 'tcp'
+    udp = 'udp'
+    http = 'http'
+    https = 'https'
 
-
-class EndPoint(Base):
-
-    __tablenmae__ = "end_point"
-
-    id: Mapped[int] = mapped_column(
-        Integer,
-        Identity(always=True),
-        primary_key=True,
-    )
-    service_id: Mapped[int] = mapped_column(
-        Integer,
-        ForeignKey("service.id"),
-        index=True,
-        nullable=False,
-    )
-    hostname: Mapped[str] = mapped_column(String(255), nullable=False)
-    port: Mapped[int] = mapped_column(Integer, nullable=False)
-    protocol: Mapped[str] = mapped_column(String(50), default="tcp", nullable=False)
-    first_seen: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    last_seen: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    retired_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime,
-        nullable=True,
-        index=True,
+class EndPoint(SQLModel):
+    id: int | None = Field(
         default=None,
+        sa_column=Column(Integer, Identity(always=True), primary_key=True),
     )
-
-    # Relationships
-    service: Mapped[Optional["Service"]] = relationship(
-        "Service",
-        back_populates="endpoints",
+    part_of_service_id: int = Field(
+        foreign_key='service.id', 
+        index=True,
     )
-    scans: Mapped[list["Scan"]] = relationship(
-        "Scan",
-        back_populates="endpoint",
-    )
+    hostname: str = Field(max_length=253)
+    port: int = Field(ge=1)
+    path: str = Field(default='/') 
+    protocol: Protocol = Protocol.tcp
+    first_seen: datetime
+    last_seen: datetime
+    retire_at: datetime | None = Field(default=None) 
 
     __table_args__ = (
-        UniqueConstraint("service_id", "hostname", "port", "protocol"),
+        UniqueConstraint('part_of_service_id', 'hostname', 'port', 'protocol', 'path'),
     )
+
+class EndPointTable(EndPoint, table=True):
+    service: Optional['ServiceTable'] = Relationship(back_populates='endpoints')
+    scans: list['ScanTable'] = Relationship(back_populates='endpoint')
+
+
