@@ -77,3 +77,52 @@ def test_different_port_is_allowed(session):
         select(m.EndPointTable).where(m.EndPointTable.part_of_service_id == svc.id)
     ).all()
     assert len(results) == 2
+
+def test_retire_at_can_be_set(session):
+    svc = make_service(session)
+    ep = make_endpoint(session, svc, retire_at=LATER)
+
+    result = session.exec(
+        select(m.EndPointTable).where(m.EndPointTable.id == ep.id)
+    ).one()
+    assert result.retire_at == LATER
+
+def test_different_protocol_is_allowed(session):
+    svc = make_service(session)
+    make_endpoint(session, svc, protocol='tcp')
+    make_endpoint(session, svc, protocol='https')
+
+    results = session.exec(
+        select(m.EndPointTable).where(m.EndPointTable.part_of_service_id == svc.id)
+    ).all()
+    assert len(results) == 2
+
+
+def test_different_path_is_allowed(session):
+    svc = make_service(session)
+    make_endpoint(session, svc, path='/')
+    make_endpoint(session, svc, path='/api/v1')
+
+    results = session.exec(
+        select(m.EndPointTable).where(m.EndPointTable.part_of_service_id == svc.id)
+    ).all()
+    assert len(results) == 2
+
+
+def test_different_hostname_is_allowed(session):
+    svc = make_service(session)
+    make_endpoint(session, svc, hostname='a.example.com')
+    make_endpoint(session, svc, hostname='b.example.com')
+
+    results = session.exec(
+        select(m.EndPointTable).where(m.EndPointTable.part_of_service_id == svc.id)
+    ).all()
+    assert len(results) == 2
+
+
+def test_same_endpoint_tuple_on_different_services_is_allowed(session):
+    svc1 = make_service(session, name='service_one')
+    svc2 = make_service(session, name='service_two')
+    make_endpoint(session, svc1)
+    make_endpoint(session, svc2)
+
