@@ -12,6 +12,7 @@ from sqlalchemy.orm import attribute_keyed_dict
 
 from tlssec.database.sqlmodel import SQLModel
 from .validator import EmptyToNoneStr
+from .endpoint import EndPointTable
 
 
 class ServiceTagMap(SQLModel): 
@@ -66,6 +67,7 @@ class ServiceTable(Service, table = True):
         back_populates = 'services',
         link_model = ServiceTagMapTable,
     )
+    endpoints: list['EndPointTable'] = Relationship(back_populates='target') 
 
 
 class ServiceTag(SQLModel):
