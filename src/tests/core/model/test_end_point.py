@@ -63,8 +63,8 @@ def test_unique_constraint_same_endpoint(session):
         first_seen=NOW,
         last_seen=NOW,
     )
-    session.add(duplicate)
     with pytest.raises(IntegrityError):
+        session.add(duplicate)
         session.flush()
 
 
