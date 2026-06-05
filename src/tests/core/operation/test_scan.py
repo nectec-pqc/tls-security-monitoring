@@ -7,8 +7,6 @@ import pytest
 
 # TODO: put testssl calling into a reusable function
 def test_call_testssl():
-    breakpoint()
-    return
     async def call() -> str | None:
         proc = await asyncio.create_subprocess_exec(
             'testssl', '--help',
