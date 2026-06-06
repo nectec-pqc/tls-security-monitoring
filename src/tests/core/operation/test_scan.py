@@ -50,8 +50,10 @@ def current_openssl_server():
         ],
         cwd = server_config_dir,
         check = True,
+        timeout = 1,
     )
 
+    # TODO: whole thing needs to handle exception by killing subprocess
     proc = subprocess.Popen(
         [
             'openssl', 's_server',
@@ -61,12 +63,13 @@ def current_openssl_server():
             '-port', '4433',
         ],
         cwd = server_config_dir,
-        stdout = subprocess.DEVNULL,
+        stdout = subprocess.PIPE,
         stderr = subprocess.DEVNULL,
     )
-    # FIXME: Is there a better way to wait for server to be ready?
-    import time
-    time.sleep(.5)
+    # TODO: add timeout. Need to use asyncio?
+    for line in proc.stdout:
+        if line == b'ACCEPT\n':
+            break
     yield proc
     try:
         proc.terminate()
