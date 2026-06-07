@@ -19,7 +19,15 @@ def test_call_testssl(testssl):
     assert 'testssl [options] <URI>' in result.stdout
 
 
-@pytest.fixture(scope = 'module', autouse = True)
+def test_testssl_error(testssl):
+    result = asyncio.run(testssl.call(
+        '--this-option-is-invalid',
+        timeout = 1,
+    ))
+    assert result.returncode != 0
+
+
+@pytest.fixture(scope = 'module')
 def current_openssl_server():
     """Start an openssl server to use as target of test scan on localhost.
 
@@ -70,10 +78,11 @@ def current_openssl_server():
 # we might need to install different version of openssl or nginx into test image.
 # Or might even need to use separate container.
 # TODO: get output line-by-line, timeout on not getting new line
-def test_scan_local(testssl):
+def test_scan_local(testssl, current_openssl_server):
     result = asyncio.run(testssl.call(
         # TODO: test with faster running option
         '--forward-secrecy', 'localhost:4433',
         timeout = 180,
     ))
     assert result.returncode == 0
+    assert 'X25519MLKEM768' in result.stdout
