@@ -20,15 +20,16 @@ def make_service(session, name='test_service'):
 
 def make_endpoint(session, service, **overrides):
     defaults = dict(
-        part_of_service_id=service.id,
-        hostname='target.example.com',
-        port=443,
-        path='/',
-        protocol='tcp',
-        first_seen=NOW,
-        last_seen=NOW,
+        part_of_service_id = service.id,
+        hostname = 'target.example.com',
+        ip = '127.0.0.1',
+        port = 443,
+        path = '/',
+        protocol = 'tcp',
+        first_seen = NOW,
+        last_seen = NOW,
     )
-    ep = m.EndPointTable(**(defaults | overrides))
+    ep = m.EndpointTable(**(defaults | overrides))
     session.add(ep)
     session.flush()
     return ep
@@ -38,7 +39,7 @@ def test_create_and_query_endpoint(session):
     ep = make_endpoint(session, svc)
 
     result = session.exec(
-        select(m.EndPointTable).where(m.EndPointTable.id == ep.id)
+        select(m.EndpointTable).where(m.EndpointTable.id == ep.id)
     ).one()
 
     assert result.hostname == 'target.example.com'
@@ -54,7 +55,7 @@ def test_unique_constraint_same_endpoint(session):
     svc = make_service(session)
     make_endpoint(session, svc)
 
-    duplicate = m.EndPointTable(
+    duplicate = m.EndpointTable(
         part_of_service_id=svc.id,
         hostname='target.example.com',
         port=443,
@@ -74,7 +75,7 @@ def test_different_port_is_allowed(session):
     make_endpoint(session, svc, port=8443)
 
     results = session.exec(
-        select(m.EndPointTable).where(m.EndPointTable.part_of_service_id == svc.id)
+        select(m.EndpointTable).where(m.EndpointTable.part_of_service_id == svc.id)
     ).all()
     assert len(results) == 2
 
@@ -83,7 +84,7 @@ def test_retire_at_can_be_set(session):
     ep = make_endpoint(session, svc, retire_at=LATER)
 
     result = session.exec(
-        select(m.EndPointTable).where(m.EndPointTable.id == ep.id)
+        select(m.EndpointTable).where(m.EndpointTable.id == ep.id)
     ).one()
     assert result.retire_at == LATER
 
@@ -93,7 +94,7 @@ def test_different_protocol_is_allowed(session):
     make_endpoint(session, svc, protocol='https')
 
     results = session.exec(
-        select(m.EndPointTable).where(m.EndPointTable.part_of_service_id == svc.id)
+        select(m.EndpointTable).where(m.EndpointTable.part_of_service_id == svc.id)
     ).all()
     assert len(results) == 2
 
@@ -104,7 +105,7 @@ def test_different_path_is_allowed(session):
     make_endpoint(session, svc, path='/api/v1')
 
     results = session.exec(
-        select(m.EndPointTable).where(m.EndPointTable.part_of_service_id == svc.id)
+        select(m.EndpointTable).where(m.EndpointTable.part_of_service_id == svc.id)
     ).all()
     assert len(results) == 2
 
@@ -115,7 +116,7 @@ def test_different_hostname_is_allowed(session):
     make_endpoint(session, svc, hostname='b.example.com')
 
     results = session.exec(
-        select(m.EndPointTable).where(m.EndPointTable.part_of_service_id == svc.id)
+        select(m.EndpointTable).where(m.EndpointTable.part_of_service_id == svc.id)
     ).all()
     assert len(results) == 2
 

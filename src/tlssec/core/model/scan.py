@@ -29,7 +29,7 @@ class Scan(SQLModel):
         description = 'seconds taken to complete the scan',
     )
     belong_to_endpoint_id: int = Field(
-        foreign_key = 'end_point.id',
+        foreign_key = 'endpoint.id',
         index = True,
     )
     # TODO: store error in result?
@@ -52,4 +52,4 @@ class Scan(SQLModel):
 
 
 class ScanTable(Scan, table = True):
-    endpoint: Optional["EndPointTable"] = Relationship(back_populates = "scans",)
+    endpoint: Optional["EndpointTable"] = Relationship(back_populates = "scans",)

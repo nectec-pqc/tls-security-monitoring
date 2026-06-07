@@ -66,7 +66,7 @@ class ServiceTable(Service, table = True):
         back_populates = 'services',
         link_model = ServiceTagMapTable,
     )
-    endpoints: list['EndPointTable'] = Relationship(back_populates='service') 
+    endpoints: list['EndpointTable'] = Relationship(back_populates='service') 
 
 
 class ServiceTag(SQLModel):

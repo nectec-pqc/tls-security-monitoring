@@ -4,6 +4,7 @@ from enum import Enum
 
 from sqlmodel import Field, Relationship
 from sqlalchemy import Column, Integer, Identity, UniqueConstraint, String
+from sqlalchemy.dialects.postgresql import INET
 from pydantic import IPvAnyAddress
 from pydantic import model_validator
 
@@ -17,7 +18,7 @@ class Protocol(str, Enum):
     https = 'https'
 
 
-class EndPoint(SQLModel):
+class Endpoint(SQLModel):
     id: int | None = Field(
         default = None,
         sa_column = Column(Integer, Identity(always = True), primary_key = True),
@@ -26,8 +27,10 @@ class EndPoint(SQLModel):
         foreign_key = 'service.id', 
         index = True,
     )
-    ip : IPvAnyAddress = Field(
-        default=None,
+    ip: IPvAnyAddress = Field(
+        default = None,
+        # TODO: register custom mapping globally
+        sa_type = INET,
     )
 
     hostname: str = Field(
@@ -57,9 +60,7 @@ class EndPoint(SQLModel):
     )
 
 
-
-
-class EndPointTable(EndPoint, table = True):
+class EndpointTable(Endpoint, table = True):
     __tablename__ = 'endpoint'
     service: Optional['ServiceTable'] = Relationship(back_populates = 'endpoints')
     scans: list['ScanTable'] = Relationship(back_populates = 'endpoint')
