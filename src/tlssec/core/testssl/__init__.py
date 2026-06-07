@@ -1,16 +1,8 @@
 import asyncio
 from pathlib import Path
-from dataclasses import dataclass
+from subprocess import CompletedProcess
 
 import tlssec.core.model as m
-
-
-@dataclass
-class CompletedTestssl:
-    # Similar to subprocess.CompletedProcess
-    returncode: int
-    stdout: str
-    stderr: str
 
 
 class Testssl:
@@ -33,10 +25,11 @@ class Testssl:
         *args,
         # in seconds
         timeout: int = 180,
-    ) -> CompletedTestssl | None:
+    ) -> CompletedProcess | None:
+        full_args = ('testssl', *args)
         async with self.semaphore:
             proc = await asyncio.create_subprocess_exec(
-                'testssl', *args,
+                *full_args,
                 stdout = asyncio.subprocess.PIPE,
                 stderr = asyncio.subprocess.PIPE,
             )
@@ -46,7 +39,8 @@ class Testssl:
                     proc.communicate(),
                     timeout = timeout,
                 )
-                return CompletedTestssl(
+                return CompletedProcess(
+                    args = full_args,
                     returncode = proc.returncode,
                     stdout = out.decode(),
                     stderr = err.decode(),
