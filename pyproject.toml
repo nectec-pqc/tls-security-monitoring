@@ -41,3 +41,10 @@ build-backend = "uv_build"
 
 [tool.uv]
 exclude-newer = "7 days"
+
+[tool.pytest]
+# Deselect slow tests by default. Use `-m ''` to include slow tests.
+addopts = ["-m", "not slow"]
+markers = [
+    "slow: take a long time to run",
+]

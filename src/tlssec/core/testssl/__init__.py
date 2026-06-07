@@ -19,6 +19,9 @@ class Testssl:
     - with asyncio concurrency
     - with maximum concurrency control
     """
+    # Not a pytest test
+    __test__ = False
+
     def __init__(
         self,
         concurrency: int = 128,

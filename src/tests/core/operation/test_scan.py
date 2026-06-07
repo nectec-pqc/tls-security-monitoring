@@ -78,6 +78,7 @@ def current_openssl_server():
 # we might need to install different version of openssl or nginx into test image.
 # Or might even need to use separate container.
 # TODO: get output line-by-line, timeout on not getting new line
+@pytest.mark.slow
 def test_scan_local(testssl, current_openssl_server):
     result = asyncio.run(testssl.call(
         # TODO: test with faster running option
