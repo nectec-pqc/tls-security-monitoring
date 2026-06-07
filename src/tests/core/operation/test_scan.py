@@ -4,32 +4,19 @@ from pathlib import Path
 
 import pytest
 
+from tlssec.core.testssl import Testssl
 
-# TODO: put testssl calling into a reusable function
-def test_call_testssl():
-    async def call() -> str | None:
-        proc = await asyncio.create_subprocess_exec(
-            'testssl', '--help',
-            stdout = asyncio.subprocess.PIPE,
-            stderr = asyncio.subprocess.PIPE,
-        )
-        try:
-            out, err = await asyncio.wait_for(
-                proc.communicate(),
-                timeout = 1,
-            )
-            return out.decode()
-        except TimeoutError:
-            try:
-                proc.kill()
-            except OSError:
-                pass
-            await proc.wait()
-        return
 
-    result = asyncio.run(call())
-    assert 'testssl [options] <URI>' in result
+@pytest.fixture(scope = 'module')
+def testssl():
+    yield Testssl()
+    # TODO: kill all tasks
 
+
+def test_call_testssl(testssl):
+    result = asyncio.run(testssl.call('--help', timeout = 1))
+    assert result.returncode == 0
+    assert 'testssl [options] <URI>' in result.stdout
 
 
 @pytest.fixture(scope = 'module', autouse = True)
@@ -83,26 +70,10 @@ def current_openssl_server():
 # we might need to install different version of openssl or nginx into test image.
 # Or might even need to use separate container.
 # TODO: get output line-by-line, timeout on not getting new line
-def test_scan_local():
-    async def call():
-        proc = await asyncio.create_subprocess_exec(
-            'testssl', '--forward-secrecy', 'localhost:4433',
-            stdout = asyncio.subprocess.PIPE,
-            stderr = asyncio.subprocess.PIPE,
-        )
-        try:
-            out, err = await asyncio.wait_for(
-                proc.communicate(),
-                timeout = 180,
-            )
-            return proc.returncode, out.decode(), err.decode()
-        except TimeoutError:
-            try:
-                proc.kill()
-            except OSError:
-                pass
-            out, err = await proc.communicate()
-            return proc.returncode, out.decode(), err.decode()
-
-    returncode, out, err = asyncio.run(call())
-    assert returncode == 0
+def test_scan_local(testssl):
+    result = asyncio.run(testssl.call(
+        # TODO: test with faster running option
+        '--forward-secrecy', 'localhost:4433',
+        timeout = 180,
+    ))
+    assert result.returncode == 0
