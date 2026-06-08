@@ -4,7 +4,7 @@ from pathlib import Path
 from tlssec.asyncio import run_subprocess
 
 
-async def test_success_pwd():
+async def test_success_with_stdout():
     cwd = Path(__file__).parent
     result = await run_subprocess(
         'pwd',
@@ -14,10 +14,19 @@ async def test_success_pwd():
     assert result.stdout == f'{cwd}\n'
 
 
+async def test_success_with_stderr():
+    result = await run_subprocess(
+        'bash', '-c', 'echo info 1>&2',
+    )
+    assert result.returncode == 0
+    assert 'info' in result.stderr
+
+
 async def test_false():
     result = await run_subprocess('false')
     assert result.returncode != 0
     assert result.stdout == ''
+    assert result.stderr == ''
 
 
 async def test_failure_to_create_subprocess():
