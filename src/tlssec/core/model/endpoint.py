@@ -53,7 +53,7 @@ class EndPoint(SQLModel):
 
     # TODO: probably need more index for searching
     __table_args__ = (
-        UniqueConstraint('part_of_service_id', 'hostname', 'port', 'protocol', 'path'),
+        UniqueConstraint('ip','part_of_service_id', 'hostname', 'port', 'protocol', 'path'),
     )
 
 
