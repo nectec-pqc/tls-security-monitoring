@@ -37,6 +37,14 @@ services:
     - ./workdir:/home/tlssec
     # Mount source code for live editing
     - ./src:/opt/app/src
+    # Allow usage of `uv add --no-sync PACKAGE` or `uv lock`
+    # from inside container to update dependency files.
+    #
+    # CAUTION: Editing these files from outside container might not live-update
+    # them inside container because many editors replace the files instead of
+    # changing file in-place.
+    - ./pyproject.toml:/opt/app/pyproject.toml
+    - ./uv.lock:/opt/app/uv.lock
     profiles:
     - cli
   init:
