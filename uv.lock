@@ -1772,7 +1772,6 @@ dependencies = [
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "pytest-asyncio" },
     { name = "pyyaml" },
     { name = "sqlmodel" },
     { name = "ssh-audit" },
@@ -1791,6 +1790,7 @@ analysis = [
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
+    { name = "pytest-asyncio" },
 ]
 
 [package.metadata]
@@ -1804,7 +1804,6 @@ requires-dist = [
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pydantic-settings", specifier = ">=2.14.1" },
-    { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "seaborn", marker = "extra == 'analysis'", specifier = ">=0.13.2" },
     { name = "sqlmodel", specifier = ">=0.0.38" },
@@ -1813,7 +1812,10 @@ requires-dist = [
 provides-extras = ["analysis"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=9.0.3" }]
+dev = [
+    { name = "pytest", specifier = ">=9.0.3" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
+]
 
 [[package]]
 name = "tornado"

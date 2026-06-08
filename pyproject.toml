@@ -12,7 +12,6 @@ dependencies = [
     "psycopg[binary]>=3.3.4",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.1",
-    "pytest-asyncio>=1.4.0",
     "pyyaml>=6.0.3",
     "sqlmodel>=0.0.38",
     "ssh-audit>=3.3.0",
@@ -21,6 +20,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
+    "pytest-asyncio>=1.4.0",
 ]
 
 [project.scripts]
