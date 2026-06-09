@@ -64,3 +64,26 @@ async def test_kill_process_ignoring_sigterm():
     elapsed = perf_counter() - start
     assert elapsed >= .2, 'process ignoring SIGTERM must only be killed after timeout + termination grace mark'
     assert elapsed < 1, 'process must be killed before 1s mark where it would have terminated by itself'
+
+
+@pytest.mark.slow
+async def test_slow_but_not_idle_ok():
+    result = await run_subprocess(
+        'bash', '-c',
+        'for ((i=0; i<5; i++)); do echo "$i"; sleep ."$i"; done',
+        idle_timeout = .5,
+    )
+    assert result.returncode == 0
+    assert result.stdout == '0\n1\n2\n3\n4\n'
+
+
+@pytest.mark.slow
+async def test_idle_timeout():
+    result = await run_subprocess(
+        'bash', '-c',
+        'for ((i=0; i<5; i++)); do echo "$i"; sleep ."$i"; done',
+        idle_timeout = .15,
+    )
+    assert result is None
+    # FIXME: timeout need to return captured stdout so far
+    #assert result.stdout == '0\n1\n2\n', 'must return stdout captured so far before idle timeout when trying to sleep for 2 seconds'
