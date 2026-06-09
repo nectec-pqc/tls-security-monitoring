@@ -20,6 +20,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
+    "pytest-asyncio>=1.4.0",
 ]
 
 [project.scripts]
@@ -48,3 +49,4 @@ addopts = ["-m", "not slow"]
 markers = [
     "slow: take a long time to run",
 ]
+asyncio_mode = "auto"
