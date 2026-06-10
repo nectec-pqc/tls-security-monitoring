@@ -16,7 +16,7 @@ def testssl():
 def test_call_testssl(testssl):
     result = asyncio.run(testssl.call('--help', timeout = 1))
     assert result.returncode == 0
-    assert 'testssl [options] <URI>' in result.stdout
+    assert any('testssl [options] <URI>' in line for line in result.stdout)
 
 
 def test_testssl_error(testssl):
@@ -86,4 +86,4 @@ def test_scan_local(testssl, current_openssl_server):
         timeout = 180,
     ))
     assert result.returncode == 0
-    assert 'X25519MLKEM768' in result.stdout
+    assert any('X25519MLKEM768' in line for line in result.stdout)

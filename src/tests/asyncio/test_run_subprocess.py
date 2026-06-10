@@ -11,8 +11,8 @@ async def test_success_with_stdout():
         cwd = cwd,
     )
     assert result.returncode == 0
-    assert result.stdout == f'{cwd}\n'
-    assert result.stderr == ''
+    assert result.stdout == [f'{cwd}\n']
+    assert result.stderr == []
     assert result.exception is None
 
 
@@ -21,8 +21,8 @@ async def test_success_with_stderr():
         'bash', '-c', 'echo info 1>&2',
     )
     assert result.returncode == 0
-    assert result.stdout == ''
-    assert result.stderr == 'info\n'
+    assert result.stdout == []
+    assert result.stderr == ['info\n']
     assert result.exception is None
 
 
@@ -30,8 +30,8 @@ async def test_false():
     result = await run_subprocess('false')
     assert isinstance(result.returncode, int)
     assert result.returncode != 0
-    assert result.stdout == ''
-    assert result.stderr == ''
+    assert result.stdout == []
+    assert result.stderr == []
     assert result.exception is None
 
 
@@ -47,8 +47,8 @@ async def test_timeout_error():
         timeout = .5,
     )
     assert result.returncode is None
-    assert result.stdout == ''
-    assert result.stderr == ''
+    assert result.stdout == []
+    assert result.stderr == []
     assert isinstance(result.exception, TimeoutError)
 
 
@@ -83,7 +83,7 @@ async def test_slow_but_not_idle_ok():
         idle_timeout = .5,
     )
     assert result.returncode == 0
-    assert result.stdout == '0\n1\n2\n3\n4\n'
+    assert result.stdout == [f'{i}\n' for i in range(5)]
 
 
 @pytest.mark.slow
@@ -93,5 +93,5 @@ async def test_idle_timeout():
         'for ((i=0; i<5; i++)); do echo "$i"; sleep ."$i"; done',
         idle_timeout = .15,
     )
-    assert result.stdout == '0\n1\n2\n', 'must return stdout captured so far before idle timeout when trying to sleep for 2 seconds'
+    assert result.stdout == [f'{i}\n' for i in range(3)], 'must return stdout captured so far before idle timeout when trying to sleep for 2 seconds'
     assert isinstance(result.exception, TimeoutError)

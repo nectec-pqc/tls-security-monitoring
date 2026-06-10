@@ -6,8 +6,8 @@ from dataclasses import dataclass
 class CompletedProcess:
     args: list[str]
     returncode: int | None
-    stdout: str | None
-    stderr: str | None
+    stdout: list[str]
+    stderr: list[str]
     exception: Exception | None = None
 
 
@@ -83,9 +83,8 @@ async def run_subprocess(
         return CompletedProcess(
             args = args,
             returncode = proc.returncode,
-            # TODO: allow returning collection of lines directly
-            stdout = ''.join(out),
-            stderr = ''.join(err),
+            stdout = out,
+            stderr = err,
         )
     except Exception as e:
         if proc is None:
@@ -94,8 +93,8 @@ async def run_subprocess(
         return CompletedProcess(
             args = args,
             returncode = proc.returncode, # Should typically be None
-            stdout = ''.join(out),
-            stderr = ''.join(err),
+            stdout = out,
+            stderr = err,
             exception = e,
         )
     finally:
