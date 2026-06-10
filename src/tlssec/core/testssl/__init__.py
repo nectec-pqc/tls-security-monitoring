@@ -1,9 +1,8 @@
 import asyncio
 from pathlib import Path
-from subprocess import CompletedProcess
 
 import tlssec.core.model as m
-from tlssec.asyncio import run_subprocess
+from tlssec.asyncio import run_subprocess, CompletedProcess
 
 
 class Testssl:
@@ -25,7 +24,7 @@ class Testssl:
         self,
         *args,
         **kwargs,
-    ) -> CompletedProcess | None:
+    ) -> CompletedProcess:
         async with self.semaphore:
             return await run_subprocess('testssl', *args, **kwargs)
 

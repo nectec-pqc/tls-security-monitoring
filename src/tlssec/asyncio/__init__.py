@@ -1,5 +1,14 @@
 import asyncio
-from subprocess import CompletedProcess
+from dataclasses import dataclass
+
+
+@dataclass
+class CompletedProcess:
+    args: list[str]
+    returncode: int | None
+    stdout: str | None
+    stderr: str | None
+    exception: Exception | None = None
 
 
 async def read_stream(
@@ -23,13 +32,14 @@ async def read_stream(
 
 async def run_subprocess(
     *args,
+    # TODO: test other choices such as: file, None, devnull
     stdout = asyncio.subprocess.PIPE,
     stderr = asyncio.subprocess.PIPE,
     timeout = 180,
     idle_timeout = 10,
     termination_grace = 1,
     **kwargs,
-) -> CompletedProcess | None:
+) -> CompletedProcess:
     """Run subprocess asynchronously with timeout controls
 
     Pass parameters through to `asyncio.create_subprocess_exec`
@@ -44,6 +54,15 @@ async def run_subprocess(
         seconds or it will be terminated.
     termination_grace
         Seconds allowed for process to act on SIGTERM before sending SIGKILL.
+
+    Returns
+    -------
+    CompletedProcess
+        If the process has started, return CompletedProcess object containing
+        captured output so far and exception that terminated the process if any.
+
+        If process has not yet started due to some exception,
+        that exception will be propagated out.
     """
     proc = None
     out = []
@@ -69,9 +88,16 @@ async def run_subprocess(
             stderr = ''.join(err),
         )
     except Exception as e:
-        # TODO: should return output captured so far
-        # TODO: should return exception as value
-        return
+        if proc is None:
+            raise
+
+        return CompletedProcess(
+            args = args,
+            returncode = proc.returncode, # Should typically be None
+            stdout = ''.join(out),
+            stderr = ''.join(err),
+            exception = e,
+        )
     finally:
         if (
             # Subprocess has started
