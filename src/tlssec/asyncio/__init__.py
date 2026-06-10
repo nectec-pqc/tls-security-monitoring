@@ -4,9 +4,12 @@ from subprocess import CompletedProcess
 
 async def read_stream(
     stream,
+    buffer = None,
     idle_timeout = 10,
 ) -> list[str]:
-    lines = []
+    """Read stream line-by-line with idle timeout"""
+    if buffer is None:
+        buffer = []
     while True:
         line = await asyncio.wait_for(
             stream.readline(),
@@ -14,8 +17,8 @@ async def read_stream(
         )
         if line == b'':
             break
-        lines.append(line.decode())
-    return lines
+        buffer.append(line.decode())
+    return buffer
 
 
 async def run_subprocess(
@@ -43,6 +46,8 @@ async def run_subprocess(
         Seconds allowed for process to act on SIGTERM before sending SIGKILL.
     """
     proc = None
+    out = []
+    err = []
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -51,9 +56,9 @@ async def run_subprocess(
             **kwargs,
         )
         async with asyncio.timeout(timeout):
-            out, err = await asyncio.gather(
-                read_stream(proc.stdout, idle_timeout = idle_timeout),
-                read_stream(proc.stderr, idle_timeout = None),
+            await asyncio.gather(
+                read_stream(proc.stdout, buffer = out, idle_timeout = idle_timeout),
+                read_stream(proc.stderr, buffer = err, idle_timeout = None),
             )
             await proc.wait()
         return CompletedProcess(
