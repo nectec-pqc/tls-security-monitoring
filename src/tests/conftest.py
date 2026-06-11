@@ -18,6 +18,8 @@ def empty_database_session(database):
     connection = database.engine.connect()
     transaction = connection.begin()
     with Session(bind=connection, join_transaction_mode='create_savepoint') as session:
+        session.execute(delete(model.ScanTable))
+        session.execute(delete(model.EndpointTable))
         session.execute(delete(model.ServiceTagMapTable))
         session.execute(delete(model.ServiceTagTable))
         session.execute(delete(model.ServiceTable))
