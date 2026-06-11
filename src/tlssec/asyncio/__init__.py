@@ -1,12 +1,24 @@
 import asyncio
-from subprocess import CompletedProcess
+from dataclasses import dataclass
+
+
+@dataclass
+class CompletedProcess:
+    args: list[str]
+    returncode: int | None
+    stdout: list[str]
+    stderr: list[str]
+    exception: Exception | None = None
 
 
 async def read_stream(
     stream,
+    buffer = None,
     idle_timeout = 10,
 ) -> list[str]:
-    lines = []
+    """Read stream line-by-line with idle timeout"""
+    if buffer is None:
+        buffer = []
     while True:
         line = await asyncio.wait_for(
             stream.readline(),
@@ -14,19 +26,20 @@ async def read_stream(
         )
         if line == b'':
             break
-        lines.append(line.decode())
-    return lines
+        buffer.append(line.decode())
+    return buffer
 
 
 async def run_subprocess(
     *args,
+    # TODO: test other choices such as: file, None, devnull
     stdout = asyncio.subprocess.PIPE,
     stderr = asyncio.subprocess.PIPE,
     timeout = 180,
     idle_timeout = 10,
     termination_grace = 1,
     **kwargs,
-) -> CompletedProcess | None:
+) -> CompletedProcess:
     """Run subprocess asynchronously with timeout controls
 
     Pass parameters through to `asyncio.create_subprocess_exec`
@@ -41,8 +54,19 @@ async def run_subprocess(
         seconds or it will be terminated.
     termination_grace
         Seconds allowed for process to act on SIGTERM before sending SIGKILL.
+
+    Returns
+    -------
+    CompletedProcess
+        If the process has started, return CompletedProcess object containing
+        captured output so far and exception that terminated the process if any.
+
+        If process has not yet started due to some exception,
+        that exception will be propagated out.
     """
     proc = None
+    out = []
+    err = []
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -51,22 +75,28 @@ async def run_subprocess(
             **kwargs,
         )
         async with asyncio.timeout(timeout):
-            out, err = await asyncio.gather(
-                read_stream(proc.stdout, idle_timeout = idle_timeout),
-                read_stream(proc.stderr, idle_timeout = None),
+            await asyncio.gather(
+                read_stream(proc.stdout, buffer = out, idle_timeout = idle_timeout),
+                read_stream(proc.stderr, buffer = err, idle_timeout = None),
             )
             await proc.wait()
         return CompletedProcess(
             args = args,
             returncode = proc.returncode,
-            # TODO: allow returning collection of lines directly
-            stdout = ''.join(out),
-            stderr = ''.join(err),
+            stdout = out,
+            stderr = err,
         )
     except Exception as e:
-        # TODO: should return output captured so far
-        # TODO: should return exception as value
-        return
+        if proc is None:
+            raise
+
+        return CompletedProcess(
+            args = args,
+            returncode = proc.returncode, # Should typically be None
+            stdout = out,
+            stderr = err,
+            exception = e,
+        )
     finally:
         if (
             # Subprocess has started

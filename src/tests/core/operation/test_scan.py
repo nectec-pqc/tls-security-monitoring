@@ -1,6 +1,5 @@
 import asyncio
 import subprocess
-from pathlib import Path
 
 import pytest
 
@@ -16,7 +15,7 @@ def testssl():
 def test_call_testssl(testssl):
     result = asyncio.run(testssl.call('--help', timeout = 1))
     assert result.returncode == 0
-    assert 'testssl [options] <URI>' in result.stdout
+    assert any('testssl [options] <URI>' in line for line in result.stdout)
 
 
 def test_testssl_error(testssl):
@@ -28,13 +27,13 @@ def test_testssl_error(testssl):
 
 
 @pytest.fixture(scope = 'module')
-def current_openssl_server():
+def current_openssl_server(cache_dir):
     """Start an openssl server to use as target of test scan on localhost.
 
     This server will use the current openssl version installed in tlssec image.
     """
     # First ensure server certificate exists. Just issue a self-signed one.
-    server_config_dir = Path.home() / '.cache/tlssec/test/current_openssl_server'
+    server_config_dir = cache_dir / 'current_openssl_server'
     server_config_dir.mkdir(parents = True, exist_ok = True)
     subprocess.run(
         [
@@ -86,4 +85,4 @@ def test_scan_local(testssl, current_openssl_server):
         timeout = 180,
     ))
     assert result.returncode == 0
-    assert 'X25519MLKEM768' in result.stdout
+    assert any('X25519MLKEM768' in line for line in result.stdout)

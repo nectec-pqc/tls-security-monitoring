@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from sqlmodel import (
     Session,
@@ -27,3 +29,9 @@ def empty_database_session(database):
     transaction.rollback()
     connection.close()
 
+
+@pytest.fixture(scope = 'session')
+def cache_dir():
+    path = Path.home() / '.cache/tlssec/test'
+    path.mkdir(parents = True, exist_ok = True)
+    return path
