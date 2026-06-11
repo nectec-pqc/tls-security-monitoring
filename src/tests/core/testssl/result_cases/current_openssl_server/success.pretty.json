@@ -6,11 +6,11 @@
       "finding": "No engine or GOST support via engine with your /usr/bin/openssl"
     }
   ],
-  "Invocation": "testssl --jsonfile-pretty /opt/app/src/tests/core/testssl/result_cases/tmp.json localhost:4433",
+  "Invocation": "testssl --jsonfile-pretty /opt/app/src/tests/core/testssl/result_cases/current_openssl_server/tmp.json localhost:4433",
   "at": "e67f2e55f0a1:/usr/bin/openssl",
   "version": "3.2.1 ",
   "openssl": "OpenSSL 3.5.5 from Fri Apr 3 10:05:32 2026",
-  "startTime": "1781165088",
+  "startTime": "1781175994",
   "scanResult": [
     {
       "targetHost": "localhost",
@@ -364,7 +364,7 @@
         {
           "id": "cert_serialNumber",
           "severity": "INFO",
-          "finding": "7367E714FFF0CB1EE153A9922DB442DE03AC099F"
+          "finding": "1A65E4C831613114C28B4A27F6320ABC678277EA"
         },
         {
           "id": "cert_serialNumberLen",
@@ -374,17 +374,17 @@
         {
           "id": "cert_fingerprintSHA1",
           "severity": "INFO",
-          "finding": "067FC6D12A810892054773304DDCBDBCF40BAB20"
+          "finding": "40EC85ECF5A72338AFD94D82872B7407F924EAC1"
         },
         {
           "id": "cert_fingerprintSHA256",
           "severity": "INFO",
-          "finding": "49B2D237ED083F7B77B8D555647AB5951213EB47906890D1A8D914724408116F"
+          "finding": "AE4607FE5641F7AAA57FD0E0AD653C4619F99FB05C905BAE936A914BC4B89BC5"
         },
         {
           "id": "cert",
           "severity": "INFO",
-          "finding": "-----BEGIN CERTIFICATE-----\nMIIDCTCCAfGgAwIBAgIUc2fnFP/wyx7hU6mSLbRC3gOsCZ8wDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMTA4MDQ0OFoXDTI2MDcxMTA4MDQ0OFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA24ni18x9PxJ/qVjO8JKrjM7bomBr6+JQTt/r1qZXDWRgLxOlnv2PYk4WXaQ/+KEaszJOAViXdRw+BraSIogXgPSx3gDm/E0e8mMHf+XyPYvGQUVaxDzErwzZjMWMXeKBoQfJar9Sj0B30WiTZIRHeTXQWW5YKJYO2r+q/s5Qdi6TGW2gXu8Jp3mUbhj/1RUYICjNGPGhCgLdYw//akgG+CdXJwG3RqdtTUT/oa3+dGexwLdRTsAe4wXZwusFLFuzXuL2ZaCnkZcgPUcOfQp0vLD30/AexHW5Pchf4sWuxs+nrKfGNpob0Uji2RzYlOqtRnatCo3UXhQtCSPFlOA0BwIDAQABo1MwUTAdBgNVHQ4EFgQUZMjpV8GWS433AahUXB5484IBOA8wHwYDVR0jBBgwFoAUZMjpV8GWS433AahUXB5484IBOA8wDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAVkTUtVBHgG4xrKdKNrM1Y0k1oz4m4aWmaMJzUCQ/5Fz/gPH+ga5kQ20wzfuEsihneFVUG5DyoLe1ePQ7h334kKrhkAUKemJmxT24J3DcT6dyX3fNKqRm6Qi8flY+pvze3R7+QwQirLPYekSrP/YJLGqWgP1xwo08fCeoKhsmUfDzlAHL9wu3Fcb1aF6N3uhnfDTPvyxJX0cgPlFckSagqvUzqYNc1/nAL+beWGjMaSg+FaOqaD1t8IlUCfIGh9l1oDoeqdEXAV//87Yla7lgPfCk9AKK6zwGYIT3Cd58xSvb3mBVuDDvTCzPbrVnRzQctIwdlTFJLAECjuXwlcDAtQ==\n-----END CERTIFICATE-----"
+          "finding": "-----BEGIN CERTIFICATE-----\nMIIDCTCCAfGgAwIBAgIUGmXkyDFhMRTCi0on9jIKvGeCd+owDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMTExMDUyOVoXDTI2MDcxMTExMDUyOVowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsSUgRfs6/8w/JhLvRAQkJtKKa0YrTVIncJqyezD9/021aV7CC9ThK4fe2LMV3FAAFdY67uw1h1sykDhon1fNu7Im+B0AvKTdzWxqCjA13ZttwBr+RsxjTUmZSR0GvJ0hoKQ4vxLsmYlUBcEDScjh+w8Mza1Db/NVugsurK7SehJoj26weap4WLuntUXeKYqgDadk8lnQ4kNX5VGvp4tW+SYX3lKR8Ro4T+tl4n/yLRC64yf80BxU9HMoVUotVbaQ6lXbOQxchLqQ/ktKWmdTVNzCnG/V66sW9MUICcVH3CVNyP0QcIwF0LFAZ6dtugryDrKFanwdG3+6dv8sAqSLrwIDAQABo1MwUTAdBgNVHQ4EFgQUHKsT1MqvUhipwcndJXDSHc869/MwHwYDVR0jBBgwFoAUHKsT1MqvUhipwcndJXDSHc869/MwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAUV/NGaZQVz68bnUDTYsLk3cT7N/kIn28EKWz+bNevHRUAomoR/hJWhyKjMVZ9PT5KZdy7mQ27Vdxg2aygGsOlr5WIZPOBaOOmFCWLZcHxgGQ0M7XFLFDoK9soPZ1YNbYhhG2HtnFNdoOMkNZ5gM6WLvGhl3Jq7mu4npGAWj/+0rVpEjZjk/eyEbPObel7rJewHg3Jcan1Qcu+15H18wfYQzlb0kOIMQyZqZQgj3oja9h2VkZaKQ2Km1N58C70Zsk9EzmuUs41GUX4LWJngD3+MSy7GvAa7aDAskiqGIw/OXdFgpkYHO+zCCcou2YSN/3ULRSLJWxATDM93Te3ew7kw==\n-----END CERTIFICATE-----"
         },
         {
           "id": "cert_commonName",
@@ -424,12 +424,12 @@
         {
           "id": "cert_notBefore",
           "severity": "INFO",
-          "finding": "2026-06-11 08:04"
+          "finding": "2026-06-11 11:05"
         },
         {
           "id": "cert_notAfter",
           "severity": "HIGH",
-          "finding": "2026-07-11 08:04"
+          "finding": "2026-07-11 11:05"
         },
         {
           "id": "cert_extlifeSpan",
@@ -566,9 +566,365 @@
           "cve": "CVE-2016-9244",
           "cwe": "CWE-200",
           "finding": "not vulnerable"
+        },
+        {
+          "id": "ROBOT",
+          "severity": "OK",
+          "cve": "CVE-2017-17382 CVE-2017-17427 CVE-2017-17428 CVE-2017-13098 CVE-2017-1000385 CVE-2017-13099 CVE-2016-6883 CVE-2012-5081 CVE-2017-6168",
+          "cwe": "CWE-203",
+          "finding": "not vulnerable"
+        },
+        {
+          "id": "secure_renego",
+          "severity": "OK",
+          "cwe": "CWE-310",
+          "finding": "supported"
+        },
+        {
+          "id": "secure_client_renego",
+          "severity": "OK",
+          "cve": "CVE-2011-1473",
+          "cwe": "CWE-310",
+          "finding": "not vulnerable"
+        },
+        {
+          "id": "CRIME_TLS",
+          "severity": "OK",
+          "cve": "CVE-2012-4929",
+          "cwe": "CWE-310",
+          "finding": "not vulnerable"
+        },
+        {
+          "id": "BREACH",
+          "severity": "OK",
+          "cve": "CVE-2013-3587",
+          "cwe": "CWE-310",
+          "finding": "not vulnerable, no gzip/deflate/compress/br HTTP compression  - only supplied '/' tested"
+        },
+        {
+          "id": "POODLE_SSL",
+          "severity": "OK",
+          "cve": "CVE-2014-3566",
+          "cwe": "CWE-310",
+          "finding": "not vulnerable, no SSLv3"
+        },
+        {
+          "id": "fallback_SCSV",
+          "severity": "OK",
+          "finding": "no protocol below TLS 1.2 offered"
+        },
+        {
+          "id": "SWEET32",
+          "severity": "OK",
+          "cve": "CVE-2016-2183 CVE-2016-6329",
+          "cwe": "CWE-327",
+          "finding": "not vulnerable"
+        },
+        {
+          "id": "FREAK",
+          "severity": "OK",
+          "cve": "CVE-2015-0204",
+          "cwe": "CWE-310",
+          "finding": "not vulnerable"
+        },
+        {
+          "id": "DROWN",
+          "severity": "OK",
+          "cve": "CVE-2016-0800 CVE-2016-0703",
+          "cwe": "CWE-310",
+          "finding": "not vulnerable on this host and port"
+        },
+        {
+          "id": "DROWN_hint",
+          "severity": "INFO",
+          "cve": "CVE-2016-0800 CVE-2016-0703",
+          "cwe": "CWE-310",
+          "finding": "Make sure you don't use this certificate elsewhere with SSLv2 enabled services, see https://search.censys.io/search?resource=hosts&virtual_hosts=INCLUDE&q=AE4607FE5641F7AAA57FD0E0AD653C4619F99FB05C905BAE936A914BC4B89BC5"
+        },
+        {
+          "id": "LOGJAM-common_primes",
+          "severity": "INFO",
+          "cve": "CVE-2015-4000",
+          "cwe": "CWE-310",
+          "finding": "RFC3526/Oakley Group 14"
+        },
+        {
+          "id": "LOGJAM",
+          "severity": "OK",
+          "cve": "CVE-2015-4000",
+          "cwe": "CWE-310",
+          "finding": "not vulnerable, no DH EXPORT ciphers,"
+        },
+        {
+          "id": "BEAST",
+          "severity": "OK",
+          "cve": "CVE-2011-3389",
+          "cwe": "CWE-20",
+          "finding": "not vulnerable, no SSL3 or TLS1"
+        },
+        {
+          "id": "LUCKY13",
+          "severity": "LOW",
+          "cve": "CVE-2013-0169",
+          "cwe": "CWE-310",
+          "finding": "potentially vulnerable, uses TLS CBC ciphers"
+        },
+        {
+          "id": "winshock",
+          "severity": "OK",
+          "cve": "CVE-2014-6321",
+          "cwe": "CWE-94",
+          "finding": "not vulnerable"
+        },
+        {
+          "id": "RC4",
+          "severity": "OK",
+          "cve": "CVE-2013-2566 CVE-2015-2808",
+          "cwe": "CWE-310",
+          "finding": "not vulnerable"
+        }
+      ],
+      "cipherTests": [],
+      "browserSimulations": [
+        {
+          "id": "clientsimulation-android_70",
+          "severity": "INFO",
+          "finding": "TLSv1.2 ECDHE-RSA-AES128-GCM-SHA256"
+        },
+        {
+          "id": "clientsimulation-android_81",
+          "severity": "INFO",
+          "finding": "TLSv1.2 ECDHE-RSA-AES128-GCM-SHA256"
+        },
+        {
+          "id": "clientsimulation-android_90",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-android_X",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-android_11_12",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-android_13_14",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-android_15",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-chrome_101_win10",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-chromium_137_win11",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-firefox_100_win10",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-firefox_137_win11",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-ie_8_win7",
+          "severity": "INFO",
+          "finding": "No connection"
+        },
+        {
+          "id": "clientsimulation-ie_11_win7",
+          "severity": "INFO",
+          "finding": "TLSv1.2 ECDHE-RSA-AES256-SHA384"
+        },
+        {
+          "id": "clientsimulation-ie_11_win81",
+          "severity": "INFO",
+          "finding": "TLSv1.2 ECDHE-RSA-AES256-SHA384"
+        },
+        {
+          "id": "clientsimulation-ie_11_winphone81",
+          "severity": "INFO",
+          "finding": "TLSv1.2 AES128-SHA256"
+        },
+        {
+          "id": "clientsimulation-ie_11_win10",
+          "severity": "INFO",
+          "finding": "TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384"
+        },
+        {
+          "id": "clientsimulation-edge_15_win10",
+          "severity": "INFO",
+          "finding": "TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384"
+        },
+        {
+          "id": "clientsimulation-edge_101_win10_21h2",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-edge_133_win11_23h2",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-safari_184_ios_184",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-safari_154_osx_1231",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-safari_184_osx_154",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-java_7u25",
+          "severity": "INFO",
+          "finding": "No connection"
+        },
+        {
+          "id": "clientsimulation-java_80442",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_256_GCM_SHA384"
+        },
+        {
+          "id": "clientsimulation-java_1102",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-java_1703",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_256_GCM_SHA384"
+        },
+        {
+          "id": "clientsimulation-java_2106",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_256_GCM_SHA384"
+        },
+        {
+          "id": "clientsimulation-go_1178",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "clientsimulation-libressl_336",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_CHACHA20_POLY1305_SHA256"
+        },
+        {
+          "id": "clientsimulation-openssl_102e",
+          "severity": "INFO",
+          "finding": "TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384"
+        },
+        {
+          "id": "clientsimulation-openssl_111d",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_256_GCM_SHA384"
+        },
+        {
+          "id": "clientsimulation-openssl_315",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_256_GCM_SHA384"
+        },
+        {
+          "id": "clientsimulation-openssl_350",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_256_GCM_SHA384"
+        },
+        {
+          "id": "clientsimulation-apple_mail_16_0",
+          "severity": "INFO",
+          "finding": "TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384"
+        },
+        {
+          "id": "clientsimulation-thunderbird_91_9",
+          "severity": "INFO",
+          "finding": "TLSv1.3 TLS_AES_128_GCM_SHA256"
+        }
+      ],
+      "rating": [
+        {
+          "id": "rating_spec",
+          "severity": "INFO",
+          "finding": "SSL Labs's 'SSL Server Rating Guide' (version 2009q from 2020-01-30)"
+        },
+        {
+          "id": "rating_doc",
+          "severity": "INFO",
+          "finding": "https://github.com/ssllabs/research/wiki/SSL-Server-Rating-Guide"
+        },
+        {
+          "id": "protocol_support_score",
+          "severity": "INFO",
+          "finding": "0"
+        },
+        {
+          "id": "protocol_support_score_weighted",
+          "severity": "INFO",
+          "finding": "0"
+        },
+        {
+          "id": "key_exchange_score",
+          "severity": "INFO",
+          "finding": "0"
+        },
+        {
+          "id": "key_exchange_score_weighted",
+          "severity": "INFO",
+          "finding": "0"
+        },
+        {
+          "id": "cipher_strength_score",
+          "severity": "INFO",
+          "finding": "0"
+        },
+        {
+          "id": "cipher_strength_score_weighted",
+          "severity": "INFO",
+          "finding": "0"
+        },
+        {
+          "id": "final_score",
+          "severity": "INFO",
+          "finding": "0"
+        },
+        {
+          "id": "overall_grade",
+          "severity": "CRITICAL",
+          "finding": "T"
+        },
+        {
+          "id": "grade_cap_reason_1",
+          "severity": "INFO",
+          "finding": "Grade capped to T. Issues with the chain of trust (self signed)"
+        },
+        {
+          "id": "grade_cap_reason_2",
+          "severity": "INFO",
+          "finding": "Grade capped to A. HSTS is not offered"
         }
       ]
     }
   ],
-  "scanTime": "Scan interrupted"
+  "scanTime": 65
 }

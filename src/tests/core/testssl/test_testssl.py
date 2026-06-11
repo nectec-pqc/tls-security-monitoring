@@ -13,17 +13,17 @@ def testssl():
     # TODO: kill all tasks
 
 
-def test_call_testssl(testssl):
-    result = asyncio.run(testssl.call('--help', timeout = 1))
+async def test_call_testssl(testssl):
+    result = await testssl.call('--help', timeout = 1)
     assert result.returncode == 0
     assert any('testssl [options] <URI>' in line for line in result.stdout)
 
 
-def test_testssl_error(testssl):
-    result = asyncio.run(testssl.call(
+async def test_testssl_error(testssl):
+    result = await testssl.call(
         '--this-option-is-invalid',
         timeout = 1,
-    ))
+    )
     assert result.returncode != 0
 
 
@@ -79,41 +79,63 @@ def current_openssl_server(cache_dir):
 # Or might even need to use separate container.
 # TODO: get output line-by-line, timeout on not getting new line
 @pytest.mark.slow
-def test_scan_local(testssl, current_openssl_server):
-    result = asyncio.run(testssl.call(
+async def test_scan_local(testssl, current_openssl_server):
+    result = await testssl.call(
         '--forward-secrecy', 'localhost:4433',
-    ))
+    )
     assert result.returncode == 0
     assert any('X25519MLKEM768' in line for line in result.stdout)
 
 
 # TODO: Maybe create a command to generate test case file
 # instead of piggybacking on test running infrastructure?
-# FIXME: Current output have field `"scanTime": "Scan interrupted"`
-# Do I give it too little time?
-# FIXME: Case that ran later is getting stuck.
+# TODO: Make proper tests for testssl json generation cases
 @pytest.mark.skip(
     'Not a real test.'
     ' For producing test case file used in other tests.'
 )
 @pytest.mark.slow
-def test_generate_testssl_json(testssl, current_openssl_server):
+async def test_generate_testssl_json(testssl, current_openssl_server):
     import json
-    out_dir = Path(__file__).parent / 'result_cases'
+    out_dir = Path(__file__).parent / 'result_cases/current_openssl_server'
     out_dir.mkdir(parents = True, exist_ok = True)
     tmp_file = out_dir / 'tmp.json'
     tmp_file.unlink(missing_ok = True)
 
-    for opts, filename in [
-        (('--jsonfile', str(tmp_file)), 'current_openssl_server.json'),
-        (('--jsonfile-pretty', str(tmp_file)), 'current_openssl_server.pretty.json'),
+    for testssl_opts, call_kwargs, filename in [
+        (
+            ('--jsonfile', str(tmp_file)),
+            {},
+            'success.json',
+        ),
+        (
+            ('--jsonfile-pretty', str(tmp_file)),
+            {},
+            'success.pretty.json',
+        ),
+        (
+            ('--jsonfile', str(tmp_file)),
+            {'idle_timeout': 10},
+            'idle_timeout.json',
+        ),
+        # FIXME: Next process sometimes get stuck after
+        # previous process idle_timeout
+        (
+            ('--jsonfile-pretty', str(tmp_file)),
+            {'idle_timeout': 10},
+            'idle_timeout.pretty.json',
+        ),
     ]:
-        result = asyncio.run(testssl.call(
-            *opts, 'localhost:4433',
+        result = await testssl.call(
+            *testssl_opts, 'localhost:4433',
             cwd = out_dir,
-        ))
+            **call_kwargs,
+        )
 
         with open(tmp_file) as f:
+            # FIXME: testssl sometimes produce invalid JSON.
+            # I have seen --json mode produce the last "scanTime" item
+            # outside of its main list.
             content = json.load(f)
         with open(out_dir / filename, 'w') as f:
             json.dump(content, f, indent = 2)

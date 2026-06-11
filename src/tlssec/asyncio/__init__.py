@@ -35,8 +35,8 @@ async def run_subprocess(
     # TODO: test other choices such as: file, None, devnull
     stdout = asyncio.subprocess.PIPE,
     stderr = asyncio.subprocess.PIPE,
-    timeout = 180,
-    idle_timeout = 10,
+    timeout = 360,
+    idle_timeout = 30,
     termination_grace = 1,
     **kwargs,
 ) -> CompletedProcess:
