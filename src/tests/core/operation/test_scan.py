@@ -1,6 +1,5 @@
 import asyncio
 import subprocess
-from pathlib import Path
 
 import pytest
 
@@ -28,13 +27,13 @@ def test_testssl_error(testssl):
 
 
 @pytest.fixture(scope = 'module')
-def current_openssl_server():
+def current_openssl_server(cache_dir):
     """Start an openssl server to use as target of test scan on localhost.
 
     This server will use the current openssl version installed in tlssec image.
     """
     # First ensure server certificate exists. Just issue a self-signed one.
-    server_config_dir = Path.home() / '.cache/tlssec/test/current_openssl_server'
+    server_config_dir = cache_dir / 'current_openssl_server'
     server_config_dir.mkdir(parents = True, exist_ok = True)
     subprocess.run(
         [
