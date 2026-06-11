@@ -1,0 +1,574 @@
+{
+  "clientProblem1": [
+    {
+      "id": "engine_problem",
+      "severity": "WARN",
+      "finding": "No engine or GOST support via engine with your /usr/bin/openssl"
+    }
+  ],
+  "Invocation": "testssl --jsonfile-pretty /opt/app/src/tests/core/testssl/result_cases/tmp.json localhost:4433",
+  "at": "e67f2e55f0a1:/usr/bin/openssl",
+  "version": "3.2.1 ",
+  "openssl": "OpenSSL 3.5.5 from Fri Apr 3 10:05:32 2026",
+  "startTime": "1781165088",
+  "scanResult": [
+    {
+      "targetHost": "localhost",
+      "ip": "127.0.0.1",
+      "port": "4433",
+      "rDNS": "localhost.",
+      "service": "HTTP",
+      "pretest": [
+        {
+          "id": "pre_128cipher",
+          "severity": "INFO",
+          "finding": "No 128 cipher limit bug"
+        }
+      ],
+      "protocols": [
+        {
+          "id": "SSLv2",
+          "severity": "OK",
+          "finding": "not offered"
+        },
+        {
+          "id": "SSLv3",
+          "severity": "OK",
+          "finding": "not offered"
+        },
+        {
+          "id": "TLS1",
+          "severity": "INFO",
+          "finding": "not offered"
+        },
+        {
+          "id": "TLS1_1",
+          "severity": "INFO",
+          "finding": "not offered"
+        },
+        {
+          "id": "TLS1_2",
+          "severity": "OK",
+          "finding": "offered"
+        },
+        {
+          "id": "TLS1_3",
+          "severity": "OK",
+          "finding": "offered with final"
+        },
+        {
+          "id": "NPN",
+          "severity": "INFO",
+          "finding": "not offered"
+        },
+        {
+          "id": "ALPN",
+          "severity": "INFO",
+          "finding": "not offered"
+        }
+      ],
+      "grease": [],
+      "ciphers": [
+        {
+          "id": "cipherlist_NULL",
+          "severity": "OK",
+          "cwe": "CWE-327",
+          "finding": "not offered"
+        },
+        {
+          "id": "cipherlist_aNULL",
+          "severity": "OK",
+          "cwe": "CWE-327",
+          "finding": "not offered"
+        },
+        {
+          "id": "cipherlist_EXPORT",
+          "severity": "OK",
+          "cwe": "CWE-327",
+          "finding": "not offered"
+        },
+        {
+          "id": "cipherlist_LOW",
+          "severity": "OK",
+          "cwe": "CWE-327",
+          "finding": "not offered"
+        },
+        {
+          "id": "cipherlist_3DES_IDEA",
+          "severity": "INFO",
+          "cwe": "CWE-310",
+          "finding": "not offered"
+        },
+        {
+          "id": "cipherlist_OBSOLETED",
+          "severity": "LOW",
+          "cwe": "CWE-310",
+          "finding": "offered"
+        },
+        {
+          "id": "cipherlist_STRONG_NOFS",
+          "severity": "OK",
+          "finding": "offered"
+        },
+        {
+          "id": "cipherlist_STRONG_FS",
+          "severity": "OK",
+          "finding": "offered"
+        }
+      ],
+      "serverPreferences": [
+        {
+          "id": "cipher_order-tls1_2",
+          "severity": "LOW",
+          "finding": "NOT a cipher order configured"
+        },
+        {
+          "id": "cipher-tls1_2_xc030",
+          "severity": "OK",
+          "finding": "TLSv1.2   xc030   ECDHE-RSA-AES256-GCM-SHA384       ECDH 253   AESGCM      256      TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        },
+        {
+          "id": "cipher-tls1_2_xc028",
+          "severity": "LOW",
+          "finding": "TLSv1.2   xc028   ECDHE-RSA-AES256-SHA384           ECDH 253   AES         256      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384"
+        },
+        {
+          "id": "cipher-tls1_2_xc014",
+          "severity": "LOW",
+          "finding": "TLSv1.2   xc014   ECDHE-RSA-AES256-SHA              ECDH 253   AES         256      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"
+        },
+        {
+          "id": "cipher-tls1_2_x9f",
+          "severity": "OK",
+          "finding": "TLSv1.2   x9f     DHE-RSA-AES256-GCM-SHA384         DH 2048    AESGCM      256      TLS_DHE_RSA_WITH_AES_256_GCM_SHA384"
+        },
+        {
+          "id": "cipher-tls1_2_xcca8",
+          "severity": "OK",
+          "finding": "TLSv1.2   xcca8   ECDHE-RSA-CHACHA20-POLY1305       ECDH 253   ChaCha20    256      TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+        },
+        {
+          "id": "cipher-tls1_2_xccaa",
+          "severity": "OK",
+          "finding": "TLSv1.2   xccaa   DHE-RSA-CHACHA20-POLY1305         DH 2048    ChaCha20    256      TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+        },
+        {
+          "id": "cipher-tls1_2_x6b",
+          "severity": "LOW",
+          "finding": "TLSv1.2   x6b     DHE-RSA-AES256-SHA256             DH 2048    AES         256      TLS_DHE_RSA_WITH_AES_256_CBC_SHA256"
+        },
+        {
+          "id": "cipher-tls1_2_x39",
+          "severity": "LOW",
+          "finding": "TLSv1.2   x39     DHE-RSA-AES256-SHA                DH 2048    AES         256      TLS_DHE_RSA_WITH_AES_256_CBC_SHA"
+        },
+        {
+          "id": "cipher-tls1_2_x9d",
+          "severity": "OK",
+          "finding": "TLSv1.2   x9d     AES256-GCM-SHA384                 RSA        AESGCM      256      TLS_RSA_WITH_AES_256_GCM_SHA384"
+        },
+        {
+          "id": "cipher-tls1_2_x3d",
+          "severity": "LOW",
+          "finding": "TLSv1.2   x3d     AES256-SHA256                     RSA        AES         256      TLS_RSA_WITH_AES_256_CBC_SHA256"
+        },
+        {
+          "id": "cipher-tls1_2_x35",
+          "severity": "LOW",
+          "finding": "TLSv1.2   x35     AES256-SHA                        RSA        AES         256      TLS_RSA_WITH_AES_256_CBC_SHA"
+        },
+        {
+          "id": "cipher-tls1_2_xc02f",
+          "severity": "OK",
+          "finding": "TLSv1.2   xc02f   ECDHE-RSA-AES128-GCM-SHA256       ECDH 253   AESGCM      128      TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "cipher-tls1_2_xc027",
+          "severity": "LOW",
+          "finding": "TLSv1.2   xc027   ECDHE-RSA-AES128-SHA256           ECDH 253   AES         128      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
+        },
+        {
+          "id": "cipher-tls1_2_xc013",
+          "severity": "LOW",
+          "finding": "TLSv1.2   xc013   ECDHE-RSA-AES128-SHA              ECDH 253   AES         128      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA"
+        },
+        {
+          "id": "cipher-tls1_2_x9e",
+          "severity": "OK",
+          "finding": "TLSv1.2   x9e     DHE-RSA-AES128-GCM-SHA256         DH 2048    AESGCM      128      TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "cipher-tls1_2_x67",
+          "severity": "LOW",
+          "finding": "TLSv1.2   x67     DHE-RSA-AES128-SHA256             DH 2048    AES         128      TLS_DHE_RSA_WITH_AES_128_CBC_SHA256"
+        },
+        {
+          "id": "cipher-tls1_2_x33",
+          "severity": "LOW",
+          "finding": "TLSv1.2   x33     DHE-RSA-AES128-SHA                DH 2048    AES         128      TLS_DHE_RSA_WITH_AES_128_CBC_SHA"
+        },
+        {
+          "id": "cipher-tls1_2_x9c",
+          "severity": "OK",
+          "finding": "TLSv1.2   x9c     AES128-GCM-SHA256                 RSA        AESGCM      128      TLS_RSA_WITH_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "cipher-tls1_2_x3c",
+          "severity": "LOW",
+          "finding": "TLSv1.2   x3c     AES128-SHA256                     RSA        AES         128      TLS_RSA_WITH_AES_128_CBC_SHA256"
+        },
+        {
+          "id": "cipher-tls1_2_x2f",
+          "severity": "LOW",
+          "finding": "TLSv1.2   x2f     AES128-SHA                        RSA        AES         128      TLS_RSA_WITH_AES_128_CBC_SHA"
+        },
+        {
+          "id": "supportedciphers_TLSv1_2",
+          "severity": "INFO",
+          "finding": "ECDHE-RSA-AES256-GCM-SHA384 ECDHE-RSA-AES256-SHA384 ECDHE-RSA-AES256-SHA DHE-RSA-AES256-GCM-SHA384 ECDHE-RSA-CHACHA20-POLY1305 DHE-RSA-CHACHA20-POLY1305 DHE-RSA-AES256-SHA256 DHE-RSA-AES256-SHA AES256-GCM-SHA384 AES256-SHA256 AES256-SHA ECDHE-RSA-AES128-GCM-SHA256 ECDHE-RSA-AES128-SHA256 ECDHE-RSA-AES128-SHA DHE-RSA-AES128-GCM-SHA256 DHE-RSA-AES128-SHA256 DHE-RSA-AES128-SHA AES128-GCM-SHA256 AES128-SHA256 AES128-SHA"
+        },
+        {
+          "id": "cipher_order-tls1_3",
+          "severity": "INFO",
+          "finding": "NOT a cipher order configured"
+        },
+        {
+          "id": "cipher-tls1_3_x1302",
+          "severity": "OK",
+          "finding": "TLSv1.3   x1302   TLS_AES_256_GCM_SHA384            ECDH/MLKEM AESGCM      256      TLS_AES_256_GCM_SHA384"
+        },
+        {
+          "id": "cipher-tls1_3_x1303",
+          "severity": "OK",
+          "finding": "TLSv1.3   x1303   TLS_CHACHA20_POLY1305_SHA256      ECDH/MLKEM ChaCha20    256      TLS_CHACHA20_POLY1305_SHA256"
+        },
+        {
+          "id": "cipher-tls1_3_x1301",
+          "severity": "OK",
+          "finding": "TLSv1.3   x1301   TLS_AES_128_GCM_SHA256            ECDH/MLKEM AESGCM      128      TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "supportedciphers_TLSv1_3",
+          "severity": "INFO",
+          "finding": "TLS_AES_256_GCM_SHA384 TLS_CHACHA20_POLY1305_SHA256 TLS_AES_128_GCM_SHA256"
+        },
+        {
+          "id": "cipher_order",
+          "severity": "LOW",
+          "finding": "NOT a cipher order configured"
+        }
+      ],
+      "fs": [
+        {
+          "id": "FS",
+          "severity": "OK",
+          "finding": "offered"
+        },
+        {
+          "id": "FS_ciphers",
+          "severity": "INFO",
+          "finding": "TLS_AES_256_GCM_SHA384 TLS_CHACHA20_POLY1305_SHA256 ECDHE-RSA-AES256-GCM-SHA384 ECDHE-RSA-AES256-SHA384 ECDHE-RSA-AES256-SHA DHE-RSA-AES256-GCM-SHA384 ECDHE-RSA-CHACHA20-POLY1305 DHE-RSA-CHACHA20-POLY1305 DHE-RSA-AES256-SHA256 DHE-RSA-AES256-SHA TLS_AES_128_GCM_SHA256 ECDHE-RSA-AES128-GCM-SHA256 ECDHE-RSA-AES128-SHA256 ECDHE-RSA-AES128-SHA DHE-RSA-AES128-GCM-SHA256 DHE-RSA-AES128-SHA256 DHE-RSA-AES128-SHA"
+        },
+        {
+          "id": "FS_KEMs",
+          "severity": "OK",
+          "finding": "X25519MLKEM768"
+        },
+        {
+          "id": "FS_ECDHE_curves",
+          "severity": "OK",
+          "finding": "prime256v1 secp384r1 secp521r1 X25519 X448"
+        },
+        {
+          "id": "DH_groups",
+          "severity": "OK",
+          "finding": "ffdhe2048 ffdhe3072"
+        },
+        {
+          "id": "FS_TLS12_sig_algs",
+          "severity": "INFO",
+          "finding": "RSA-PSS-RSAE+SHA512 RSA-PSS-RSAE+SHA384 RSA-PSS-RSAE+SHA256 RSA+SHA512 RSA+SHA384 RSA+SHA256 RSA+SHA224"
+        },
+        {
+          "id": "FS_TLS13_sig_algs",
+          "severity": "INFO",
+          "finding": "RSA-PSS-RSAE+SHA512 RSA-PSS-RSAE+SHA384 RSA-PSS-RSAE+SHA256"
+        }
+      ],
+      "serverDefaults": [
+        {
+          "id": "TLS_extensions",
+          "severity": "INFO",
+          "finding": "'max fragment length/#1' 'EC point formats/#11' 'encrypt-then-mac/#22' 'extended master secret/#23' 'session ticket/#35' 'supported versions/#43' 'key share/#51' 'renegotiation info/#65281'"
+        },
+        {
+          "id": "TLS_session_ticket",
+          "severity": "INFO",
+          "finding": "valid for 7200 seconds only (<daily)"
+        },
+        {
+          "id": "SSL_sessionID_support",
+          "severity": "INFO",
+          "finding": "yes"
+        },
+        {
+          "id": "sessionresumption_ticket",
+          "severity": "INFO",
+          "finding": "supported"
+        },
+        {
+          "id": "sessionresumption_ID",
+          "severity": "INFO",
+          "finding": "supported"
+        },
+        {
+          "id": "TLS_timestamp",
+          "severity": "INFO",
+          "finding": "random"
+        },
+        {
+          "id": "certificate_compression",
+          "severity": "INFO",
+          "finding": "none"
+        },
+        {
+          "id": "clientAuth",
+          "severity": "INFO",
+          "finding": "none"
+        },
+        {
+          "id": "cert_numbers",
+          "severity": "INFO",
+          "finding": "1"
+        },
+        {
+          "id": "cert_signatureAlgorithm",
+          "severity": "OK",
+          "finding": "SHA256 with RSA"
+        },
+        {
+          "id": "cert_keySize",
+          "severity": "INFO",
+          "finding": "RSA 2048 bits (exponent is 65537)"
+        },
+        {
+          "id": "cert_keyUsage",
+          "severity": "INFO",
+          "finding": "No server key usage information"
+        },
+        {
+          "id": "cert_extKeyUsage",
+          "severity": "INFO",
+          "finding": "No server extended key usage information"
+        },
+        {
+          "id": "cert_serialNumber",
+          "severity": "INFO",
+          "finding": "7367E714FFF0CB1EE153A9922DB442DE03AC099F"
+        },
+        {
+          "id": "cert_serialNumberLen",
+          "severity": "INFO",
+          "finding": "20"
+        },
+        {
+          "id": "cert_fingerprintSHA1",
+          "severity": "INFO",
+          "finding": "067FC6D12A810892054773304DDCBDBCF40BAB20"
+        },
+        {
+          "id": "cert_fingerprintSHA256",
+          "severity": "INFO",
+          "finding": "49B2D237ED083F7B77B8D555647AB5951213EB47906890D1A8D914724408116F"
+        },
+        {
+          "id": "cert",
+          "severity": "INFO",
+          "finding": "-----BEGIN CERTIFICATE-----\nMIIDCTCCAfGgAwIBAgIUc2fnFP/wyx7hU6mSLbRC3gOsCZ8wDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMTA4MDQ0OFoXDTI2MDcxMTA4MDQ0OFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA24ni18x9PxJ/qVjO8JKrjM7bomBr6+JQTt/r1qZXDWRgLxOlnv2PYk4WXaQ/+KEaszJOAViXdRw+BraSIogXgPSx3gDm/E0e8mMHf+XyPYvGQUVaxDzErwzZjMWMXeKBoQfJar9Sj0B30WiTZIRHeTXQWW5YKJYO2r+q/s5Qdi6TGW2gXu8Jp3mUbhj/1RUYICjNGPGhCgLdYw//akgG+CdXJwG3RqdtTUT/oa3+dGexwLdRTsAe4wXZwusFLFuzXuL2ZaCnkZcgPUcOfQp0vLD30/AexHW5Pchf4sWuxs+nrKfGNpob0Uji2RzYlOqtRnatCo3UXhQtCSPFlOA0BwIDAQABo1MwUTAdBgNVHQ4EFgQUZMjpV8GWS433AahUXB5484IBOA8wHwYDVR0jBBgwFoAUZMjpV8GWS433AahUXB5484IBOA8wDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAVkTUtVBHgG4xrKdKNrM1Y0k1oz4m4aWmaMJzUCQ/5Fz/gPH+ga5kQ20wzfuEsihneFVUG5DyoLe1ePQ7h334kKrhkAUKemJmxT24J3DcT6dyX3fNKqRm6Qi8flY+pvze3R7+QwQirLPYekSrP/YJLGqWgP1xwo08fCeoKhsmUfDzlAHL9wu3Fcb1aF6N3uhnfDTPvyxJX0cgPlFckSagqvUzqYNc1/nAL+beWGjMaSg+FaOqaD1t8IlUCfIGh9l1oDoeqdEXAV//87Yla7lgPfCk9AKK6zwGYIT3Cd58xSvb3mBVuDDvTCzPbrVnRzQctIwdlTFJLAECjuXwlcDAtQ==\n-----END CERTIFICATE-----"
+        },
+        {
+          "id": "cert_commonName",
+          "severity": "OK",
+          "finding": "localhost"
+        },
+        {
+          "id": "cert_commonName_wo_SNI",
+          "severity": "INFO",
+          "finding": "localhost"
+        },
+        {
+          "id": "cert_subjectAltName",
+          "severity": "HIGH",
+          "finding": "No SAN, browsers are complaining"
+        },
+        {
+          "id": "cert_trust",
+          "severity": "HIGH",
+          "finding": "via CN only (same w/o SNI)"
+        },
+        {
+          "id": "cert_chain_of_trust",
+          "severity": "CRITICAL",
+          "finding": "failed (self signed)."
+        },
+        {
+          "id": "cert_certificatePolicies_EV",
+          "severity": "INFO",
+          "finding": "no"
+        },
+        {
+          "id": "cert_expirationStatus",
+          "severity": "HIGH",
+          "finding": "expires < 30 days (29)"
+        },
+        {
+          "id": "cert_notBefore",
+          "severity": "INFO",
+          "finding": "2026-06-11 08:04"
+        },
+        {
+          "id": "cert_notAfter",
+          "severity": "HIGH",
+          "finding": "2026-07-11 08:04"
+        },
+        {
+          "id": "cert_extlifeSpan",
+          "severity": "OK",
+          "finding": "certificate has no extended life time according to browser forum"
+        },
+        {
+          "id": "cert_eTLS",
+          "severity": "INFO",
+          "finding": "not present"
+        },
+        {
+          "id": "cert_crlDistributionPoints",
+          "severity": "INFO",
+          "finding": "--"
+        },
+        {
+          "id": "cert_ocspURL",
+          "severity": "INFO",
+          "finding": "--"
+        },
+        {
+          "id": "cert_revocation",
+          "severity": "HIGH",
+          "finding": "Neither CRL nor OCSP URI provided"
+        },
+        {
+          "id": "OCSP_stapling",
+          "severity": "INFO",
+          "finding": "not offered"
+        },
+        {
+          "id": "cert_mustStapleExtension",
+          "severity": "INFO",
+          "finding": "--"
+        },
+        {
+          "id": "DNS_CAArecord",
+          "severity": "LOW",
+          "finding": "--"
+        },
+        {
+          "id": "certificate_transparency",
+          "severity": "INFO",
+          "finding": "--"
+        },
+        {
+          "id": "certs_countServer",
+          "severity": "INFO",
+          "finding": "1"
+        },
+        {
+          "id": "certs_list_ordering_problem",
+          "severity": "INFO",
+          "finding": "no"
+        },
+        {
+          "id": "cert_caIssuers",
+          "severity": "INFO",
+          "finding": "localhost"
+        },
+        {
+          "id": "intermediate_cert_badOCSP",
+          "severity": "OK",
+          "finding": "intermediate certificate(s) is/are ok"
+        }
+      ],
+      "headerResponse": [
+        {
+          "id": "HTTP_status_code",
+          "severity": "INFO",
+          "finding": "200 ok ('/')"
+        },
+        {
+          "id": "HTTP_clock_skew",
+          "severity": "INFO",
+          "finding": "Got no HTTP time, maybe try different URL?"
+        },
+        {
+          "id": "HSTS",
+          "severity": "LOW",
+          "finding": "not offered"
+        },
+        {
+          "id": "HPKP",
+          "severity": "INFO",
+          "finding": "No support for HTTP Public Key Pinning"
+        },
+        {
+          "id": "banner_server",
+          "severity": "INFO",
+          "finding": "No Server banner line in header, interesting!"
+        },
+        {
+          "id": "banner_application",
+          "severity": "INFO",
+          "finding": "No application banner found"
+        },
+        {
+          "id": "cookie_count",
+          "severity": "INFO",
+          "finding": "0 at '/'"
+        },
+        {
+          "id": "security_headers",
+          "severity": "MEDIUM",
+          "finding": "--"
+        },
+        {
+          "id": "banner_reverseproxy",
+          "severity": "INFO",
+          "cwe": "CWE-200",
+          "finding": "--"
+        }
+      ],
+      "vulnerabilities": [
+        {
+          "id": "heartbleed",
+          "severity": "OK",
+          "cve": "CVE-2014-0160",
+          "cwe": "CWE-119",
+          "finding": "not vulnerable, no heartbeat extension"
+        },
+        {
+          "id": "CCS",
+          "severity": "OK",
+          "cve": "CVE-2014-0224",
+          "cwe": "CWE-310",
+          "finding": "not vulnerable"
+        },
+        {
+          "id": "ticketbleed",
+          "severity": "OK",
+          "cve": "CVE-2016-9244",
+          "cwe": "CWE-200",
+          "finding": "not vulnerable"
+        }
+      ]
+    }
+  ],
+  "scanTime": "Scan interrupted"
+}

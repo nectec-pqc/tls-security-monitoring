@@ -1,5 +1,6 @@
 import asyncio
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -80,9 +81,41 @@ def current_openssl_server(cache_dir):
 @pytest.mark.slow
 def test_scan_local(testssl, current_openssl_server):
     result = asyncio.run(testssl.call(
-        # TODO: test with faster running option
         '--forward-secrecy', 'localhost:4433',
-        timeout = 180,
     ))
     assert result.returncode == 0
     assert any('X25519MLKEM768' in line for line in result.stdout)
+
+
+# TODO: Maybe create a command to generate test case file
+# instead of piggybacking on test running infrastructure?
+# FIXME: Current output have field `"scanTime": "Scan interrupted"`
+# Do I give it too little time?
+# FIXME: Case that ran later is getting stuck.
+@pytest.mark.skip(
+    'Not a real test.'
+    ' For producing test case file used in other tests.'
+)
+@pytest.mark.slow
+def test_generate_testssl_json(testssl, current_openssl_server):
+    import json
+    out_dir = Path(__file__).parent / 'result_cases'
+    out_dir.mkdir(parents = True, exist_ok = True)
+    tmp_file = out_dir / 'tmp.json'
+    tmp_file.unlink(missing_ok = True)
+
+    for opts, filename in [
+        (('--jsonfile', str(tmp_file)), 'current_openssl_server.json'),
+        (('--jsonfile-pretty', str(tmp_file)), 'current_openssl_server.pretty.json'),
+    ]:
+        result = asyncio.run(testssl.call(
+            *opts, 'localhost:4433',
+            cwd = out_dir,
+        ))
+
+        with open(tmp_file) as f:
+            content = json.load(f)
+        with open(out_dir / filename, 'w') as f:
+            json.dump(content, f, indent = 2)
+
+        tmp_file.unlink(missing_ok = True)
