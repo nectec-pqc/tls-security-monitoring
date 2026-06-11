@@ -28,7 +28,8 @@ class Scan(SQLModel):
         default = None,
         description = 'seconds taken to complete the scan',
     )
-    belong_to_endpoint_id: int = Field(
+    belong_to_endpoint_id: int | None = Field(
+        default = None,
         foreign_key = 'endpoint.id',
         index = True,
     )
