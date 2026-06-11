@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import pytest
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
+from sqlalchemy import select
 
 import tlssec.core.model as m
 
@@ -38,7 +38,7 @@ def test_create_and_query_endpoint(session):
     svc = make_service(session)
     ep = make_endpoint(session, svc)
 
-    result = session.exec(
+    result = session.scalars(
         select(m.EndpointTable).where(m.EndpointTable.id == ep.id)
     ).one()
 
@@ -74,7 +74,7 @@ def test_different_port_is_allowed(session):
     make_endpoint(session, svc, port=443)
     make_endpoint(session, svc, port=8443)
 
-    results = session.exec(
+    results = session.scalars(
         select(m.EndpointTable).where(m.EndpointTable.part_of_service_id == svc.id)
     ).all()
     assert len(results) == 2
@@ -83,7 +83,7 @@ def test_retire_at_can_be_set(session):
     svc = make_service(session)
     ep = make_endpoint(session, svc, retire_at=LATER)
 
-    result = session.exec(
+    result = session.scalars(
         select(m.EndpointTable).where(m.EndpointTable.id == ep.id)
     ).one()
     assert result.retire_at == LATER
@@ -93,7 +93,7 @@ def test_different_protocol_is_allowed(session):
     make_endpoint(session, svc, protocol='tcp')
     make_endpoint(session, svc, protocol='https')
 
-    results = session.exec(
+    results = session.scalars(
         select(m.EndpointTable).where(m.EndpointTable.part_of_service_id == svc.id)
     ).all()
     assert len(results) == 2
@@ -104,7 +104,7 @@ def test_different_path_is_allowed(session):
     make_endpoint(session, svc, path='/')
     make_endpoint(session, svc, path='/api/v1')
 
-    results = session.exec(
+    results = session.scalars(
         select(m.EndpointTable).where(m.EndpointTable.part_of_service_id == svc.id)
     ).all()
     assert len(results) == 2
@@ -115,7 +115,7 @@ def test_different_hostname_is_allowed(session):
     make_endpoint(session, svc, hostname='a.example.com')
     make_endpoint(session, svc, hostname='b.example.com')
 
-    results = session.exec(
+    results = session.scalars(
         select(m.EndpointTable).where(m.EndpointTable.part_of_service_id == svc.id)
     ).all()
     assert len(results) == 2

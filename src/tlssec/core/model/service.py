@@ -1,127 +1,111 @@
 from typing import Optional
 from pathlib import PurePosixPath
 
-from sqlmodel import Field, Relationship
+from pydantic import BaseModel, ConfigDict, Field as PydanticField
 from sqlalchemy import (
-    Column,
     Integer,
     Identity,
     UniqueConstraint,
+    String,
+    ForeignKey,
 )
-from sqlalchemy.orm import attribute_keyed_dict
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
+    relationship,
+    attribute_keyed_dict,
+)
 
-from tlssec.database.sqlmodel import SQLModel
+from tlssec.database.base import Base
 from .validator import EmptyToNoneStr
 
 
-class ServiceTagMap(SQLModel): 
-    service_id: int  = Field(
-        primary_key = True,
-        foreign_key = 'service.id',
-    )
-    tag_id: int = Field(
-        primary_key = True,
-        foreign_key = 'service_tag.id',
-        # Postgres don't automatically create index on foreign key.
-        # So, unless the foreign key is already a prefix of primary key (like service_id),
-        # we need to explicitly create an index.
-        index = True,
-    )
+class ServiceTagMap(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    service_id: int
+    tag_id: int
 
 
-class ServiceTagMapTable(ServiceTagMap, table = True): 
-    pass
+class ServiceTagMapTable(Base):
+    service_id: Mapped[int] = mapped_column(ForeignKey('service.id'), primary_key=True)
+    tag_id: Mapped[int] = mapped_column(ForeignKey('service_tag.id'), primary_key=True, index=True)
 
 
-class Service(SQLModel):
-    """A Logical service that does a single application / bussiness function.
+class Service(BaseModel):
+    """A logical service that does a single application / business function."""
+    model_config = ConfigDict(from_attributes=True)
 
-    The same service may be served on multiple endpoints.
-    The endpoint that serve this service may change over time.
-    """
-    id: int | None = Field(
-        default = None,
-        sa_column = Column(Integer, Identity(always = True), primary_key = True)
+    id: int | None = None
+    name: str = PydanticField(
+        min_length=1,
+        max_length=50,
+        pattern=r'^[a-zA-Z_][a-zA-Z0-9_]*$',
     )
-    name: str = Field(
-        index = True,
-        unique = True,
-        min_length = 1,
-        max_length = 50,
-        schema_extra = {'pattern': r'^[a-zA-Z_][a-zA-Z0-9_]*$'},
-    )
-    description: EmptyToNoneStr = Field(
-        default = None,
-        max_length = 500,
-        description = 'A few sentences on what this service is and what it provides',
-    )
-    hostname: str = Field(
-        index = True,
-        max_length = 255,
-    )
+    description: EmptyToNoneStr = None
+    hostname: str = PydanticField(max_length=255)
 
 
-class ServiceTable(Service, table = True):
-    tags: list['ServiceTagTable'] = Relationship(
-        back_populates = 'services',
-        link_model = ServiceTagMapTable,
+class ServiceTable(Base):
+    id: Mapped[int] = mapped_column(Integer, Identity(always=True), primary_key=True)
+    name: Mapped[str] = mapped_column(String(50), index=True, unique=True)
+    description: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    hostname: Mapped[str] = mapped_column(String(255), index=True)
+
+    tags: Mapped[list['ServiceTagTable']] = relationship(
+        secondary='service_tag_map',
+        back_populates='services',
     )
-    endpoints: list['EndpointTable'] = Relationship(back_populates='service') 
+    endpoints: Mapped[list['EndpointTable']] = relationship(back_populates='service')
 
 
-class ServiceTag(SQLModel):
-    """Tags to help organize and search for service"""
-    id: int | None = Field(
-        default = None,
-        sa_column = Column(Integer, Identity(always = True), primary_key = True)
+class ServiceTag(BaseModel):
+    """Tags to help organize and search for services."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int | None = None
+    parent_id: int | None = None
+    name: str = PydanticField(
+        min_length=1,
+        max_length=30,
+        pattern=r'^[a-zA-Z_][a-zA-Z0-9_]*$',
     )
-    parent_id: int | None = Field(
-        default = None,
-        foreign_key = 'service_tag.id',
-        index = True,
-        ondelete = 'SET NULL',
-        description = (
-            'ID of parent tag.'
-            ' Parent tag must also be applied if child tag is applied.',
-        ),
+    description: EmptyToNoneStr = None
+
+
+class ServiceTagTable(Base):
+    id: Mapped[int] = mapped_column(Integer, Identity(always=True), primary_key=True)
+    parent_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey('service_tag.id', ondelete='SET NULL'),
+        nullable=True,
+        index=True,
     )
-    name: str = Field(
-        index = True,
-        min_length = 1,
-        max_length = 30,
-        # NOTE: Can not use `regex` or `pattern` option directly because of
-        # https://github.com/fastapi/sqlmodel/pull/1231
-        schema_extra = {'pattern': r'^[a-zA-Z_][a-zA-Z0-9_]*$'},
-        description = 'Tag name which must be unique among siblings',
-    )
-    description: EmptyToNoneStr = Field(
-        default = None,
-        max_length = 500,
-    )
+    name: Mapped[str] = mapped_column(String(30), index=True)
+    description: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
     __table_args__ = (
         UniqueConstraint(
             'parent_id', 'name',
-            postgresql_nulls_not_distinct = True,
+            postgresql_nulls_not_distinct=True,
         ),
     )
 
+    parent: Mapped[Optional['ServiceTagTable']] = relationship(
+        back_populates='children',
+        foreign_keys='[ServiceTagTable.parent_id]',
+        remote_side='ServiceTagTable.id',
+    )
+    children: Mapped[dict[str, 'ServiceTagTable']] = relationship(
+        back_populates='parent',
+        foreign_keys='[ServiceTagTable.parent_id]',
+        collection_class=attribute_keyed_dict('name'),
+    )
+    services: Mapped[list['ServiceTable']] = relationship(
+        secondary='service_tag_map',
+        back_populates='tags',
+    )
 
-class ServiceTagTable(ServiceTag, table = True):
-    parent: Optional[ServiceTagTable] = Relationship(
-        back_populates = 'children',
-        sa_relationship_kwargs = {'remote_side': (lambda: ServiceTagTable.id)},
-    )
-    children: dict[str, ServiceTagTable] = Relationship(
-        back_populates = 'parent',
-        sa_relationship_kwargs = {'collection_class': attribute_keyed_dict('name')},
-    )
-    services: list['ServiceTable'] = Relationship(
-        back_populates = 'tags',
-        link_model = ServiceTagMapTable,
-    )
-
-    def __init__(self, children = None, **kwargs):
+    def __init__(self, children=None, **kwargs):
         if isinstance(children, list):
             children = {child.name: child for child in children}
         if children:
@@ -130,14 +114,10 @@ class ServiceTagTable(ServiceTag, table = True):
 
     @property
     def fullpath(self) -> PurePosixPath:
-        # TODO: cache and clear cache on orm lifecycle events
         cursor = self
         lineage = []
         visited = set()
-        while cursor != None:
-            # NOTE: use python object ID instead of `cursor.id`
-            # to allow loop detection even before adding to database.
-            # ORM session helps make sure object with same tag ID are not duplicated in python.
+        while cursor is not None:
             if id(cursor) in visited:
                 raise ValueError(f'tag loop detected: {lineage}')
             lineage.append(cursor)
