@@ -1,5 +1,5 @@
 import pytest
-from sqlmodel import select
+from sqlalchemy import select
 
 import tlssec.core.model as m
 

@@ -49,7 +49,7 @@ def scan(
     for path in paths:
         _logger.info(f'importing scan from {path}')
         try:
-            scan = model.ScanTable.from_file(path)
+            scan = model.Scan.from_file(path)
             op.import_scan(scan, session = state.db.session)
             state.db.session.commit()
         except Exception as e:

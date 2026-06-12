@@ -3,7 +3,7 @@ from contextlib import nullcontext
 import pytest
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
+from sqlalchemy import select
 
 import tlssec.core.model as m
 
@@ -83,7 +83,7 @@ def test_traverse_tag_hierarchy(session):
     session.add_all(tags)
     
     # Readback and check tag hierarchy can be accessed through relationship attributes
-    results = session.exec(
+    results = session.scalars(
         select(m.ServiceTagTable)
             .where(m.ServiceTagTable.name == 'private')
     ).all()
@@ -112,7 +112,7 @@ def test_tag_name_can_repeat_if_parents_differ(session):
     ]
     session.add_all(tags)
 
-    results = session.exec(
+    results = session.scalars(
         select(m.ServiceTagTable)
             .where(m.ServiceTagTable.name == 'repeat')
     ).all()

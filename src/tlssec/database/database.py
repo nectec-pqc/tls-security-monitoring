@@ -1,7 +1,7 @@
 from functools import cached_property
 
-from sqlalchemy import URL, Engine
-from sqlmodel import create_engine, Session
+from sqlalchemy import URL, create_engine
+from sqlalchemy.orm import Session
 
 from tlssec.settings import Settings
 
