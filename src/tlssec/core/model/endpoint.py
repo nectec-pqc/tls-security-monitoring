@@ -56,7 +56,9 @@ class EndpointTable(Base):
     hostname: Mapped[str] = mapped_column(String(253))
     port: Mapped[int] = mapped_column(Integer, default=443)
     path: Mapped[str] = mapped_column(String, default='/')
-    protocol: Mapped[str] = mapped_column(String(10), default=Protocol.https.value)
+    protocol: Mapped[Protocol] = mapped_column(
+        default = Protocol.https,
+    )
     first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     retire_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
