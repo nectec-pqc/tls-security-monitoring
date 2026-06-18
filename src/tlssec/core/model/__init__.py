@@ -4,4 +4,4 @@ from .service import (
     ServiceTagMap, ServiceTagMapTable,
 )
 from .scan import Scan, ScanTable
-from .endpoint import Endpoint, EndpointTable, Protocol
+from .endpoint import Endpoint, EndpointTable, TlsMode

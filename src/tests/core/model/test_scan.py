@@ -27,7 +27,7 @@ def make_endpoint(session, service):
         part_of_service_id=service.id,
         hostname='target.example.com',
         port=443,
-        protocol='https',
+        application_protocol = 'https',
         first_seen=NOW,
         last_seen=NOW,
     )

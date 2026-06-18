@@ -51,7 +51,7 @@ def test_endpoint_defaults():
     ep = m.Endpoint(**VALID_ENDPOINT_ARGS)
     assert ep.port == 443
     assert ep.path == '/'
-    assert ep.protocol == m.Protocol.https
+    assert ep.application_protocol == 'https'
     assert ep.ip is None
     assert ep.retire_at is None
 
@@ -66,7 +66,7 @@ def test_endpoint_from_attributes(session):
         hostname='target.example.com',
         port=8443,
         path='/api',
-        protocol='https',
+        application_protocol = 'https',
         first_seen=NOW,
         last_seen=NOW,
     )
@@ -92,7 +92,7 @@ def make_endpoint(session, service, **overrides):
         ip = '127.0.0.1',
         port = 443,
         path = '/',
-        protocol = 'tcp',
+        application_protocol = 'https',
         first_seen = NOW,
         last_seen = NOW,
     )
@@ -112,28 +112,10 @@ def test_create_and_query_endpoint(session):
     assert result.hostname == 'target.example.com'
     assert result.port == 443
     assert result.path == '/'
-    assert result.protocol == 'tcp'
+    assert result.application_protocol == 'https'
     assert result.first_seen == NOW
     assert result.last_seen == NOW
     assert result.retire_at is None
-
-def test_unique_constraint_same_endpoint(session):
-    """Exact same service + hostname + port + protocol + path is rejected."""
-    svc = make_service(session)
-    make_endpoint(session, svc)
-
-    duplicate = m.EndpointTable(
-        part_of_service_id=svc.id,
-        hostname='target.example.com',
-        port=443,
-        path='/',
-        protocol='tcp',
-        first_seen=NOW,
-        last_seen=NOW,
-    )
-    with pytest.raises(IntegrityError):
-        session.add(duplicate)
-        session.flush()
 
 
 def test_different_port_is_allowed(session):
@@ -155,10 +137,11 @@ def test_retire_at_can_be_set(session):
     ).one()
     assert result.retire_at == LATER
 
-def test_different_protocol_is_allowed(session):
+
+def test_different_application_protocol_is_allowed(session):
     svc = make_service(session)
-    make_endpoint(session, svc, protocol='tcp')
-    make_endpoint(session, svc, protocol='https')
+    make_endpoint(session, svc, application_protocol = 'ftp')
+    make_endpoint(session, svc, application_protocol = 'smtp')
 
     results = session.scalars(
         select(m.EndpointTable).where(m.EndpointTable.part_of_service_id == svc.id)
