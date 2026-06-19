@@ -10,6 +10,7 @@ RUN \
     tlssec
 RUN apt-get update && apt-get install -y --no-install-recommends \
   testssl.sh \
+  nmap \
   && rm -rf /var/lib/apt/lists/*
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
