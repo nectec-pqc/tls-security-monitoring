@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -33,3 +34,50 @@ def cache_dir():
     path = Path.home() / '.cache/tlssec/test'
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+@pytest.fixture(scope = 'module')
+def current_openssl_server(cache_dir):
+    """Start an openssl server to use as target of test scan on localhost.
+
+    This server will use the current openssl version installed in tlssec image.
+    """
+    # First ensure server certificate exists. Just issue a self-signed one.
+    server_config_dir = cache_dir / 'current_openssl_server'
+    server_config_dir.mkdir(parents = True, exist_ok = True)
+    subprocess.run(
+        [
+            'openssl', 'req', '-new', '-x509', '-nodes',
+            '-out', 'server.crt',
+            '-keyout', 'server.pem',
+            '-subj', '/CN=localhost',
+        ],
+        cwd = server_config_dir,
+        check = True,
+        timeout = 1,
+    )
+
+    # TODO: whole thing needs to handle exception by killing subprocess
+    proc = subprocess.Popen(
+        [
+            'openssl', 's_server',
+            '-www',
+            '-key', 'server.pem',
+            '-cert', 'server.crt',
+            '-port', '4433',
+        ],
+        cwd = server_config_dir,
+        stdout = subprocess.PIPE,
+        stderr = subprocess.DEVNULL,
+    )
+    # TODO: add timeout. Need to use asyncio?
+    for line in proc.stdout:
+        if line == b'ACCEPT\n':
+            break
+    yield proc
+    try:
+        proc.terminate()
+        proc.wait(timeout = 1)
+    except subprocess.TimeoutExpired:
+        with proc:
+            proc.kill()
