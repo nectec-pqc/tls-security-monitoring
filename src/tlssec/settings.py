@@ -6,6 +6,8 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from tlssec.core.model.validator import PandasTimedelta
+
 
 class DatabaseSettings(BaseModel):
     """Matches arguments of `sqlalchemy.URL.create()`"""
@@ -27,8 +29,7 @@ class Settings(BaseSettings):
 
     deployment_mode: Literal['development', 'production'] = 'production'
     db: DatabaseSettings
-    # TODO: Allow string specification, normalize to pandas.Timestamp
-    endpoint_cooldown: int = Field(
-        default = 604800, # 7 days
+    endpoint_cooldown: PandasTimedelta('seconds') = Field(
+        default = '7 days',
         description = 'Seconds to wait from last successful scan before getting scanned again',
     )
