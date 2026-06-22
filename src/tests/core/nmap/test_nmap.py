@@ -1,8 +1,10 @@
 import re
+import shutil
 
 import pytest
 
 from tlssec.asyncio import run_subprocess, CompletedProcess
+from tlssec.core.nmap import Nmap
 
 
 async def test_call_nmap():
@@ -44,3 +46,35 @@ async def test_scan_local_not_found(current_openssl_server):
     assert result.returncode == 0
     assert any('51 closed' in line for line in result.stdout), \
         'Must see all ports as closed'
+
+
+@pytest.fixture
+def clean_nmap_output_dir(cache_dir):
+    output_dir = cache_dir / 'nmap'
+
+    def clear():
+        if output_dir.exists():
+            if output_dir.is_dir():
+                shutil.rmtree(output_dir)
+            else:
+                output_dir.unlink()
+
+    clear()
+    yield output_dir
+    clear()
+
+
+async def test_discover_endpoints(
+    current_openssl_server,
+    cache_dir,
+    clean_nmap_output_dir,
+):
+    result = await Nmap.discover_endpoints(
+        'localhost',
+        base_output_dir = cache_dir,
+        detect_version = False,
+        ports = '4400-4450',
+    )
+    outfiles = list(clean_nmap_output_dir.glob('*_localhost.nmap.xml'))
+    assert len(outfiles) == 1
+    # TODO: test content
