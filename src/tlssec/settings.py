@@ -1,4 +1,5 @@
 from typing import Literal
+from pathlib import Path
 
 from pydantic import (
     BaseModel,
@@ -29,6 +30,10 @@ class Settings(BaseSettings):
 
     deployment_mode: Literal['development', 'production'] = 'production'
     db: DatabaseSettings
+    output_dir: Path = Field(
+        default_factory = Path.cwd,
+        description = 'Base directory for storing outputs',
+    )
     endpoint_cooldown: PandasTimedelta('seconds') = Field(
         default = '7 days',
         description = 'Seconds to wait from last successful scan before getting scanned again',
