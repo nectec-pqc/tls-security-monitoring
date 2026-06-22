@@ -5,7 +5,7 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
 from tlssec.database.base import Base
-import tlssec.core.model as model
+import tlssec.core.model as m
 
 
 def drop_database(engine: Engine):
@@ -19,10 +19,10 @@ def initialize_database(engine: Engine):
 
 
 def import_scan(
-    scan: model.Scan | model.ScanTable,
+    scan: m.Scan | m.ScanTable,
     *,
     session: Session,
 ):
-    if not isinstance(scan, model.ScanTable):
-        scan = model.ScanTable(**scan.model_dump(exclude = ['id']))
+    if not isinstance(scan, m.ScanTable):
+        scan = m.ScanTable(**scan.m_dump(exclude = ['id']))
     session.add(scan)
