@@ -16,9 +16,12 @@ class Testssl:
 
     def __init__(
         self,
-        concurrency: int = 128,
+        concurrency: int | asyncio.Semaphore = 128,
     ):
-        self.semaphore = asyncio.Semaphore(concurrency)
+        if isinstance(concurrency, asyncio.Semaphore):
+            self.semaphore = concurrency
+        else:
+            self.semaphore = asyncio.Semaphore(concurrency)
 
     async def call(
         self,
