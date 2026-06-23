@@ -84,3 +84,8 @@ cli.add_command(import_group)
 def report():
     """Produce report"""
     raise NotImplementedError
+
+@cli.command()
+@cli.option("--tag", multiple=True)
+@cli.option("--file", type=click.File("r"))
+def add-service(ctx):
