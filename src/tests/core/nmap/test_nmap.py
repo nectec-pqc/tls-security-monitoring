@@ -77,4 +77,35 @@ async def test_discover_endpoints(
     )
     outfiles = list(clean_nmap_output_dir.glob('*_localhost.nmap.xml'))
     assert len(outfiles) == 1
-    # TODO: test content
+
+    from bs4 import BeautifulSoup
+    with open(outfiles[0]) as f:
+        soup = BeautifulSoup(f, 'xml')
+
+    hosts = soup.find_all('host')
+    assert len(hosts) == 1, (
+        'Generally, there can be more than one <host> tags.'
+        ' A known case is: when user give multiple targets explicitly on command line.'
+        ' However, in this test, there we only give one target so there should only be one <host> tag.'
+    )
+    for host in hosts:
+        addresses = host.find_all('address')
+        assert len(addresses) == 1, (
+            'nmap should be iterating each host based on IP address,'
+            ' so there should only be one address per host item.'
+            # TODO: try nmap on domain name that maps to multiple IP to confirm this
+        )
+
+        ports_tags = host.find_all('ports')
+        assert len(ports_tags) == 1, 'There should only be one <ports> tag per host'
+        the_ports_tag = ports_tags[0]
+
+        port_tags = the_ports_tag.find_all('port')
+        assert len(port_tags) == 51, '--script=ssl-cert should runs on all ports'
+        assert all(len(x.find_all('state')) == 1 for x in port_tags), \
+            'There shuold only be one state tag inside each port tag'
+
+        open_ports = [x for x in port_tags if x.find('state', state = 'open')]
+        assert len(open_ports) == 1, 'There should only be one open port'
+        the_open_port = open_ports[0]
+        assert the_open_port.attrs['portid'] == '4433'

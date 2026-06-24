@@ -41,7 +41,7 @@ def scan(
     - `testssl.sh --json-pretty`
     """
     if not paths:
-        _logger.warn('No paths given to import scans from')
+        _logger.warning('No paths given to import scans from')
         return
     state = ctx.find_object(CliState)
     fails = []

@@ -1,3 +1,5 @@
+import logging
+_logger = logging.getLogger(__name__)
 import asyncio
 from dataclasses import dataclass
 
@@ -67,6 +69,7 @@ async def run_subprocess(
     proc = None
     out = []
     err = []
+    _logger.info(f'Starting subprocess: {args}')
     try:
         proc = await asyncio.create_subprocess_exec(
             *args,

@@ -8,7 +8,9 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "beautifulsoup4>=4.14.3",
     "click>=8.3.2",
+    "lxml>=6.1.1",
     "pandas>=3.0.3",
     "psycopg[binary]>=3.3.4",
     "pydantic>=2.13.4",
