@@ -26,3 +26,9 @@ def import_scan(
     if not isinstance(scan, m.ScanTable):
         scan = m.ScanTable(**scan.m_dump(exclude = ['id']))
     session.add(scan)
+
+def parse():
+    pass
+
+def make_service():
+    pass

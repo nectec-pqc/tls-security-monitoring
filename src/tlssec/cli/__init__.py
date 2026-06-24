@@ -86,6 +86,19 @@ def report():
     raise NotImplementedError
 
 @cli.command()
-@cli.option("--tag", multiple=True)
-@cli.option("--file", type=click.File("r"))
-def add-service(ctx):
+@click.option("--tag", multiple=True)
+@click.option("--from_file", type=click.File("r"))
+@click.option("--name")
+@click.pass_context
+def add_service(ctx, tags, from_file, name):
+    if from_file and name:
+        raise click.UsageError("use --from_file OR --name, not both")
+    if not from_file and not name:
+        raise click.UsageError("use --from_file OR --name")
+
+    if from_file:
+        service = parse(from_file.read())
+    else: 
+        service = make_service([name, tags]) 
+        
+    ctx.obj.services.extend(service)
