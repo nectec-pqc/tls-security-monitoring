@@ -8,3 +8,5 @@ from tlssec.database.database import Database
 class CliState:
     settings: Settings | None = None
     db: Database | None = None
+    service: None = None
+    
