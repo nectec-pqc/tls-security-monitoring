@@ -7,6 +7,7 @@ from pydantic import (
     IPvAnyAddress,
     ConfigDict,
     Field as PydanticField,
+    model_validator,
 )
 from sqlalchemy import (
     Integer,
@@ -37,7 +38,7 @@ class Endpoint(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int | None = None
-    part_of_service_id: int
+    part_of_service_id: int | None = None
     ip: IPvAnyAddress | None = None
     hostname: str = PydanticField(
         min_length = 1,
@@ -70,9 +71,19 @@ class Endpoint(BaseModel):
             ' String "none" means there is no TLS.'
         ),
     )
-    first_seen: datetime
-    last_seen: datetime
+    first_seen: datetime = None
+    last_seen: datetime = None
     retire_at: datetime | None = None
+
+    @model_validator(mode = 'after')
+    def default_now(self):
+        # Ensure defaulting to now get the exact same value across multiple fields
+        now = datetime.now()
+        if self.first_seen is None:
+            self.first_seen = now
+        if self.last_seen is None:
+            self.last_seen = now
+        return self
 
 
 class EndpointTable(Base):
@@ -81,7 +92,7 @@ class EndpointTable(Base):
         Identity(always = True),
         primary_key = True,
     )
-    part_of_service_id: Mapped[int] = mapped_column(
+    part_of_service_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey('service.id'),
         index = True,
     )
