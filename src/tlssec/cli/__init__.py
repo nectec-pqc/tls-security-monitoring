@@ -97,8 +97,15 @@ def add_service(ctx, tags, from_file, name):
         raise click.UsageError("use --from_file OR --name")
 
     if from_file:
-        service = parse(from_file.read())
+        service = op.parse(yaml.safe_load(from_file.read()))
     else: 
-        service = make_service([name, tags]) 
-        
+        service = op.make_service(name, tags) 
+    
+    # list of service
     ctx.obj.services.extend(service)
+
+
+
+
+
+
