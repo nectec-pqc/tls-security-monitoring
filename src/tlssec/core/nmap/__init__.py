@@ -96,6 +96,7 @@ class Nmap:
         # NOTE: `-sV` take a long time on service responding with unrecognizable data.
         # TODO: Find a different way to speed up in that case.
         detect_version: bool = False,
+        host_discovery: bool = False,
         ports: str | None = None,
     ):
         """From given nmap `target`, discover open ports, services.
@@ -115,6 +116,8 @@ class Nmap:
         ]
         if detect_version:
             options.append('-sV')
+        if not host_discovery:
+            options.append('-Pn')
         if ports:
             # TODO: Do we validate port string, or receive as structured list instead?
             options.append(f'-p{ports}')
