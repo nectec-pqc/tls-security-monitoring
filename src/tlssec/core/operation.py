@@ -1,4 +1,6 @@
 import logging
+
+from tlssec.core.model import service
 _logger = logging.getLogger(__name__)
 
 from sqlalchemy import Engine
@@ -27,8 +29,13 @@ def import_scan(
         scan = m.ScanTable(**scan.m_dump(exclude = ['id']))
     session.add(scan)
 
-def parse():
-    pass
+def parse(inputFile):
+    services = []
+    for rawService in inputFile:
+        tags = rawService.pop("tags",[])
+        service = m.Service(**rawService)
+        services.append((service, tags))
+    return  services
 
-def make_service():
+def make_service(name, tags):
     pass
