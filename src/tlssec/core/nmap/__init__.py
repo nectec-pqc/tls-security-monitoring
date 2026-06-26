@@ -93,21 +93,23 @@ class Nmap:
 
                 service_tag = port.find('service')
                 # TODO: handle case there is no service tag
+                service_infos = list(filter(None, [
+                    service_tag.attrs.get('product', None),
+                    service_tag.attrs.get('version', None),
+                    (
+                        (extra := service_tag.attrs.get('extrainfo', None))
+                        and f'({extra})'
+                    ),
+                ]))
+                if any(isinstance(x,int) for x in service_infos):
+                    breakpoint()
                 endpoints.append(m.Endpoint(
                     ip = address,
                     hostname = preferred_hostname,
                     port = port.attrs.get('portid', None),
                     transport_protocol = port.attrs.get('protocol', 'tcp'),
                     application_protocol = service_tag.attrs.get('name', None),
-                    service_info = ' '.join([
-                        service_tag.attrs.get('product', ''),
-                        service_tag.attrs.get('version', ''),
-                        (
-                            f'({extra})'
-                            if (extra := service_tag.attrs.get('extrainfo', None)) else
-                            ''
-                        ),
-                    ]),
+                    service_info = ' '.join(service_infos) or None,
                     first_seen = host_start,
                     last_seen = host_end,
                     tls_mode = tls_mode,
