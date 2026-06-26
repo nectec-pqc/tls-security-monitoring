@@ -40,7 +40,7 @@ class Endpoint(BaseModel):
     id: int | None = None
     part_of_service_id: int | None = None
     ip: IPvAnyAddress | None = None
-    hostname: str = PydanticField(
+    hostname: str | None = PydanticField(
         min_length = 1,
         max_length = 253,
     )
@@ -100,7 +100,7 @@ class EndpointTable(Base):
         InetType,
         nullable = True,
     )
-    hostname: Mapped[str] = mapped_column(String(253))
+    hostname: Mapped[Optional[str]] = mapped_column(String(253))
     port: Mapped[int] = mapped_column(
         Integer,
         default = 443,
