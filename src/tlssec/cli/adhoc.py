@@ -37,6 +37,7 @@ def nmap_xmls_to_typst(
         endpoints.extend(
             Nmap.extract_endpoints_from_xml(path)
         )
+    # TODO: make tls_mode categorical
     df = pd.DataFrame(x.model_dump() for x in endpoints)
     df = df.set_index(['hostname', 'ip', 'port'])
     # TODO: use jinja templating engine?
@@ -62,4 +63,11 @@ def nmap_xmls_to_typst(
                     row.service_info
                 )
                 print(f'    [{row.port}], [{display_app}], [{display_service}], [{action}],')
+
+    print('---')
+    
+    with_detail = df[df.tls_mode != 'none']
+    for row in with_detail.reset_index().itertuples():
+        print(f'#include "details/{row.ip}_{row.port}.typ"')
+
     return endpoints
