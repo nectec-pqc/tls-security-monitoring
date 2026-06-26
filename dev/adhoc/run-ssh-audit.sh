@@ -10,6 +10,6 @@ for NAME in \
   example1.com \
   example2.com ;
 do
-  ssh-audit > "$NAME".ssh-audit
+  ssh-audit "$NAME" > "$NAME".ssh-audit
   ssh-audit --json "$NAME" > "$NAME".ssh-audit.json
 done

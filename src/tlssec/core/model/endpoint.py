@@ -7,6 +7,7 @@ from pydantic import (
     IPvAnyAddress,
     ConfigDict,
     Field as PydanticField,
+    model_validator,
 )
 from sqlalchemy import (
     Integer,
@@ -37,9 +38,9 @@ class Endpoint(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int | None = None
-    part_of_service_id: int
+    part_of_service_id: int | None = None
     ip: IPvAnyAddress | None = None
-    hostname: str = PydanticField(
+    hostname: str | None = PydanticField(
         min_length = 1,
         max_length = 253,
     )
@@ -61,7 +62,7 @@ class Endpoint(BaseModel):
         default = 'https',
         examples = ['http', 'https', 'ftp', 'smtp', 'dns', 'postgres', 'mysql'],
         min_length = 1,
-        max_length = 10,
+        max_length = 40,
     )
     tls_mode: TlsMode | None = PydanticField(
         default = None,
@@ -70,9 +71,19 @@ class Endpoint(BaseModel):
             ' String "none" means there is no TLS.'
         ),
     )
-    first_seen: datetime
-    last_seen: datetime
+    first_seen: datetime = None
+    last_seen: datetime = None
     retire_at: datetime | None = None
+
+    @model_validator(mode = 'after')
+    def default_now(self):
+        # Ensure defaulting to now get the exact same value across multiple fields
+        now = datetime.now()
+        if self.first_seen is None:
+            self.first_seen = now
+        if self.last_seen is None:
+            self.last_seen = now
+        return self
 
 
 class EndpointTable(Base):
@@ -81,7 +92,7 @@ class EndpointTable(Base):
         Identity(always = True),
         primary_key = True,
     )
-    part_of_service_id: Mapped[int] = mapped_column(
+    part_of_service_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey('service.id'),
         index = True,
     )
@@ -89,7 +100,7 @@ class EndpointTable(Base):
         InetType,
         nullable = True,
     )
-    hostname: Mapped[str] = mapped_column(String(253))
+    hostname: Mapped[Optional[str]] = mapped_column(String(253))
     port: Mapped[int] = mapped_column(
         Integer,
         default = 443,
@@ -103,7 +114,7 @@ class EndpointTable(Base):
         default = 'tcp',
     )
     application_protocol: Mapped[str] = mapped_column(
-        String(10),
+        String(40),
         default = 'https',
     )
     tls_mode: Mapped[TlsMode] = mapped_column(
