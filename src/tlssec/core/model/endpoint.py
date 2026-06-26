@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from enum import Enum, auto
+from enum import StrEnum, auto
 
 from pydantic import (
     BaseModel,
@@ -28,7 +28,7 @@ from tlssec.database.types import InetType
 from tlssec.core.model.validator import UrlPath
 
 
-class TlsMode(str, Enum):
+class TlsMode(StrEnum):
     implicit = auto()
     explicit = auto()
     none = auto()
