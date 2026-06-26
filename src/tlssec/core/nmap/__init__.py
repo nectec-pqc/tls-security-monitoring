@@ -69,6 +69,8 @@ class Nmap:
 
         endpoints = []
         for host in source.find_all('host'):
+            host_start = host.attrs.get('starttime', None)
+            host_end = host.attrs.get('endtime', None)
             address = host.find('address').attrs.get('addr', None)
             hostnames = cls.extract_ordered_hostnames(host)
             preferred_hostname = (
@@ -95,6 +97,8 @@ class Nmap:
                     port = port.attrs.get('portid', None),
                     transport_protocol = port.attrs.get('protocol', 'tcp'),
                     application_protocol = port.find('service').attrs.get('name', None),
+                    first_seen = host_start,
+                    last_seen = host_end,
                     tls_mode = tls_mode,
                 ))
         return endpoints
