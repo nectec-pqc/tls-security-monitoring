@@ -3,6 +3,7 @@ import logging
 from tlssec.core.model import service
 _logger = logging.getLogger(__name__)
 
+import yaml
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
@@ -29,13 +30,17 @@ def import_scan(
         scan = m.ScanTable(**scan.m_dump(exclude = ['id']))
     session.add(scan)
 
-def parse(inputFile):
+def parse(yaml_content):
+    raw_services = yaml.safe_load(yaml_content)
     services = []
-    for rawService in inputFile:
-        tags = rawService.pop("tags",[])
-        service = m.Service(**rawService)
-        services.append((service, tags))
+    for raw_service in raw_services:
+        service = m.Service(**raw_service)
+        services.append((service, raw_service["tags"]))
     return  services
 
-def make_service(name, tags):
-    pass
+def make_service(name_and_hostname, tags):
+    services = []
+    name, hostname = name_and_hostname
+    service = m.Service(name=name, hostname=hostname)
+    services.append((service, tags))
+    return services

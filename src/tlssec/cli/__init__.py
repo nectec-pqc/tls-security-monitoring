@@ -1,4 +1,6 @@
 import logging
+
+from tlssec.core.model.service import Service
 _logger = logging.getLogger(__name__)
 
 import click
@@ -88,19 +90,25 @@ def report():
 @cli.command()
 @click.option("--tag", multiple=True)
 @click.option("--from_file", type=click.File("r"))
-@click.option("--name")
+@click.option("--name_and_hostname", type=(str, str), help='Frist str is name and second str is hostname')
 @click.pass_context
 def add_service(ctx, tags, from_file, name):
     if from_file and name:
         raise click.UsageError("use --from_file OR --name, not both")
     if not from_file and not name:
-        raise click.UsageError("use --from_file OR --name")
+        raise click.UsageError("use -from_file OR --name")
 
     if from_file:
-        service = op.parse(yaml.safe_load(from_file.read()))
+        services_and_tags = op.parse(from_file)
     else: 
-        service = op.make_service(name, tags) 
-    
+        services_and_tags = op.make_service(name_and_hostname, tags) 
+
+    # commit to DB 
+    for service, tags in services_and_tags:
+        row = model.ServiceTable(**service.model_dump(exclude={"id"}))
+        state.db.session.add(row)
+
+
     # list of service
     ctx.obj.services.extend(service)
 
