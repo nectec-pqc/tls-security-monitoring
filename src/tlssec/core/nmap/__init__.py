@@ -43,6 +43,10 @@ class Nmap:
         - Lastly, if there is any other type of hostname, they all have equal
           priority.
         """
+        hostnames_tags = soup.find_all('hostnames')
+        assert len(hostnames_tags) == 1, 'There should only be one <hostnames> tag inside each <host> tag in nmap.xml'
+        hostnames_tag = hostnames_tags[0]
+
         def key(hostname):
             type_ = hostname.attrs.get('type', None),
             return (
@@ -50,7 +54,7 @@ class Nmap:
                 type_ or '',
             )
         return sorted(
-            soup.find('hostnames').find_all('hostname'),
+            hostnames_tag.find_all('hostname'),
             key = key,
         )
 
@@ -67,7 +71,11 @@ class Nmap:
         for host in source.find_all('host'):
             address = host.find('address').attrs.get('addr', None)
             hostnames = cls.extract_ordered_hostnames(host)
-            preferred_hostname = hostnames and hostnames[0].attrs.get('name', None)
+            preferred_hostname = (
+                hostnames[0].attrs.get('name', None)
+                if hostnames else
+                None
+            )
             open_ports = [
                 port
                 for port in host.find('ports').find_all('port')
