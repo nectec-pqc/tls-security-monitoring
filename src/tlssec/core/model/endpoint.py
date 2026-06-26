@@ -62,7 +62,7 @@ class Endpoint(BaseModel):
         default = 'https',
         examples = ['http', 'https', 'ftp', 'smtp', 'dns', 'postgres', 'mysql'],
         min_length = 1,
-        max_length = 10,
+        max_length = 40,
     )
     tls_mode: TlsMode | None = PydanticField(
         default = None,
@@ -114,7 +114,7 @@ class EndpointTable(Base):
         default = 'tcp',
     )
     application_protocol: Mapped[str] = mapped_column(
-        String(10),
+        String(40),
         default = 'https',
     )
     tls_mode: Mapped[TlsMode] = mapped_column(
