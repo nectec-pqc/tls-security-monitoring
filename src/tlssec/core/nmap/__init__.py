@@ -3,8 +3,9 @@ from pathlib import Path
 from datetime import datetime
 import re
 import unicodedata
+from typing import TextIO
 
-from bs4 import BeautifulSoup
+import bs4
 
 import tlssec.core.model as m
 from tlssec.asyncio import run_subprocess, CompletedProcess
@@ -32,7 +33,7 @@ class Nmap:
         return s
 
     @staticmethod
-    def extract_ordered_hostnames(soup: BeautifulSoup) -> list[BeautifulSoup]:
+    def extract_ordered_hostnames(soup: bs4.PageElement) -> list[bs4.PageElement]:
         """List children <host> tag ordered by preferred type first
 
         Nmap can list multiple hostnames for a single host it scanned.
@@ -54,12 +55,16 @@ class Nmap:
         )
 
     @classmethod
-    def extract_endpoints_from_xml_soup(
+    def extract_endpoints_from_xml(
         cls,
-        soup: BeautifulSoup,
+        source: bs4.PageElement | os.PathLike,
     ) -> list[m.Endpoint]:
+        if not isinstance(source, bs4.PageElement):
+            with open(source) as f:
+                source = bs4.BeautifulSoup(f, 'xml')
+
         endpoints = []
-        for host in soup.find_all('host'):
+        for host in source.find_all('host'):
             address = host.find('address').attrs.get('addr', None)
             hostnames = cls.extract_ordered_hostnames(host)
             preferred_hostname = hostnames and hostnames[0].attrs.get('name', None)
@@ -135,10 +140,7 @@ class Nmap:
             'nmap', *options, target,
         )
 
-        with open(xml_path) as f:
-            soup = BeautifulSoup(f, 'xml')
-
-        endpoints = cls.extract_endpoints_from_xml_soup(soup)
+        endpoints = cls.extract_endpoints_from_xml(xml_path)
 
         return completed_process, endpoints
         #raise NotImplementedError('The rest of function has not been implemented yet')
