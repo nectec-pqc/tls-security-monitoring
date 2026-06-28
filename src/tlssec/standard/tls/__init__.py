@@ -30,4 +30,27 @@ SYMENC_IN_OPENSSL = re.compile(
     r'(?:^|[-_])((?:AES|CAMELLIA|ARIA)_?\d*|CHACHA20|SEED|RC4|DES|SM4|IDEA)(?:$|[-_])'
     # FIXME: We are ignoring GOST suites. They have weird naming scheme.
     # In the end, this regex is just a heuristic, we should be relying on full lookup table where possible.
+    # FIXME: distiguish between DES and 3DES
 )
+
+
+IS_SYMENC_QUANTUM_SAFE = {
+    'AES256': True,
+    'ARIA256': True,
+    'CAMELLIA256': True,
+    'CHACHA20': True,
+
+    'AES128': False,
+    'ARIA128': False,
+    'CAMELLIA128': False,
+    'SM4': False,
+    'DES': False, #broken
+    '3DES': False, #broken
+    'RC4': False, #broken
+    'SEED': False,
+    'IDEA': False,
+}
+
+
+def is_symenc_quantum_safe(name: str) -> bool:
+    return IS_SYMENC_QUANTUM_SAFE[name]
