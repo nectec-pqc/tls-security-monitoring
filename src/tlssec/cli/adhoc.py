@@ -5,9 +5,11 @@ from textwrap import dedent
 
 import click
 import pandas as pd
+import yaml
 
 import tlssec.core.model as m
 from tlssec.core.nmap import Nmap
+from tlssec.core.testssl import Testssl
 
 
 @click.group()
@@ -135,3 +137,36 @@ def nmap_xmls_to_typst(
             f.write(template.format(row = row))
 
     return endpoints
+
+
+@adhoc.command()
+@click.option(
+    '--force', '-f',
+    is_flag = True,
+    help = 'Overwrite existing output file',
+)
+@click.argument(
+    'paths',
+    metavar = 'files',
+    type = click.Path(
+        exists = True,
+        dir_okay = False,
+        path_type = Path,
+    ),
+    nargs = -1,
+)
+def testssl_json_to_extracts_yaml(
+    paths: list[Path],
+    force: bool,
+):
+    """Produce typst document summarizing testssl result"""
+    extracts = []
+    for path in paths:
+        _logger.info(f'processing {path}')
+        extracts.extend(Testssl.extract_json(path))
+
+    outpath = Path('testssl_extracts.yaml')
+    if not force and outpath.exists():
+        raise FileExistsError(f'file already exists {outpath}')
+    with open(outpath, 'w') as f:
+        yaml.safe_dump(extracts, f)
