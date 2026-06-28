@@ -27,11 +27,21 @@ quantum_safe_kems = {
 
 # Capture symmetric encryption name within openssl cipher suite names.
 SYMENC_IN_OPENSSL = re.compile(
-    r'(?:^|[-_])((?:AES|CAMELLIA|ARIA)_?\d*|CHACHA20|SEED|RC4|DES|SM4|IDEA)(?:$|[-_])'
+    r'(?:^|[-_])((?:AES|CAMELLIA|ARIA)_?\d*|CHACHA20|SEED|RC4|(?:3)?DES(?:-CBC3)?|SM4|IDEA)(?:$|[-_])'
     # FIXME: We are ignoring GOST suites. They have weird naming scheme.
     # In the end, this regex is just a heuristic, we should be relying on full lookup table where possible.
-    # FIXME: distiguish between DES and 3DES
 )
+
+def guess_symenc_from_openssl_cipher_name(name: str) -> str | None:
+    m = SYMENC_IN_OPENSSL.search(name)
+    if m is None:
+        return None
+    symenc = m[1]
+    # Normalize further where regex couldn't
+    if symenc == 'DES-CBC3':
+        symenc = '3DES'
+    symenc = symenc.replace('_', '')
+    return symenc
 
 
 IS_SYMENC_QUANTUM_SAFE = {

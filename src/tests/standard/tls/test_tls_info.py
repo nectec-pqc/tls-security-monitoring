@@ -9,10 +9,9 @@ def test_compile_cipher_names_from_openssl_manual():
     path = Path(standard.tls.__file__).parent / 'openssl_cipher_names_from_manual/cipher-names.csv'
     df = pd.read_csv(path, names = ['tls','openssl'])
     assert len(df.index) >= 1
-    df['symenc'] = df.openssl.str.extract(
-        standard.tls.SYMENC_IN_OPENSSL
+    df['symenc'] = df.openssl.apply(
+        standard.tls.guess_symenc_from_openssl_cipher_name
     )
-    df.symenc = df.symenc.str.replace('_', '', regex = False)
     unclassified = df[df.symenc.isna()]
     assert len(unclassified.index) <= 12, (
         'There shuold be no more than this many names that we can not identify symmetric encryption inside.'
