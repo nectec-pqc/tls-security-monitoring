@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from enum import Enum, auto
+from enum import StrEnum, auto
 
 from pydantic import (
     BaseModel,
@@ -28,7 +28,7 @@ from tlssec.database.types import InetType
 from tlssec.core.model.validator import UrlPath
 
 
-class TlsMode(str, Enum):
+class TlsMode(StrEnum):
     implicit = auto()
     explicit = auto()
     none = auto()
@@ -58,11 +58,16 @@ class Endpoint(BaseModel):
         min_length = 1,
         max_length = 10,
     )
-    application_protocol: str = PydanticField(
+    application_protocol: str | None = PydanticField(
         default = 'https',
         examples = ['http', 'https', 'ftp', 'smtp', 'dns', 'postgres', 'mysql'],
         min_length = 1,
         max_length = 40,
+    )
+    service_info: str | None = PydanticField(
+        default = None,
+        min_length = 1,
+        max_length = 100,
     )
     tls_mode: TlsMode | None = PydanticField(
         default = None,
@@ -113,9 +118,13 @@ class EndpointTable(Base):
         String(10),
         default = 'tcp',
     )
-    application_protocol: Mapped[str] = mapped_column(
+    application_protocol: Mapped[Optional[str]] = mapped_column(
         String(40),
         default = 'https',
+    )
+    service_info: Mapped[Optional[str]] = mapped_column(
+        String(100),
+        default = None,
     )
     tls_mode: Mapped[TlsMode] = mapped_column(
         nullable = True,

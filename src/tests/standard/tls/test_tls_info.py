@@ -1,0 +1,25 @@
+import pytest
+
+import tlssec.standard as standard
+
+
+def test_compile_cipher_names_from_openssl_manual():
+    from pathlib import Path
+    import pandas as pd
+    path = Path(standard.tls.__file__).parent / 'openssl_cipher_names_from_manual/cipher-names.csv'
+    df = pd.read_csv(path, names = ['tls','openssl'])
+    assert len(df.index) >= 1
+    df['symenc'] = df.openssl.apply(
+        standard.tls.guess_symenc_from_openssl_cipher_name
+    )
+    unclassified = df[df.symenc.isna()]
+    assert len(unclassified.index) <= 12, (
+        'There shuold be no more than this many names that we can not identify symmetric encryption inside.'
+        ' Some of these really do not contain symmetric encryption, but some is just unrecognized.'
+    )
+
+    counts = df.symenc.value_counts()
+    assert all(
+        symenc in standard.tls.IS_SYMENC_QUANTUM_SAFE
+        for symenc in counts.index
+    ), 'There must be quantum safe classification for all symenc name'

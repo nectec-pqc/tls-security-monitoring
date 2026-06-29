@@ -12,6 +12,7 @@ import tlssec.core.model as model
 import tlssec.core.operation as op
 from .cli_state import CliState
 from .import_group import import_group
+from .adhoc import adhoc
 
 
 @click.group('tlssec')
@@ -80,6 +81,7 @@ def scan():
 
 
 cli.add_command(import_group)
+cli.add_command(adhoc)
 
 
 @cli.command()
