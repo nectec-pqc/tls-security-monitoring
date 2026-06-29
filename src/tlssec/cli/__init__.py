@@ -93,6 +93,8 @@ def report():
 @click.option("--name_and_hostname", type=(str, str), help='Frist str is name and second str is hostname')
 @click.pass_context
 def add_service(ctx, tags, from_file, name):
+    state = ctx.find_object(CliState)
+    session = state.db.session
     if from_file and name:
         raise click.UsageError("use --from_file OR --name, not both")
     if not from_file and not name:
@@ -106,11 +108,9 @@ def add_service(ctx, tags, from_file, name):
     # commit to DB 
     for service, tags in services_and_tags:
         row = model.ServiceTable(**service.model_dump(exclude={"id"}))
-        state.db.session.add(row)
-
-
-    # list of service
-    ctx.obj.services.extend(service)
+        session.add(row)    
+        for tag in tags:
+            op.resolve_tag(state.db.obj, tag)
 
 
 
