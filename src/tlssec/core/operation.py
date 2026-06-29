@@ -58,10 +58,7 @@ def resolve_tag(session, full_tag):
             session.add(isTagThere)
             session.flush()
         parent_tag = isTagThere
-
-def tag_service(session, service, tag):
-    
-    pass
+    return parent_tag
 
 def resolve_service():
     pass
