@@ -139,6 +139,19 @@ def nmap_xmls_to_typst(
     return endpoints
 
 
+# TODO: move to another file?
+class SetToListDumper(yaml.SafeDumper):
+    pass
+
+SetToListDumper.add_representer(
+    set,
+    (
+        lambda dumper, data:
+            dumper.represent_list(list(data))
+    ),
+)
+
+
 @adhoc.command()
 @click.option(
     '--force', '-f',
@@ -169,4 +182,4 @@ def testssl_json_to_extracts_yaml(
     if not force and outpath.exists():
         raise FileExistsError(f'file already exists {outpath}')
     with open(outpath, 'w') as f:
-        yaml.safe_dump(extracts, f)
+        yaml.dump(extracts, f, Dumper=SetToListDumper)

@@ -63,12 +63,12 @@ class Testssl:
                 'port': scan['port'],
                 'qs': {
                     'key_establishment': {
-                        'safe': [],
-                        'unsafe': [],
+                        'safe': set(),
+                        'unsafe': set(),
                     },
                     'symmetric_encryption': {
-                        'safe': [],
-                        'unsafe': [],
+                        'safe': set(),
+                        'unsafe': set(),
                     },
                     'server_cert_signature': {},
                 },
@@ -89,12 +89,12 @@ class Testssl:
                             # See https://github.com/testssl/testssl.sh/blob/9fdf8028baba86d83218db294a5776384ec8c332/testssl.sh#L11838-L11864
                             params = params.replace(' ', '_')
                         for param in params.split():
-                            extract['qs']['key_establishment']['safe' if param in standard.tls.quantum_safe_kems else 'unsafe'].append(param)
+                            extract['qs']['key_establishment']['safe' if param in standard.tls.quantum_safe_kems else 'unsafe'].add(param)
                     case {'id': 'FS_ciphers', 'finding': str(ciphers)}:
                         for cipher in ciphers.split():
                             symenc = standard.tls.guess_symenc_from_openssl_cipher_name(cipher)
                             qs_safe = standard.tls.is_symenc_quantum_safe(symenc)
-                            extract['qs']['symmetric_encryption']['safe' if qs_safe else 'unsafe'].append(symenc)
+                            extract['qs']['symmetric_encryption']['safe' if qs_safe else 'unsafe'].add(symenc)
 
             for sd_item in scan.get('serverDefaults', []):
                 match sd_item:
@@ -104,4 +104,5 @@ class Testssl:
                         extract['qs']['server_cert_signature']['key_size'] = key_size
             
             extracts.append(extract)
+
         return extracts
