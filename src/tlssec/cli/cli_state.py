@@ -11,3 +11,4 @@ class CliState:
     db: Database | None = None
     service: list[Service] | None = None
 
+

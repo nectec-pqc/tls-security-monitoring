@@ -30,7 +30,7 @@ def import_scan(
         scan = m.ScanTable(**scan.m_dump(exclude = ['id']))
     session.add(scan)
 
-def parse(yaml_content):
+def parse_service(yaml_content):
     raw_services = yaml.safe_load(yaml_content)
     services = []
     for raw_service in raw_services:
@@ -60,5 +60,12 @@ def resolve_tag(session, full_tag):
         parent_tag = isTagThere
     return parent_tag
 
-def resolve_service():
+def parse_endpoint(session, from_film):
+    
     pass
+
+
+def make_endpoint(session, name, port, ip, hostname):
+    pass
+
+
