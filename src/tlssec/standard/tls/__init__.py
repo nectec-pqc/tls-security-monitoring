@@ -22,6 +22,7 @@ quantum_safe_kems = {
     'SecP384r1MLKEM1024',
     'curveSM2MLKEM768',
     'X25519Kyber768Draft00',
+    'SecP256r1Kyber768Draft00',
 }
 
 

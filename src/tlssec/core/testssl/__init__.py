@@ -62,6 +62,10 @@ class Testssl:
                 'ip': scan['ip'],
                 'port': scan['port'],
                 'qs': {
+                    'key_establishment': {
+                        'safe': [],
+                        'unsafe': [],
+                    },
                     'symmetric_encryption': {
                         'safe': [],
                         'unsafe': [],
@@ -70,25 +74,23 @@ class Testssl:
                 },
             }
 
-            fs_kem = [
-                fs_item
-                for fs_item in scan.get('fs', [])
-                if fs_item.get('id', None) == 'FS_KEMs'
-            ]
-            match fs_kem:
-                case []:
-                    extract['qs']['key_establishment'] = None
-                case [fs_kem]:
-                    kems = fs_kem.get('finding', '').split()
-                    qs_kems = standard.tls.quantum_safe_kems.intersection(kems)
-                    extract['qs']['key_establishment'] = qs_kems
-                case _:
-                    raise AssertionError('Each testssl `scanResult` should contain no more than one FS_KEMs item')
-
             for fs_item in scan.get('fs', []):
+                # NOTE: Repeated match on the same ID shouldn't exists, but if it does, the findings will be concatenated.
                 match fs_item:
+                    case {
+                        'id': 'FS_KEMs' | 'FS_ECDHE_curves' | 'DH_groups' as item_id,
+                        'finding': str(params),
+                    }:
+                        if item_id == 'DH_groups' and 'ffdhe' not in params:
+                            # CAUTION: When testssl output DH_groups findings,
+                            # the finding may not be a list of parameter names separated by spaces like other cases.
+                            # This happen when DH group found is not one of RFC 7919.
+                            # When this happens, the whole finding is a decription of DH group which may contain spaces inside.
+                            # See https://github.com/testssl/testssl.sh/blob/9fdf8028baba86d83218db294a5776384ec8c332/testssl.sh#L11838-L11864
+                            params = params.replace(' ', '_')
+                        for param in params.split():
+                            extract['qs']['key_establishment']['safe' if param in standard.tls.quantum_safe_kems else 'unsafe'].append(param)
                     case {'id': 'FS_ciphers', 'finding': str(ciphers)}:
-                        # NOTE: Multiple FS_ciphers shouldn't exists, but if it does, the result will be concatenated.
                         for cipher in ciphers.split():
                             symenc = standard.tls.guess_symenc_from_openssl_cipher_name(cipher)
                             qs_safe = standard.tls.is_symenc_quantum_safe(symenc)
