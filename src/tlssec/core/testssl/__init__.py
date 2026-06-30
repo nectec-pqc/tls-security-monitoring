@@ -60,7 +60,7 @@ class Testssl:
         for scan in source['scanResult']:
             extract = {
                 'ip': scan['ip'],
-                'port': scan['port'],
+                'port': int(scan['port']),
                 'qs': {
                     'key_establishment': {
                         'safe': set(),
