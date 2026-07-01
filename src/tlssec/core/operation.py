@@ -44,6 +44,59 @@ def resolve_tag(session, full_tag):
     return parent_tag
 
 
+def resolve_tag_existing(
+    session: Session,
+    full_tag: str,
+) -> 'm.TagTable | None':
+    """Like resolve_tag but does NOT create — returns None if tag does not exist."""
+    tags = full_tag.split('/')
+    parent_tag = None
+    for tag in tags:
+        existing = session.scalar(
+            select(m.TagTable)
+            .where(m.TagTable.parent_id == (parent_tag.id if parent_tag else None))
+            .where(m.TagTable.name == tag))
+        if existing is None:
+            return None
+        parent_tag = existing
+    return parent_tag
+
+
+def get_endpoints_by_tag(
+    session: Session,
+    tag_paths: list[str],
+) -> list[m.EndpointTable]:
+    """Return endpoints that have ALL of the given exact tags."""
+    query = select(m.EndpointTable)
+    for tag_path in tag_paths:
+        tag_row = resolve_tag_existing(session, tag_path)
+        if tag_row is None:
+            return []
+        query = query.where(
+            m.EndpointTable.tags.any(m.TagTable.id == tag_row.id)
+        )
+    return list(session.scalars(query).all())
+
+
+def find_new_endpoints(
+    discovered: list[m.Endpoint],
+    existing: list[m.EndpointTable],
+) -> list[m.Endpoint]:
+    """Return discovered endpoints not already in DB.
+
+    Match on (ip, port, transport_protocol).
+    """
+    existing_keys = {
+        (str(ep.ip), ep.port, ep.transport_protocol)
+        for ep in existing
+        if ep.ip is not None
+    }
+    return [
+        ep for ep in discovered
+        if (str(ep.ip), ep.port, ep.transport_protocol) not in existing_keys
+    ]
+
+
 def make_endpoint(session, port, ip, hostname, tags=()):
     endpoint = m.EndpointTable(
         port=port,

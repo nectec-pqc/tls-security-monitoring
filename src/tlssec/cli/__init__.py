@@ -1,6 +1,7 @@
 import logging
 _logger = logging.getLogger(__name__)
 
+import asyncio
 import click
 import yaml
 
@@ -10,6 +11,7 @@ import tlssec.core.model as model
 import tlssec.core.operation as op
 from .cli_state import CliState
 from .import_group import import_group
+from tlssec.core.nmap import Nmap
 
 
 @click.group('tlssec')
@@ -128,3 +130,73 @@ def endpoint(ctx, tag, from_file, port, ip, hostname):
                 ep.tags.append(op.resolve_tag(session, t))
     else:
         ep = op.make_endpoint(session, port, ip, hostname, list(tag))
+
+
+@cli.command()
+@click.option(
+    '--tag',
+    multiple = True,
+    required = True,
+    help = 'Exact tag path to select target endpoints e.g. network/tls',
+)
+@click.option(
+    '--ports',
+    default = None,
+    help = 'Port range to scan e.g. 443,8443 or 1-1024 (default: all ports)',
+)
+@click.pass_context
+def nmap(ctx, tag, ports):
+    """Scan endpoints matching tag(s) with nmap and report new discoveries."""
+    state = ctx.find_object(CliState)
+    session = state.db.session
+
+    existing = op.get_endpoints_by_tag(session, list(tag))
+    if not existing:
+        click.echo(f'No endpoints found with tags: {", ".join(tag)}')
+        return
+
+    hosts = set()
+    for ep in existing:
+        if ep.hostname:
+            hosts.add(ep.hostname)
+        elif ep.ip:
+            hosts.add(str(ep.ip))
+
+    if not hosts:
+        click.echo('No scannable hosts found.')
+        return
+
+    click.echo(f'Scanning {len(hosts)} host(s): {", ".join(hosts)}')
+
+    for host in hosts:
+        _, discovered = asyncio.run(
+            Nmap.discover_endpoints(
+                host,
+                ports = ports,
+            )
+        )
+
+        new_endpoints = op.find_new_endpoints(discovered, existing)
+
+        if not new_endpoints:
+            click.echo(f'No new endpoints discovered on {host}.')
+            continue
+
+        click.echo(f'\nFound {len(new_endpoints)} new endpoint(s) on {host}:\n')
+
+        for ep in new_endpoints:
+            click.echo(
+                f'  {ep.ip}:{ep.port}/{ep.transport_protocol}'
+                f'  app={ep.application_protocol}'
+                f'  tls={ep.tls_mode}'
+                f'  hostname={ep.hostname}'
+            )
+            if click.confirm('  Add this endpoint?', default = True):
+                row = model.EndpointTable(**ep.model_dump(exclude = {'id'}))
+                session.add(row)
+                session.flush()
+                for t in tag:
+                    row.tags.append(op.resolve_tag(session, t))
+
+    session.commit()
+    click.echo('\nDone.')
