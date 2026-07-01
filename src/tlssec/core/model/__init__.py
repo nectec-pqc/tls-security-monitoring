@@ -1,7 +1,3 @@
-from .service import (
-    Service, ServiceTable,
-    ServiceTag, ServiceTagTable,
-    ServiceTagMap, ServiceTagMapTable,
-)
+from .tag import Tag, TagTable, EndpointTagMapTable
 from .scan import Scan, ScanTable
 from .endpoint import Endpoint, EndpointTable, TlsMode

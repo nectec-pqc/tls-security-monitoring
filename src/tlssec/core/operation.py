@@ -1,9 +1,6 @@
 import logging
-
-from tlssec.core.model import service
 _logger = logging.getLogger(__name__)
 
-import yaml
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
@@ -27,45 +24,35 @@ def import_scan(
     session: Session,
 ):
     if not isinstance(scan, m.ScanTable):
-        scan = m.ScanTable(**scan.m_dump(exclude = ['id']))
+        scan = m.ScanTable(**scan.m_dump(exclude=['id']))
     session.add(scan)
 
-def parse_service(yaml_content):
-    raw_services = yaml.safe_load(yaml_content)
-    services = []
-    for raw_service in raw_services:
-        service = m.Service(**raw_service)
-        services.append((service, raw_service["tags"]))
-    return  services
-
-def make_service(name_and_hostname, tags):
-    services = []
-    name, hostname = name_and_hostname
-    service = m.Service(name=name, hostname=hostname)
-    services.append((service, tags))
-    return services
 
 def resolve_tag(session, full_tag):
     tags = full_tag.split("/")
     parent_tag = None
     for tag in tags:
-        isTagThere = session.scalar(
-            select(m.ServiceTagTable)
-            .where(m.ServiceTagTable.parent_id == (parent_tag.id if parent_tag else None))
-            .where(m.ServiceTagTable.name == tag))
-        if isTagThere is None:
-            isTagThere = m.ServiceTagTable(name=tag, parent=parent_tag)
-            session.add(isTagThere)
+        existing = session.scalar(
+            select(m.TagTable)
+            .where(m.TagTable.parent_id == (parent_tag.id if parent_tag else None))
+            .where(m.TagTable.name == tag))
+        if existing is None:
+            existing = m.TagTable(name=tag, parent=parent_tag)
+            session.add(existing)
             session.flush()
-        parent_tag = isTagThere
+        parent_tag = existing
     return parent_tag
 
-def parse_endpoint(session, from_film):
-        
-    pass
 
-
-def make_endpoint(session, name, port, ip, hostname):
-    pass
-
-
+def make_endpoint(session, port, ip, hostname, tags=()):
+    endpoint = m.EndpointTable(
+        port=port,
+        ip=ip,
+        hostname=hostname,
+    )
+    session.add(endpoint)
+    session.flush()
+    for tag in tags:
+        leaf_tag = resolve_tag(session, tag)
+        endpoint.tags.append(leaf_tag)
+    return endpoint
