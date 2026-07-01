@@ -9,6 +9,6 @@ from tlssec.core.model.service import Service
 class CliState:
     settings: Settings | None = None
     db: Database | None = None
-    service: list[Service] | None = None
+    services: list[Service] | None = None
 
 

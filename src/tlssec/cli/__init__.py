@@ -12,8 +12,6 @@ import tlssec.core.model as model
 import tlssec.core.operation as op
 from .cli_state import CliState
 from .import_group import import_group
-from .adhoc import adhoc
-
 
 @click.group('tlssec')
 @click.option(
@@ -81,7 +79,6 @@ def scan():
 
 
 cli.add_command(import_group)
-cli.add_command(adhoc)
 
 
 @cli.command()
@@ -89,34 +86,76 @@ def report():
     """Produce report"""
     raise NotImplementedError
 
-@cli.command()
+@cli.group(chain=True)
+def add():
+    """Add objects to the database"""
+    pass
+
+@add.command()
+@click.pass_context()
+def service_and_endpoint():
+    pass
+
+@add.command()
 @click.option("--tag", multiple=True)
 @click.option("--from_file", type=click.File("r"))
 @click.option("--name_and_hostname", type=(str, str), help='Frist str is name and second str is hostname')
 @click.pass_context
-def add_service(ctx, tags, from_file, name_and_hostname):
+def service(ctx, tags, from_file, name_and_hostname):
     state = ctx.find_object(CliState)
     session = state.db.session
     if from_file and name_and_hostname:
         raise click.UsageError("use --from_file OR --name, not both")
     if not from_file and not name_and_hostname:
-        raise click.UsageError("use -from_file OR --name")
+        raise click.UsageError("use --from_file OR --name")
 
     if from_file:
-        services_and_tags = op.parse(from_file)
+        services_and_tags = op.parse_service(from_file)
     else: 
         services_and_tags = op.make_service(name_and_hostname, tags) 
 
     # commit to DB 
+    rows = []
     for service, tags in services_and_tags:
         row = model.ServiceTable(**service.model_dump(exclude={"id"}))
         session.add(row)    
         for tag in tags:
             leaf_tag = op.resolve_tag(session, tag)
             row.tags.append(leaf_tag)
+        rows.append(row)
+    state.services = rows
     session.commit()
 
+@add.command()
+@click.option()
+
+@add.command()
+@click.oprion("--from_file", type=click.File("r"))
+@click.option("--name", "service_name")
+@click.option("--port", type=int)
+@click.option("--ip", type=str)
+@click.option("--hostname", type=str)
+@click.pass_context
+def endpoint(ctx, from_file, service_name, port, ip, hostname):
+    state = ctx.find_object(CliState)
+    session = state.db.session 
+
+    current_services = ctx.services
 
 
+    if current_services: 
+        # chain from add service  
+        # if it have multiple service then we need to map endpoint to that service, but don't that mean  
+        pass
+    else: 
+       # not chain from add service 
+        if service_name and from_file:
+            raise click.UsageError("use --from_file OR --name, not both")
+        if not service_name and not from_file:
+            raise click.UsageError("use --from_file OR --name")
 
+        if from_file:
+            op.parse_endpoint(session, from_file)
+        else:
+            op.make_endpoint(session, service_name, port, ip, hostname)
 

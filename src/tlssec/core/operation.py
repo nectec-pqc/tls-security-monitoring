@@ -61,7 +61,7 @@ def resolve_tag(session, full_tag):
     return parent_tag
 
 def parse_endpoint(session, from_film):
-    
+        
     pass
 
 
