@@ -116,7 +116,7 @@ def endpoint(ctx, tag, from_file, port, ip, hostname):
 
     if from_file and (ip or hostname):
         raise click.UsageError('use --from_file OR --ip/--hostname, not both')
-    if not from_file and not ip and not hostname:
+    if not any([from_file, ip, hostname]):
         raise click.UsageError('provide --from_file OR --ip/--hostname')
 
     if from_file:

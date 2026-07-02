@@ -28,7 +28,11 @@ def import_scan(
     session.add(scan)
 
 
-def resolve_tag(session, full_tag):
+def resolve_tag(
+    session: Session, 
+    full_tag: str,
+    create_non_existing_tag: bool = True,
+):
     tags = full_tag.split("/")
     parent_tag = None
     for tag in tags:
@@ -37,30 +41,14 @@ def resolve_tag(session, full_tag):
             .where(m.TagTable.parent_id == (parent_tag.id if parent_tag else None))
             .where(m.TagTable.name == tag))
         if existing is None:
-            existing = m.TagTable(name=tag, parent=parent_tag)
-            session.add(existing)
-            session.flush()
+            if create_non_existing_tag:
+                existing = m.TagTable(name=tag, parent=parent_tag)
+                session.add(existing)
+                session.flush()
+            else:
+                return None
         parent_tag = existing
     return parent_tag
-
-
-def resolve_tag_existing(
-    session: Session,
-    full_tag: str,
-) -> 'm.TagTable | None':
-    """Like resolve_tag but does NOT create — returns None if tag does not exist."""
-    tags = full_tag.split('/')
-    parent_tag = None
-    for tag in tags:
-        existing = session.scalar(
-            select(m.TagTable)
-            .where(m.TagTable.parent_id == (parent_tag.id if parent_tag else None))
-            .where(m.TagTable.name == tag))
-        if existing is None:
-            return None
-        parent_tag = existing
-    return parent_tag
-
 
 def get_endpoints_by_tag(
     session: Session,
@@ -69,7 +57,7 @@ def get_endpoints_by_tag(
     """Return endpoints that have ALL of the given exact tags."""
     query = select(m.EndpointTable)
     for tag_path in tag_paths:
-        tag_row = resolve_tag_existing(session, tag_path)
+        tag_row = resolve_tag(session, tag_path, False)
         if tag_row is None:
             return []
         query = query.where(
