@@ -1,6 +1,8 @@
 import logging
 _logger = logging.getLogger(__name__)
 
+from datetime import datetime
+
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
@@ -86,10 +88,13 @@ def find_new_endpoints(
 
 
 def make_endpoint(session, port, ip, hostname, tags=()):
+    now = datetime.now()
     endpoint = m.EndpointTable(
         port=port,
         ip=ip,
         hostname=hostname,
+        first_seen=now,
+        last_seen=now,
     )
     session.add(endpoint)
     session.flush()
