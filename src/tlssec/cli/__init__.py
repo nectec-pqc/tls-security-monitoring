@@ -4,6 +4,7 @@ _logger = logging.getLogger(__name__)
 import asyncio
 import click
 import yaml
+from pydantic import ValidationError
 
 from tlssec.settings import Settings
 from tlssec.database.database import Database
@@ -132,6 +133,97 @@ def endpoint(ctx, tag, from_file, port, ip, hostname):
         ep = op.make_endpoint(session, port, ip, hostname, list(tag))
 
 
+@cli.group(chain=True)
+@click.pass_context
+def edit(ctx):
+    """Edit objects in the database"""
+    pass
+
+
+@edit.result_callback()
+@click.pass_context
+def edit_commit(ctx, results, **kwargs):
+    state = ctx.find_object(CliState)
+    state.db.session.commit()
+
+
+@edit.command()
+@click.option('--id', 'ids', multiple=True, type=int, help='Select endpoint by id')
+@click.option('--tag', 'tags', multiple=True, help='Select endpoints carrying ALL of these tag path(s)')
+@click.option('--ip', 'ips', multiple=True, help='Select endpoints by IP address')
+@click.option('--hostname', 'hostnames', multiple=True, help='Select endpoints by hostname')
+@click.option('--port', type=int, default=None, help='Select endpoints by port')
+@click.option('--add-tag', 'add_tags', multiple=True, help='Attach this tag to selected endpoints')
+@click.option('--remove-tag', 'remove_tags', multiple=True, help='Detach this tag from selected endpoints')
+@click.option(
+    '--change-tag', 'change_tags',
+    multiple=True, nargs=2,
+    metavar='OLD NEW',
+    help='Replace tag OLD with NEW on selected endpoints',
+)
+@click.option(
+    '--disable/--enable', 'disabled',
+    default=None,
+    help='Disable (skip on scan) or re-enable selected endpoints',
+)
+@click.pass_context
+def endpoint(ctx, ids, tags, ips, hostnames, port, add_tags, remove_tags, change_tags, disabled):
+    """Edit endpoint(s): retag or toggle scan participation.
+
+    Select endpoints with --id, --tag, --ip, --hostname and/or --port. All
+    given criteria must match (intersection), so adding more options narrows
+    the selection toward a single endpoint; repeating the same option (e.g.
+    two --ip) matches any of those values. Then apply changes. Disabled
+    endpoints are skipped by scans but keep their tags and history, so the
+    disabled state is independent from last_seen used for scheduling.
+    """
+    state = ctx.find_object(CliState)
+    session = state.db.session
+
+    if not (ids or tags or ips or hostnames or port is not None):
+        raise click.UsageError('select endpoints with --id, --tag, --ip, --hostname and/or --port')
+    if not (add_tags or remove_tags or change_tags or disabled is not None):
+        raise click.UsageError(
+            'nothing to do: pass --add-tag/--remove-tag/--change-tag/--disable/--enable'
+        )
+
+    try:
+        endpoints = op.select_endpoints(
+            session,
+            ids=list(ids),
+            tag_paths=list(tags),
+            ips=list(ips),
+            hostnames=list(hostnames),
+            port=port,
+        )
+    except ValueError as e:
+        raise click.UsageError(str(e))
+
+    if not endpoints:
+        click.echo('No endpoints matched.')
+        return
+
+    try:
+        for ep in endpoints:
+            for old, new in change_tags:
+                if not op.change_endpoint_tag(session, ep, old, new):
+                    click.echo(
+                        f'  endpoint {ep.id}: no tag "{old}", not adding "{new}"'
+                    )
+            for t in remove_tags:
+                op.remove_endpoint_tag(session, ep, t)
+            for t in add_tags:
+                op.add_endpoint_tag(session, ep, t)
+    except ValidationError as e:
+        raise click.UsageError(f'invalid tag: {e}')
+
+    if disabled is not None:
+        op.set_endpoints_disabled(session, endpoints, disabled)
+
+    action = 'Disabled' if disabled else 'Enabled' if disabled is False else 'Updated'
+    click.echo(f'{action} {len(endpoints)} endpoint(s).')
+
+
 @cli.command()
 @click.option(
     '--tag',
@@ -155,8 +247,10 @@ def nmap(ctx, tag, ports):
         click.echo(f'No endpoints found with tags: {", ".join(tag)}')
         return
 
+    scannable = [ep for ep in existing if ep.retire_at is None]
+
     hosts = set()
-    for ep in existing:
+    for ep in scannable:
         if ep.hostname:
             hosts.add(ep.hostname)
         elif ep.ip:
