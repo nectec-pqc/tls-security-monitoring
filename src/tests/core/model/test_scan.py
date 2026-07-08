@@ -15,19 +15,11 @@ NOW = datetime(2025, 1, 1, tzinfo=timezone.utc)
 # Helpers
 # ---------------------------------------------------------------------------
 
-def make_service(session, name='scan_service'):
-    svc = m.ServiceTable(name=name, hostname='example.com')
-    session.add(svc)
-    session.flush()
-    return svc
-
-
-def make_endpoint(session, service):
+def make_endpoint(session, hostname='target.example.com'):
     ep = m.EndpointTable(
-        part_of_service_id=service.id,
-        hostname='target.example.com',
+        hostname=hostname,
         port=443,
-        application_protocol = 'https',
+        application_protocol='https',
         first_seen=NOW,
         last_seen=NOW,
     )
@@ -81,8 +73,7 @@ def test_scan_from_file_bad_path():
 # ---------------------------------------------------------------------------
 
 def test_create_and_query_scan(session):
-    svc = make_service(session)
-    ep = make_endpoint(session, svc)
+    ep = make_endpoint(session)
 
     scan = m.ScanTable(
         result={'tls': 'ok'},
@@ -103,8 +94,7 @@ def test_create_and_query_scan(session):
 
 
 def test_scan_optional_fields_nullable(session):
-    svc = make_service(session, 'svc_null')
-    ep = make_endpoint(session, svc)
+    ep = make_endpoint(session)
 
     scan = m.ScanTable(result=[], belong_to_endpoint_id=ep.id)
     session.add(scan)
@@ -118,8 +108,7 @@ def test_scan_optional_fields_nullable(session):
 
 
 def test_scan_result_list_stored_as_jsonb(session):
-    svc = make_service(session, 'svc_list')
-    ep = make_endpoint(session, svc)
+    ep = make_endpoint(session)
 
     data = [{'id': 'TLS1_3', 'finding': 'offered'}, {'id': 'TLS1_2', 'finding': 'offered'}]
     scan = m.ScanTable(result=data, belong_to_endpoint_id=ep.id)
@@ -133,8 +122,7 @@ def test_scan_result_list_stored_as_jsonb(session):
 
 
 def test_scan_endpoint_relationship(session):
-    svc = make_service(session, 'svc_rel')
-    ep = make_endpoint(session, svc)
+    ep = make_endpoint(session)
 
     scan = m.ScanTable(result={}, belong_to_endpoint_id=ep.id)
     session.add(scan)
@@ -146,8 +134,7 @@ def test_scan_endpoint_relationship(session):
 
 
 def test_endpoint_scans_relationship(session):
-    svc = make_service(session, 'svc_scans')
-    ep = make_endpoint(session, svc)
+    ep = make_endpoint(session)
 
     scans = [m.ScanTable(result={'run': i}, belong_to_endpoint_id=ep.id) for i in range(3)]
     session.add_all(scans)
@@ -158,8 +145,7 @@ def test_endpoint_scans_relationship(session):
 
 
 def test_scan_from_attributes(session):
-    svc = make_service(session, 'svc_pydantic')
-    ep = make_endpoint(session, svc)
+    ep = make_endpoint(session)
 
     scan = m.ScanTable(result={'key': 'val'}, belong_to_endpoint_id=ep.id, time_taken=10)
     session.add(scan)

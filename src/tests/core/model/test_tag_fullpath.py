@@ -7,16 +7,16 @@ import tlssec.core.model as m
 
 
 def test_fullpath(session):
-    tag = m.ServiceTagTable(
+    tag = m.TagTable(
         name = 'top',
         children = [
-            m.ServiceTagTable(name = 'left'),
-            m.ServiceTagTable(
+            m.TagTable(name = 'left'),
+            m.TagTable(
                 name = 'right',
                 children = [
-                    m.ServiceTagTable(name = 'left'),
-                    m.ServiceTagTable(name = 'mid'),
-                    m.ServiceTagTable(name = 'right'),
+                    m.TagTable(name = 'left'),
+                    m.TagTable(name = 'mid'),
+                    m.TagTable(name = 'right'),
                 ],
             ),
         ],
@@ -41,7 +41,7 @@ def test_fullpath(session):
 def test_tag_cycle_prevented(session):
     n = 4
     tags = [
-        m.ServiceTagTable(name = str(i))
+        m.TagTable(name = str(i))
         for i in range(n)
     ]
     for i in range(n):
@@ -63,7 +63,7 @@ def test_tag_cycle_detected(session):
     # separately from the rest.
     n = 4
     tags = [
-        m.ServiceTagTable(name = str(i))
+        m.TagTable(name = str(i))
         for i in range(n)
     ]
     for i in range(n - 1):
