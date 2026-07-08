@@ -10,8 +10,8 @@ for NAME in \
   example1.com \
   example2.com ;
 do
-  sudo nmap \
-    -sV --script=ssl-cert \
+  nmap \
+    -vv --script=ssl-cert \
     -oX "$NAME".nmap.xml \
     "$NAME" \
     > "$NAME".nmap
