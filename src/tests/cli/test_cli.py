@@ -387,6 +387,119 @@ def test_edit_endpoint_no_match_is_noop(runner, session):
     assert 'No endpoints matched' in result.output
 
 
+# --- delete endpoint -------------------------------------------------------
+
+def test_delete_endpoint_by_id(runner, session):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
+    op.make_endpoint(session, 443, '10.0.0.2', None, ['web'])
+    session.flush()
+    ep_id = ep.id
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id), '--yes'])
+    assert result.exit_code == 0, result.output
+    assert 'Deleted 1 endpoint' in result.output
+
+    ips = set(_by_ip(session))
+    assert ips == {'10.0.0.2'}  # only the selected endpoint is gone
+
+
+def test_delete_endpoint_by_tag_hits_all(runner, session):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
+    op.make_endpoint(session, 443, '10.0.0.3', None, ['staging'])
+    session.flush()
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--tag', 'prod', '--yes'])
+    assert result.exit_code == 0, result.output
+
+    assert set(_by_ip(session)) == {'10.0.0.3'}  # different tag, untouched
+
+
+def test_delete_endpoint_confirm_yes(runner, session):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
+    session.flush()
+    ep_id = ep.id
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id)], input='y\n')
+    assert result.exit_code == 0, result.output
+    assert _endpoints(session) == []
+
+
+def test_delete_endpoint_confirm_declined_keeps_endpoint(runner, session):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
+    session.flush()
+    ep_id = ep.id
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id)], input='n\n')
+    assert result.exit_code == 0, result.output
+    assert 'Aborted' in result.output
+    assert set(_by_ip(session)) == {'10.0.0.1'}  # nothing deleted
+
+
+def test_delete_endpoint_requires_selector(runner, session):
+    result = runner.invoke(cli, ['delete', 'endpoint', '--yes'])
+    assert result.exit_code == 2, result.output
+
+
+def test_delete_endpoint_unknown_id(runner, session):
+    result = runner.invoke(cli, ['delete', 'endpoint', '--id', '999999', '--yes'])
+    assert result.exit_code == 2, result.output
+    assert 'no endpoint with id' in result.output
+
+
+def test_delete_endpoint_no_match_is_noop(runner, session):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
+    session.flush()
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--tag', 'does/not/exist', '--yes'])
+    assert result.exit_code == 0, result.output
+    assert 'No endpoints matched' in result.output
+    assert set(_by_ip(session)) == {'10.0.0.1'}
+
+
+def _scans(session):
+    return list(session.scalars(select(model.ScanTable)).all())
+
+
+def test_delete_endpoint_with_scan_history_is_retired(runner, session):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
+    session.flush()
+    session.add(model.ScanTable(result={'ok': True}, belong_to_endpoint_id=ep.id))
+    session.flush()
+    ep_id = ep.id
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id), '--yes'])
+    assert result.exit_code == 0, result.output
+    assert 'Retired 1 endpoint' in result.output
+
+    # Endpoint is retired (disabled), not deleted; its scan history is preserved.
+    kept = _by_ip(session)
+    assert set(kept) == {'10.0.0.1'}
+    assert kept['10.0.0.1'].retire_at is not None
+    scans = _scans(session)
+    assert len(scans) == 1
+    assert scans[0].belong_to_endpoint_id == ep_id
+
+
+def test_delete_endpoint_retires_scanned_deletes_fresh(runner, session):
+    # Two endpoints share 'prod': one has scan history, one does not.
+    scanned = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
+    session.flush()
+    session.add(model.ScanTable(result={'ok': True}, belong_to_endpoint_id=scanned.id))
+    session.flush()
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--tag', 'prod', '--yes'])
+    assert result.exit_code == 0, result.output
+    assert 'Deleted 1 endpoint(s); retired 1' in result.output
+
+    # History-free endpoint is deleted; scanned one is retired with its scan kept.
+    kept = _by_ip(session)
+    assert set(kept) == {'10.0.0.1'}
+    assert kept['10.0.0.1'].retire_at is not None
+    assert len(_scans(session)) == 1
+
+
 # --- nmap ------------------------------------------------------------------
 
 def test_nmap_no_matching_endpoints(runner, session):

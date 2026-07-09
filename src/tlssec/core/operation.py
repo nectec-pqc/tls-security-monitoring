@@ -194,6 +194,27 @@ def set_endpoints_disabled(
             endpoint.retire_at = None
 
 
+def endpoint_has_scans(session: Session, endpoint: m.EndpointTable) -> bool:
+    """Return True if ``endpoint`` has any recorded scan history."""
+    return session.scalar(
+        select(m.ScanTable.id)
+        .where(m.ScanTable.belong_to_endpoint_id == endpoint.id)
+        .limit(1)
+    ) is not None
+
+
+def delete_endpoints(session: Session, endpoints: list[m.EndpointTable]):
+    """Hard-delete ``endpoints`` along with their tag associations.
+
+    The tag rows themselves are left intact since they may be shared. Callers
+    must not pass endpoints that carry scan history (see ``endpoint_has_scans``);
+    those should be retired with ``set_endpoints_disabled`` instead so the
+    history stays linked to them.
+    """
+    for endpoint in endpoints:
+        session.delete(endpoint)
+
+
 def make_endpoint(session, port, ip, hostname, tags=()):
     now = datetime.now()
     endpoint = m.EndpointTable(

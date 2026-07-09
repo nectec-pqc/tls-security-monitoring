@@ -224,6 +224,87 @@ def endpoint(ctx, ids, tags, ips, hostnames, port, add_tags, remove_tags, change
     click.echo(f'{action} {len(endpoints)} endpoint(s).')
 
 
+@cli.group(chain=True)
+@click.pass_context
+def delete(ctx):
+    """Delete objects from the database"""
+    pass
+
+
+@delete.result_callback()
+@click.pass_context
+def delete_commit(ctx, results, **kwargs):
+    state = ctx.find_object(CliState)
+    state.db.session.commit()
+
+
+@delete.command()
+@click.option('--id', 'ids', multiple=True, type=int, help='Select endpoint by id')
+@click.option('--tag', 'tags', multiple=True, help='Select endpoints carrying ALL of these tag path(s)')
+@click.option('--ip', 'ips', multiple=True, help='Select endpoints by IP address')
+@click.option('--hostname', 'hostnames', multiple=True, help='Select endpoints by hostname')
+@click.option('--port', type=int, default=None, help='Select endpoints by port')
+@click.option('--yes', '-y', is_flag=True, help='Delete without confirmation prompt')
+@click.pass_context
+def endpoint(ctx, ids, tags, ips, hostnames, port, yes):
+    """Delete endpoint(s) permanently.
+
+    Select endpoints with --id, --tag, --ip, --hostname and/or --port using the
+    same intersection semantics as `edit endpoint`: all given criteria must
+    match, while repeating one option (e.g. two --ip) matches any of those
+    values. Endpoints that carry scan history are not deleted but instead
+    retired (disabled) so their history is preserved while they stop being
+    scanned; history-free endpoints are removed outright.
+    """
+    state = ctx.find_object(CliState)
+    session = state.db.session
+
+    if not (ids or tags or ips or hostnames or port is not None):
+        raise click.UsageError('select endpoints with --id, --tag, --ip, --hostname and/or --port')
+
+    try:
+        endpoints = op.select_endpoints(
+            session,
+            ids=list(ids),
+            tag_paths=list(tags),
+            ips=list(ips),
+            hostnames=list(hostnames),
+            port=port,
+        )
+    except ValueError as e:
+        raise click.UsageError(str(e))
+
+    if not endpoints:
+        click.echo('No endpoints matched.')
+        return
+
+    deletable = [ep for ep in endpoints if not op.endpoint_has_scans(session, ep)]
+    retire = [ep for ep in endpoints if ep not in deletable]
+
+    for ep in retire:
+        click.echo(f'  retiring {ep.id}: has scan history, disabling instead of deleting')
+
+    if not deletable:
+        if retire:
+            op.set_endpoints_disabled(session, retire, True)
+            click.echo(f'Retired {len(retire)} endpoint(s); deleted 0.')
+        else:
+            click.echo('Nothing to delete.')
+        return
+
+    if not yes:
+        for ep in deletable:
+            click.echo(f'  {ep.id}: {ep.ip or ep.hostname}:{ep.port}')
+        if not click.confirm(f'Delete {len(deletable)} endpoint(s)?', default=False):
+            click.echo('Aborted.')
+            return
+
+    op.delete_endpoints(session, deletable)
+    if retire:
+        op.set_endpoints_disabled(session, retire, True)
+    click.echo(f'Deleted {len(deletable)} endpoint(s); retired {len(retire)}.')
+
+
 @cli.command()
 @click.option(
     '--tag',
