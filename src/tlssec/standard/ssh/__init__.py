@@ -42,3 +42,17 @@ quantum_safe_encs = {
     # FIXME: Find proper reference of key size of `twofish-ctr`
     # and decide if it is quantum-safe.
 }
+
+
+quantum_safe_host_key_algos = {
+    'mldsa-44',
+    'mldsa-65',
+    'mldsa-87',
+    'ssh-mldsa-44',
+    'ssh-mldsa-65',
+    'ssh-mldsa-87',
+    'ssh-mldsa44',
+    'ssh-mldsa44-ed25519@openssh.com',
+    'ssh-mldsa65',
+    'ssh-mldsa87',
+}

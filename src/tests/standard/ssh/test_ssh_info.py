@@ -25,3 +25,21 @@ def test_ssh_audit_db_agree_on_enc():
     }
     for name in standard.ssh.quantum_safe_encs:
         assert name in ssh_audit_safe_encs
+
+
+def test_ssh_audit_db_agree_on_host_key_algo():
+    ssh_audit_safe_host_key_algos = {
+        name: record
+        for name, raw_record in SSH2_KexDB.MASTER_DB['key'].items()
+        for record in (SshAudit.DbRecord(*raw_record),)
+        if (
+            not record.failures
+            and (
+                SSH2_KexDB.INFO_NIST_PQC_LEVEL_2 in record.infos
+                or SSH2_KexDB.INFO_NIST_PQC_LEVEL_3 in record.infos
+                or SSH2_KexDB.INFO_NIST_PQC_LEVEL_5 in record.infos
+            )
+        )
+    }
+    for name in standard.ssh.quantum_safe_host_key_algos:
+        assert name in ssh_audit_safe_host_key_algos

@@ -60,7 +60,7 @@ class SshAudit:
                     'safe': set(),
                     'unsafe': set(),
                 },
-                'server_cert_signature': {
+                'host_key_algorithm': {
                     'safe': set(),
                     'unsafe': set(),
                 },
@@ -77,7 +77,8 @@ class SshAudit:
             safe = item['algorithm'] in standard.ssh.quantum_safe_encs
             extract['qs']['symmetric_encryption']['safe' if safe else 'unsafe'].add(item['algorithm'])
 
-        # TODO: populate server_cert_signature
-        breakpoint()
+        for item in source['key']:
+            safe = item['algorithm'] in standard.ssh.quantum_safe_host_key_algos
+            extract['qs']['host_key_algorithm']['safe' if safe else 'unsafe'].add(item['algorithm'])
 
         return extract
