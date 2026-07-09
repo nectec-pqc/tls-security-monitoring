@@ -11,6 +11,9 @@ resolution-markers = [
 exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
 exclude-newer-span = "P7D"
 
+[options.exclude-newer-package]
+ssh-audit = { timestamp = "0001-01-01T00:00:00Z", span = "P3D" }
+
 [[package]]
 name = "annotated-types"
 version = "0.7.0"
@@ -1763,11 +1766,11 @@ wheels = [
 
 [[package]]
 name = "ssh-audit"
-version = "3.3.0"
+version = "3.9.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3b/ec/e89fdfaaa6f08813e1a5cf926bc0dc155761144ebcac57191b4c8001aae3/ssh_audit-3.3.0.tar.gz", hash = "sha256:b76e36ac9844f45d64986c9f293a4b46766a10412dc29fb43bd52d0f6661a5b0", size = 116958, upload-time = "2024-10-15T21:08:28.632Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b4/95/0dc036428ef8d76e2c812cbec9e69c2020230da32ea0e699908735894a2f/ssh_audit-3.9.0.tar.gz", hash = "sha256:f1225d0364b3cb61c7dfb1f5065a6958dbb814d98b2c1dd2a779ba2cdef41f61", size = 133244, upload-time = "2026-07-04T21:57:10.445Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/21/2b3cd275bc3c09fc765691f6c005a6683edf47f47c18d2f9eb78c39ca7e6/ssh_audit-3.3.0-py3-none-any.whl", hash = "sha256:8d2b22b7bb7c20c9d84452c9f13408015ec76eb025379cc70335e5315e4378d6", size = 121789, upload-time = "2024-10-15T21:08:27.182Z" },
+    { url = "https://files.pythonhosted.org/packages/24/79/ce022332cf59f0eb2e1b8ff6cdab3f80502449fdf3c053f05191a5a87326/ssh_audit-3.9.0-py3-none-any.whl", hash = "sha256:3dad48d4678e0de31f6332cc7674f9d7dd1805f86babf3796f41c2fd879cb812", size = 131886, upload-time = "2026-07-04T21:57:06.076Z" },
 ]
 
 [[package]]
@@ -1858,7 +1861,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "seaborn", marker = "extra == 'analysis'", specifier = ">=0.13.2" },
     { name = "sqlalchemy", specifier = ">=2.0.50" },
-    { name = "ssh-audit", specifier = ">=3.3.0" },
+    { name = "ssh-audit", specifier = ">=3.9.0" },
 ]
 provides-extras = ["analysis"]
 

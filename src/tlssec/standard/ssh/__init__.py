@@ -1,0 +1,26 @@
+"""Static information about openssh standard
+
+Sources:
+- ```
+  ssh -Q help
+  ssh -Q kex
+  ssh -Q key
+  ssh -Q cipher
+  ```
+  etc.
+- https://www.openssh.org/pq.html
+- https://www.openssh.org/specs.html
+- [ssh-audit's database](https://github.com/jtesta/ssh-audit/blob/master/src/ssh_audit/ssh2_kexdb.py)
+  The formatting is too messy to be used directly. (They don't follow their own type hints)
+  But should be good to use as one of the sources.
+"""
+
+
+# Algorithm names must be in the same format used by `ssh -Q kex`
+quantum_safe_kems = {
+    'mlkem768x25519-sha256',
+    'mlkem768nistp256-sha256',
+    'mlkem1024nistp384-sha384',
+    'sntrup761x25519-sha512',
+    'sntrup761x25519-sha512@openssh.com',
+}

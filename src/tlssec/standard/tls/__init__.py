@@ -1,4 +1,4 @@
-"""Static information about TLS key establishment mechanism.
+"""Static information about TLS standard.
 
 Sources:
 

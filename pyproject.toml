@@ -17,7 +17,7 @@ dependencies = [
     "pydantic-settings>=2.14.1",
     "pyyaml>=6.0.3",
     "sqlalchemy>=2.0.50",
-    "ssh-audit>=3.3.0",
+    "ssh-audit>=3.9.0",
 ]
 
 [dependency-groups]
@@ -44,6 +44,8 @@ build-backend = "uv_build"
 
 [tool.uv]
 exclude-newer = "7 days"
+# NOTE: Add specifically to use 3.9.0 faster. TODO: Remove soon.
+exclude-newer-package = {ssh-audit = "3 days"}
 
 [tool.pytest]
 # Deselect slow tests by default. Use `-m ''` to include slow tests.
