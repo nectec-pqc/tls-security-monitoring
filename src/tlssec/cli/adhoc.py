@@ -10,6 +10,7 @@ import yaml
 import tlssec.core.model as m
 from tlssec.core.nmap import Nmap
 from tlssec.core.testssl import Testssl
+from tlssec.core.ssh_audit import SshAudit
 
 
 @click.group()
@@ -110,6 +111,39 @@ def testssl_json_to_extracts_yaml(
         extracts.extend(Testssl.extract_json(path))
 
     outpath = Path('testssl_extracts.yaml')
+    if not force and outpath.exists():
+        raise FileExistsError(f'file already exists {outpath}')
+    with open(outpath, 'w') as f:
+        yaml.dump(extracts, f, Dumper=SetToListDumper)
+
+
+@adhoc.command()
+@click.option(
+    '--force', '-f',
+    is_flag = True,
+    help = 'Overwrite existing output file',
+)
+@click.argument(
+    'paths',
+    metavar = 'files',
+    type = click.Path(
+        exists = True,
+        dir_okay = False,
+        path_type = Path,
+    ),
+    nargs = -1,
+)
+def ssh_audit_json_to_extracts_yaml(
+    paths: list[Path],
+    force: bool,
+):
+    """Produce yaml document summarizing ssh-audit result"""
+    extracts = []
+    for path in paths:
+        _logger.info(f'processing {path}')
+        extracts.append(SshAudit.extract_json(path))
+
+    outpath = Path('ssh_audit_extracts.yaml')
     if not force and outpath.exists():
         raise FileExistsError(f'file already exists {outpath}')
     with open(outpath, 'w') as f:
