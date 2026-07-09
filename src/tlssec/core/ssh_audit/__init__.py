@@ -1,7 +1,10 @@
 import os
 from pathlib import Path
+from typing import Literal
+from dataclasses import dataclass, field
 
 import yaml
+from ssh_audit.ssh2_kexdb import SSH2_KexDB
 
 import tlssec.standard as standard
 
@@ -11,6 +14,22 @@ class SshAudit:
 
     # TODO: Try calling ssh-audit via python API directly
     # instead of having to write result to file first.
+
+    @dataclass
+    class DbRecord:
+        first_versions: list[str] = field(default_factory = list)
+        failures: list[str] = field(default_factory = list)
+        warnings: list[str] = field(default_factory = list)
+        infos: list[str] = field(default_factory = list)
+
+    def lookup_ssh_audit_db(
+        kind: Literal['kex', 'key', 'enc', 'mac'],
+        name: str,
+    ) -> DbRecord | None:
+        record = SSH2_KexDB.MASTER_DB[kind].get(name, None)
+        if record is None:
+            return None
+        return SshAudit.DbRecord(*record)
 
     @classmethod
     def extract_json(
