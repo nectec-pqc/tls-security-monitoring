@@ -73,7 +73,11 @@ class SshAudit:
             safe = item['algorithm'] in standard.ssh.quantum_safe_kems
             extract['qs']['key_establishment']['safe' if safe else 'unsafe'].add(item['algorithm'])
 
-        # TODO: populate symmetric_encryption and server_cert_signature
+        for item in source['enc']:
+            safe = item['algorithm'] in standard.ssh.quantum_safe_encs
+            extract['qs']['symmetric_encryption']['safe' if safe else 'unsafe'].add(item['algorithm'])
+
+        # TODO: populate server_cert_signature
         breakpoint()
 
         return extract

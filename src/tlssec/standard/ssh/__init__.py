@@ -13,6 +13,7 @@ Sources:
 - [ssh-audit's database](https://github.com/jtesta/ssh-audit/blob/master/src/ssh_audit/ssh2_kexdb.py)
   The formatting is too messy to be used directly. (They don't follow their own type hints)
   But should be good to use as one of the sources.
+- https://ssh-comparison.quendi.de/comparison/cipher.html
 """
 
 
@@ -23,4 +24,21 @@ quantum_safe_kems = {
     'mlkem1024nistp384-sha384',
     'sntrup761x25519-sha512',
     'sntrup761x25519-sha512@openssh.com',
+}
+
+
+quantum_safe_encs = {
+    'AEAD_AES_256_GCM',
+    'AEAD_CAMELLIA_256_GCM',
+    'aes256-ctr',
+    'aes256-gcm',
+    'aes256-gcm@openssh.com',
+    'camellia256-ctr',
+    'camellia256-ctr@openssh.org',
+    'chacha20-poly1305',
+    'chacha20-poly1305@openssh.com',
+    'twofish256-ctr',
+    'twofish256-gcm@libassh.org',
+    # FIXME: Find proper reference of key size of `twofish-ctr`
+    # and decide if it is quantum-safe.
 }
