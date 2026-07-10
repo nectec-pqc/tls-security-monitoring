@@ -46,6 +46,7 @@ class SshAudit:
         #
         # For now, we just assume it's always `{ip}:{port}`
         ip, port = source['target'].split(':')
+        port = int(port)
         
         extract = {
             'ip': ip,
