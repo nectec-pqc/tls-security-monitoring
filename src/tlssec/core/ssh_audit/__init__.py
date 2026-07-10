@@ -71,6 +71,8 @@ class SshAudit:
         for item in source['kex']:
             # NOTE: ignore notes in file, trust "current" classification of
             # algorithm in library instead of one recorded previously.
+            if item['algorithm'] in standard.ssh.pseudo_kems:
+                continue
             safe = item['algorithm'] in standard.ssh.quantum_safe_kems
             extract['qs']['key_establishment']['safe' if safe else 'unsafe'].add(item['algorithm'])
 

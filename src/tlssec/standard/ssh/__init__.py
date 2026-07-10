@@ -25,6 +25,13 @@ quantum_safe_kems = {
     'sntrup761x25519-sha512',
     'sntrup761x25519-sha512@openssh.com',
 }
+# Not real kem algorithm, just informational marker
+pseudo_kems = {
+    'ext-info-c',
+    'ext-info-s',
+    'kex-strict-c-v00@openssh.com',
+    'kex-strict-s-v00@openssh.com',
+}
 
 
 quantum_safe_encs = {
