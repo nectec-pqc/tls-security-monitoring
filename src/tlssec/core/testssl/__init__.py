@@ -81,6 +81,8 @@ class Testssl:
                         'id': 'FS_KEMs' | 'FS_ECDHE_curves' | 'DH_groups' as item_id,
                         'finding': str(params),
                     }:
+                        if item_id == 'FS_KEMs' and params == 'No KEMs offered':
+                            continue
                         if item_id == 'DH_groups' and 'ffdhe' not in params:
                             # CAUTION: When testssl output DH_groups findings,
                             # the finding may not be a list of parameter names separated by spaces like other cases.
