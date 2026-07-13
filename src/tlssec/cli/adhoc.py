@@ -108,7 +108,23 @@ def testssl_json_to_extracts_yaml(
     extracts = []
     for path in paths:
         _logger.info(f'processing {path}')
-        extracts.extend(Testssl.extract_json(path))
+        new_extracts = Testssl.extract_json(path)
+        if not new_extracts:
+            continue
+
+        stdout_path = path.with_suffix('.stdout')
+        if stdout_path.exists():
+            stdout_text = stdout_path.read_text()
+            if len(new_extracts) > 1:
+                _logger.warning(
+                    f'{stdout_path} likely contain raw result for multiple endpoints.'
+                    ' only the first endpoint will be populated with raw to avoid repeating the same data.'
+                )
+            new_extracts[0]['raw'] = stdout_text
+        else:
+            _logger.warning(f'{stdout_path} does not exists, skipping.')
+
+        extracts.extend(new_extracts)
 
     outpath = Path('testssl_extracts.yaml')
     if not force and outpath.exists():
