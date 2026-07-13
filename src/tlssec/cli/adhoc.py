@@ -11,6 +11,7 @@ import tlssec.core.model as m
 from tlssec.core.nmap import Nmap
 from tlssec.core.testssl import Testssl
 from tlssec.core.ssh_audit import SshAudit
+from .cli_state import CliState
 
 
 @click.group()
@@ -35,11 +36,14 @@ def adhoc():
     ),
     nargs = -1,
 )
+@click.pass_context
 def nmap_xmls_to_extracts_yaml(
+    ctx,
     paths: list[Path],
     force: bool,
 ):
     """Produce yaml document summarizing nmap result"""
+    state = ctx.find_object(CliState)
     endpoints = []
     for path in paths:
         _logger.info(f'processing {path}')
@@ -62,7 +66,7 @@ def nmap_xmls_to_extracts_yaml(
         for endpoint in endpoints
     ]
 
-    outpath = Path('nmap_extracts.yaml')
+    outpath = state.settings.output_dir / 'nmap_extracts.yaml'
     if not force and outpath.exists():
         raise FileExistsError(f'file already exists {outpath}')
     with open(outpath, 'w') as f:
@@ -100,11 +104,14 @@ SetToListDumper.add_representer(
     ),
     nargs = -1,
 )
+@click.pass_context
 def testssl_json_to_extracts_yaml(
+    ctx,
     paths: list[Path],
     force: bool,
 ):
     """Produce yaml document summarizing testssl result"""
+    state = ctx.find_object(CliState)
     extracts = []
     for path in paths:
         _logger.info(f'processing {path}')
@@ -126,7 +133,7 @@ def testssl_json_to_extracts_yaml(
 
         extracts.extend(new_extracts)
 
-    outpath = Path('testssl_extracts.yaml')
+    outpath = state.settings.output_dir / 'testssl_extracts.yaml'
     if not force and outpath.exists():
         raise FileExistsError(f'file already exists {outpath}')
     with open(outpath, 'w') as f:
@@ -149,17 +156,20 @@ def testssl_json_to_extracts_yaml(
     ),
     nargs = -1,
 )
+@click.pass_context
 def ssh_audit_json_to_extracts_yaml(
+    ctx,
     paths: list[Path],
     force: bool,
 ):
     """Produce yaml document summarizing ssh-audit result"""
+    state = ctx.find_object(CliState)
     extracts = []
     for path in paths:
         _logger.info(f'processing {path}')
         extracts.append(SshAudit.extract_json(path))
 
-    outpath = Path('ssh_audit_extracts.yaml')
+    outpath = state.settings.output_dir / 'ssh_audit_extracts.yaml'
     if not force and outpath.exists():
         raise FileExistsError(f'file already exists {outpath}')
     with open(outpath, 'w') as f:
