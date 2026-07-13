@@ -39,7 +39,8 @@ class Nmap:
 
         Nmap can list multiple hostnames for a single host it scanned.
         - Hostname of `user` type is preferred for further processing because
-          it is what original caller of nmap refer to the host as.
+          it can be reliably matched to records of other scanners provided they
+          also prioritize user specified hostnames.
         - Next, hostname of `PTR` type is preferred because it's what discovered.
         - Lastly, if there is any other type of hostname, they all have equal
           priority.
@@ -51,7 +52,8 @@ class Nmap:
         def key(hostname):
             type_ = hostname.attrs.get('type', None),
             return (
-                type_ is not None,
+                type_ is None,
+                type_ != 'user',
                 type_ or '',
             )
         return sorted(
