@@ -61,6 +61,7 @@ class Testssl:
             extract = {
                 'ip': scan['ip'],
                 'port': int(scan['port']),
+                'raw': scan,
                 'qs': {
                     'key_establishment': {
                         'safe': set(),

@@ -127,7 +127,7 @@ def testssl_json_to_extracts_yaml(
                     f'{stdout_path} likely contain raw result for multiple endpoints.'
                     ' only the first endpoint will be populated with raw to avoid repeating the same data.'
                 )
-            new_extracts[0]['raw'] = stdout_text
+            new_extracts[0]['raw_text'] = stdout_text
         else:
             _logger.warning(f'{stdout_path} does not exists, skipping.')
 
