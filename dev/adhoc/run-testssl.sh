@@ -11,8 +11,8 @@ for NAME in \
   example2.com ;
 do
   testssl \
-    --json-pretty \
-    --html \
+    --jsonfile-pretty "$NAME".json \
+    --htmlfile "$NAME".html \
     --user-agent 'testssl.sh run by apiwat.cha [at] nectec.or.th please contact for exclusion or feedback' \
     "$NAME" \
     > "$NAME".stdout
