@@ -1,9 +1,12 @@
 import asyncio
+import json
 from pathlib import Path
 
 import pytest
 
 from tlssec.core.testssl import Testssl
+from tlssec.asyncio import CompletedProcess
+import tlssec.core.model as m
 
 
 @pytest.fixture(scope = 'module')
@@ -93,3 +96,113 @@ async def test_generate_testssl_json(testssl, current_openssl_server):
             json.dump(content, f, indent = 2)
 
         tmp_file.unlink(missing_ok = True)
+
+
+# --- Testssl.scan (no real testssl; self.call is faked) --------------------
+
+def _fake_call_writing(result, capture=None):
+    """Build a Testssl.call replacement that writes `result` to the jsonfile.
+
+    Mimics testssl: it does not print JSON to stdout, it writes the file named
+    by the --jsonfile-pretty argument. Optionally records the args it was given.
+    """
+    async def fake_call(self, *args, **kwargs):
+        if capture is not None:
+            capture['args'] = args
+        json_path = Path(args[args.index('--jsonfile-pretty') + 1])
+        json_path.write_text(json.dumps(result))
+        return CompletedProcess(args=args, returncode=0, stdout=[], stderr=[])
+    return fake_call
+
+
+async def test_scan_writes_jsonfile_and_returns_result(monkeypatch):
+    ts = Testssl()
+    expected = {'scanResult': [{'ip': '127.0.0.1', 'port': '443'}]}
+    capture = {}
+    monkeypatch.setattr(Testssl, 'call', _fake_call_writing(expected, capture))
+
+    ep = m.Endpoint(ip='127.0.0.1', hostname=None, port=443, tls_mode=m.TlsMode.implicit)
+    scan = await ts.scan(ep)
+
+    assert scan.result == expected
+    assert scan.start_time is not None
+    assert scan.time_taken is not None
+    # Implicit TLS: target is host:port, no --starttls.
+    assert '127.0.0.1:443' in capture['args']
+    assert '--starttls' not in capture['args']
+
+
+async def test_scan_prefers_hostname_over_ip(monkeypatch):
+    ts = Testssl()
+    capture = {}
+    monkeypatch.setattr(Testssl, 'call', _fake_call_writing({}, capture))
+
+    ep = m.Endpoint(ip='127.0.0.1', hostname='example.com', port=8443,
+                    tls_mode=m.TlsMode.implicit)
+    await ts.scan(ep)
+    assert 'example.com:8443' in capture['args']
+
+
+async def test_scan_explicit_uses_starttls(monkeypatch):
+    ts = Testssl()
+    capture = {}
+    monkeypatch.setattr(Testssl, 'call', _fake_call_writing({}, capture))
+
+    ep = m.Endpoint(ip=None, hostname='mail.example.com', port=25,
+                    application_protocol='smtp', tls_mode=m.TlsMode.explicit)
+    await ts.scan(ep)
+
+    args = capture['args']
+    assert 'mail.example.com:25' in args
+    assert args[args.index('--starttls') + 1] == 'smtp'
+
+
+async def test_scan_explicit_unknown_protocol_raises(monkeypatch):
+    ts = Testssl()
+    monkeypatch.setattr(Testssl, 'call', _fake_call_writing({}))
+
+    ep = m.Endpoint(ip=None, hostname='host.example.com', port=1234,
+                    application_protocol='weirdproto', tls_mode=m.TlsMode.explicit)
+    with pytest.raises(ValueError, match='starttls'):
+        await ts.scan(ep)
+
+
+async def test_scan_requires_host():
+    ts = Testssl()
+    ep = m.Endpoint(ip=None, hostname=None, port=443)
+    with pytest.raises(ValueError, match='hostname nor ip'):
+        await ts.scan(ep)
+
+
+@pytest.mark.slow
+async def test_scan_real_local(testssl, current_openssl_server):
+    """End-to-end: really run testssl against the local openssl server."""
+    ep = m.Endpoint(ip='127.0.0.1', hostname='localhost', port=4433,
+                    tls_mode=m.TlsMode.implicit)
+    scan = await testssl.scan(ep)
+
+    assert isinstance(scan.result, dict)
+    assert 'scanResult' in scan.result
+    assert scan.start_time is not None
+    assert scan.time_taken is not None
+    # The parsed result is consumable by the existing extractor.
+    extracts = Testssl.extract_json(scan.result)
+    assert extracts and extracts[0]['port'] == '4433'
+
+
+async def test_scan_raises_when_testssl_did_not_complete(monkeypatch):
+    ts = Testssl()
+
+    async def fake_call(self, *args, **kwargs):
+        # Simulate a timeout/kill: run_subprocess returns with .exception set
+        # and no output file written.
+        return CompletedProcess(
+            args=args, returncode=None, stdout=[], stderr=[],
+            exception=asyncio.TimeoutError(),
+        )
+
+    monkeypatch.setattr(Testssl, 'call', fake_call)
+
+    ep = m.Endpoint(ip='127.0.0.1', hostname=None, port=443, tls_mode=m.TlsMode.implicit)
+    with pytest.raises(RuntimeError, match='did not complete'):
+        await ts.scan(ep)

@@ -13,6 +13,7 @@ import tlssec.core.operation as op
 from .cli_state import CliState
 from .import_group import import_group
 from tlssec.core.nmap import Nmap
+from tlssec.core.testssl import Testssl
 
 
 @click.group('tlssec')
@@ -75,9 +76,78 @@ def show_settings(ctx):
 
 
 @cli.command()
-def scan():
-    """Start scanning"""
-    raise NotImplementedError
+@click.option('--id', 'ids', multiple=True, type=int, help='Select endpoint by id')
+@click.option('--tag', 'tags', multiple=True, help='Select endpoints carrying ALL of these tag path(s)')
+@click.option('--ip', 'ips', multiple=True, help='Select endpoints by IP address')
+@click.option('--hostname', 'hostnames', multiple=True, help='Select endpoints by hostname')
+@click.option('--port', type=int, default=None, help='Select endpoints by port')
+@click.pass_context
+def scan(ctx, ids, tags, ips, hostnames, port):
+    """Scan endpoints and record the results.
+
+    With no selection options every active endpoint in the system is scanned.
+    Narrow the target set with --id, --tag, --ip, --hostname and/or --port using
+    the same intersection semantics as `edit endpoint` and `delete endpoint`:
+    all given criteria must match (so adding options narrows toward a single
+    endpoint), while repeating one option (e.g. two --ip) matches any of those
+    values. Disabled (retired) endpoints are always skipped.
+    """
+    state = ctx.find_object(CliState)
+    session = state.db.session
+
+    try:
+        endpoints = op.select_endpoints(
+            session,
+            ids=list(ids),
+            tag_paths=list(tags),
+            ips=list(ips),
+            hostnames=list(hostnames),
+            port=port,
+        )
+    except ValueError as e:
+        raise click.UsageError(str(e))
+
+    scannable = [ep for ep in endpoints if ep.retire_at is None]
+    if not scannable:
+        click.echo('No endpoints to scan.')
+        return
+
+    click.echo(f'Scanning {len(scannable)} endpoint(s)...')
+
+    testssl = Testssl()
+
+    async def run_all():
+        return await asyncio.gather(*(
+            testssl.scan(model.Endpoint.model_validate(ep))
+            for ep in scannable
+        ), return_exceptions=True)
+
+    results = asyncio.run(run_all())
+
+    recorded = 0
+    failed = 0
+    for ep, result in zip(scannable, results):
+        label = f'{ep.ip or ep.hostname}:{ep.port}'
+        # One endpoint failing (unreachable host, testssl error, ...) must not
+        # discard the scans that did succeed.
+        if isinstance(result, Exception):
+            failed += 1
+            click.echo(f'  failed {label}: {result}')
+            continue
+        session.add(model.ScanTable(
+            result=result.result,
+            start_time=result.start_time,
+            time_taken=result.time_taken,
+            belong_to_endpoint_id=ep.id,
+        ))
+        recorded += 1
+        click.echo(f'  scanned {label}')
+
+    session.commit()
+    if failed:
+        click.echo(f'Done. Recorded {recorded} scan(s); {failed} failed.')
+    else:
+        click.echo(f'Done. Recorded {recorded} scan(s).')
 
 
 cli.add_command(import_group)

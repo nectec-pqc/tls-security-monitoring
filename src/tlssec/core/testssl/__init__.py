@@ -1,5 +1,8 @@
 import os
+import json
 import asyncio
+import tempfile
+from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -35,12 +38,96 @@ class Testssl:
         async with self.semaphore:
             return await run_subprocess('testssl', *args, **kwargs)
 
+    # Map an endpoint's application_protocol to the argument testssl expects for
+    # its `--starttls` option, used when TLS is negotiated after a plaintext
+    # handshake (explicit / STARTTLS endpoints).
+    STARTTLS_PROTOCOLS = {
+        'smtp': 'smtp',
+        'submission': 'smtp',
+        'smtps': 'smtp',
+        'lmtp': 'lmtp',
+        'pop3': 'pop3',
+        'imap': 'imap',
+        'ftp': 'ftp',
+        'telnet': 'telnet',
+        'ldap': 'ldap',
+        'irc': 'irc',
+        'nntp': 'nntp',
+        'sieve': 'sieve',
+        'xmpp': 'xmpp',
+        'postgres': 'postgres',
+        'postgresql': 'postgres',
+        'mysql': 'mysql',
+    }
+
     async def scan(
         self,
         endpoint: m.Endpoint,
     ) -> m.Scan:
-        # TODO: use self.call to actually do scan
-        raise NotImplementedError
+        """Run testssl.sh against a single endpoint and return its result.
+
+        testssl writes machine-readable output to a file (via ``--jsonfile-pretty``)
+        rather than to stdout, so we point it at a throwaway temp file and read
+        it back. Explicit (STARTTLS) endpoints are scanned with ``--starttls``
+        using the protocol derived from ``application_protocol``.
+
+        Raises
+        ------
+        ValueError
+            If the endpoint has no host to scan, or is an explicit-TLS endpoint
+            whose application protocol has no known ``--starttls`` mapping.
+        RuntimeError
+            If testssl was terminated (e.g. timeout) or produced no output.
+        """
+        host = endpoint.hostname or (
+            str(endpoint.ip) if endpoint.ip is not None else None
+        )
+        if host is None:
+            raise ValueError('endpoint has neither hostname nor ip to scan')
+        target = f'{host}:{endpoint.port}'
+
+        options = []
+        if endpoint.tls_mode == m.TlsMode.explicit:
+            starttls = self.STARTTLS_PROTOCOLS.get(
+                (endpoint.application_protocol or '').lower()
+            )
+            if starttls is None:
+                raise ValueError(
+                    f'cannot scan STARTTLS endpoint {target}: no --starttls'
+                    f' mapping for application protocol'
+                    f' {endpoint.application_protocol!r}'
+                )
+            options += ['--starttls', starttls]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            json_path = Path(tmpdir) / 'result.json'
+            start_time = datetime.now()
+            completed = await self.call(
+                '--jsonfile-pretty', str(json_path),
+                *options,
+                target,
+            )
+            time_taken = round((datetime.now() - start_time).total_seconds())
+
+            if completed.exception is not None:
+                raise RuntimeError(
+                    f'testssl did not complete on {target}'
+                ) from completed.exception
+
+            try:
+                with json_path.open() as f:
+                    result = json.load(f)
+            except FileNotFoundError as e:
+                raise RuntimeError(
+                    f'testssl produced no output for {target}'
+                    f' (returncode={completed.returncode})'
+                ) from e
+
+        return m.Scan(
+            result = result,
+            start_time = start_time,
+            time_taken = time_taken,
+        )
 
     @classmethod
     def extract_json(

@@ -1,5 +1,6 @@
 import os
 import asyncio
+import tempfile
 from pathlib import Path
 from datetime import datetime
 import re
@@ -48,12 +49,10 @@ class Nmap:
         assert len(hostnames_tags) == 1, 'There should only be one <hostnames> tag inside each <host> tag in nmap.xml'
         hostnames_tag = hostnames_tags[0]
 
+        PRIORITY = {'user': 0, 'PTR': 1}
         def key(hostname):
-            type_ = hostname.attrs.get('type', None),
-            return (
-                type_ is not None,
-                type_ or '',
-            )
+            type_ = hostname.attrs.get('type')
+            return PRIORITY.get(type_, 2)
         return sorted(
             hostnames_tag.find_all('hostname'),
             key = key,
@@ -92,24 +91,29 @@ class Nmap:
                 else:
                     tls_mode = m.TlsMode.none
 
+                # A port may have no <service> tag when nmap could not identify
+                # the service; fall back to no application protocol / info.
                 service_tag = port.find('service')
-                # TODO: handle case there is no service tag
-                service_infos = list(filter(None, [
-                    service_tag.attrs.get('product', None),
-                    service_tag.attrs.get('version', None),
-                    (
-                        (extra := service_tag.attrs.get('extrainfo', None))
-                        and f'({extra})'
-                    ),
-                ]))
-                if any(isinstance(x,int) for x in service_infos):
-                    breakpoint()
+                if service_tag is not None:
+                    application_protocol = service_tag.attrs.get('name', None)
+                    service_infos = list(filter(None, [
+                        service_tag.attrs.get('product', None),
+                        service_tag.attrs.get('version', None),
+                        (
+                            (extra := service_tag.attrs.get('extrainfo', None))
+                            and f'({extra})'
+                        ),
+                    ]))
+                else:
+                    application_protocol = None
+                    service_infos = []
+
                 endpoints.append(m.Endpoint(
                     ip = address,
                     hostname = preferred_hostname,
                     port = port.attrs.get('portid', None),
                     transport_protocol = port.attrs.get('protocol', 'tcp'),
-                    application_protocol = service_tag.attrs.get('name', None),
+                    application_protocol = application_protocol,
                     service_info = ' '.join(service_infos) or None,
                     first_seen = host_start,
                     last_seen = host_end,
@@ -134,10 +138,13 @@ class Nmap:
 
         This will
 
-        - Run nmap on the target and store XML output.
-        - Read back XML output file to extract items relevant to tlssec.
-        - Store Scan object in database.
-        - Store found endpoints in database.
+        - Run nmap on the target and write XML output (to ``base_output_dir`` if
+          given, otherwise a throwaway temp file).
+        - Read back the XML output to extract items relevant to tlssec.
+        - Return the completed process together with the discovered endpoints.
+
+        Persisting the discovered endpoints is left to the caller (see the
+        ``nmap`` CLI command), which prompts before adding them.
         """
         options = [
             # Get more updates while scanning, so
@@ -161,14 +168,16 @@ class Nmap:
                 raise FileExistsError(f'Output path already exists at: {xml_path}')
             xml_path.parent.mkdir(parents = True, exist_ok = True)
             options += ('-oX', str(xml_path))
-
-        completed_process = await run_subprocess(
-            'nmap', *options, target,
-        )
-
-        endpoints = cls.extract_endpoints_from_xml(xml_path)
+            completed_process = await run_subprocess('nmap', *options, target)
+            endpoints = cls.extract_endpoints_from_xml(xml_path)
+        else:
+            # No persistent output requested, but nmap still has to write XML
+            # for us to parse it back. Use a throwaway temp file cleaned up after.
+            with tempfile.TemporaryDirectory() as tmpdir:
+                xml_path = Path(tmpdir) / 'scan.nmap.xml'
+                completed_process = await run_subprocess(
+                    'nmap', *options, '-oX', str(xml_path), target,
+                )
+                endpoints = cls.extract_endpoints_from_xml(xml_path)
 
         return completed_process, endpoints
-        #raise NotImplementedError('The rest of function has not been implemented yet')
-        # TODO: record Scan object into database
-        # TODO: record discovered Endpoint object into database
