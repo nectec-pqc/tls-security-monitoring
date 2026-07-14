@@ -3,11 +3,13 @@ _logger = logging.getLogger(__name__)
 
 from datetime import datetime
 
-from sqlalchemy import Engine, select
+from sqlalchemy import Engine, select, or_
 from sqlalchemy.orm import Session
 
 from tlssec.database.base import Base
 import tlssec.core.model as m
+import tlssec.core.cbom as cbom
+import tlssec.core.opinion as opinion
 
 
 def drop_database(engine: Engine):
@@ -71,22 +73,36 @@ def get_endpoints_by_tag(
     return list(session.scalars(query).all())
 
 
+def endpoint_identity_key(endpoint) -> tuple:
+    """Stable identity of an endpoint for de-duplication.
+
+    The hostname is the stable identity of a monitored service; the IP is a
+    per-scan observation that differs between tools and rotates behind a load
+    balancer / round-robin DNS. So identity keys on the hostname when present,
+    falling back to the IP only for IP-only endpoints.
+
+    Known limitation: a PTR-derived hostname is trusted the same as a
+    user-supplied one; distinguishing their origin is left to later work.
+    """
+    host = endpoint.hostname or (
+        str(endpoint.ip) if endpoint.ip is not None else None
+    )
+    return (host, endpoint.port, endpoint.transport_protocol)
+
+
 def find_new_endpoints(
     discovered: list[m.Endpoint],
     existing: list[m.EndpointTable],
 ) -> list[m.Endpoint]:
-    """Return discovered endpoints not already in DB.
+    """Return discovered endpoints not already tracked.
 
-    Match on (ip, port, transport_protocol).
+    Matches on ``(hostname-or-ip, port, transport)`` so a service whose IP
+    rotates between discovery runs is not re-added as a new endpoint each time.
     """
-    existing_keys = {
-        (str(ep.ip), ep.port, ep.transport_protocol)
-        for ep in existing
-        if ep.ip is not None
-    }
+    existing_keys = {endpoint_identity_key(ep) for ep in existing}
     return [
         ep for ep in discovered
-        if (str(ep.ip), ep.port, ep.transport_protocol) not in existing_keys
+        if endpoint_identity_key(ep) not in existing_keys
     ]
 
 
@@ -230,3 +246,90 @@ def make_endpoint(session, port, ip, hostname, tags=()):
         leaf_tag = resolve_tag(session, tag)
         endpoint.tags.append(leaf_tag)
     return endpoint
+
+
+# --- CBOM / opinion layers -------------------------------------------------
+
+def store_opinion_for_cbom(
+    session: Session,
+    cbom_row: m.CbomTable,
+    scan_row: m.ScanTable,
+) -> m.OpinionTable:
+    """Derive and persist an opinion (Layer 3) for a stored CBOM."""
+    record = opinion.derive(cbom_row, scan_row)
+    opinion_row = m.OpinionTable(
+        cbom_id=cbom_row.id,
+        ruleset_version=record.ruleset_version,
+        verdict=record.verdict,
+    )
+    session.add(opinion_row)
+    session.flush()
+    return opinion_row
+
+
+def store_cbom_for_scan(
+    session: Session,
+    scan_row: m.ScanTable,
+    *,
+    with_opinion: bool = True,
+    replace: bool = False,
+) -> m.CbomTable:
+    """Build and persist the CBOM (Layer 2) for a raw scan.
+
+    With ``replace``, an existing CBOM for the scan is discarded first (its
+    opinions cascade away), so a stale CBOM can be rebuilt in place. Passing an
+    already-current scan without ``replace`` would violate the 1:1 constraint,
+    so callers backfilling should use ``replace=True``.
+    """
+    if replace and scan_row.cbom is not None:
+        session.delete(scan_row.cbom)
+        session.flush()
+    record = cbom.build(scan_row)
+    cbom_row = m.CbomTable(
+        scan_id=scan_row.id,
+        builder_version=record.builder_version,
+        document=record.document,
+    )
+    session.add(cbom_row)
+    session.flush()
+    if with_opinion:
+        store_opinion_for_cbom(session, cbom_row, scan_row)
+    return cbom_row
+
+
+def scans_needing_cbom(session: Session) -> list[m.ScanTable]:
+    """Raw scans with no CBOM, or a CBOM built by a different builder version."""
+    return list(session.scalars(
+        select(m.ScanTable)
+        .outerjoin(m.CbomTable, m.CbomTable.scan_id == m.ScanTable.id)
+        .where(or_(
+            m.CbomTable.id.is_(None),
+            m.CbomTable.builder_version != cbom.BUILDER_VERSION,
+        ))
+    ).all())
+
+
+def cboms_needing_opinion(session: Session) -> list[m.CbomTable]:
+    """CBOMs lacking an opinion at the current ruleset version."""
+    current = select(m.OpinionTable.cbom_id).where(
+        m.OpinionTable.ruleset_version == opinion.RULESET_VERSION
+    )
+    return list(session.scalars(
+        select(m.CbomTable).where(m.CbomTable.id.not_in(current))
+    ).all())
+
+
+def backfill_cboms(session: Session, *, with_opinion: bool = True) -> int:
+    """(Re)build CBOMs for every raw scan lacking a current one. Returns count."""
+    scans = scans_needing_cbom(session)
+    for scan_row in scans:
+        store_cbom_for_scan(session, scan_row, with_opinion=with_opinion, replace=True)
+    return len(scans)
+
+
+def backfill_opinions(session: Session) -> int:
+    """Derive opinions for CBOMs lacking a current-ruleset opinion. Returns count."""
+    cbom_rows = cboms_needing_opinion(session)
+    for cbom_row in cbom_rows:
+        store_opinion_for_cbom(session, cbom_row, cbom_row.scan)
+    return len(cbom_rows)

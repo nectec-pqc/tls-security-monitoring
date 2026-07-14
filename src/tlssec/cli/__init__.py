@@ -14,6 +14,7 @@ from .cli_state import CliState
 from .import_group import import_group
 from tlssec.core.nmap import Nmap
 from tlssec.core.testssl import Testssl
+from tlssec.core.sshaudit import SshAudit
 
 
 @click.group('tlssec')
@@ -81,8 +82,10 @@ def show_settings(ctx):
 @click.option('--ip', 'ips', multiple=True, help='Select endpoints by IP address')
 @click.option('--hostname', 'hostnames', multiple=True, help='Select endpoints by hostname')
 @click.option('--port', type=int, default=None, help='Select endpoints by port')
+@click.option('--no-cbom', is_flag=True, help='Only store the raw scan; skip building CBOM and opinion')
+@click.option('--no-opinion', is_flag=True, help='Build the CBOM but skip the opinion layer')
 @click.pass_context
-def scan(ctx, ids, tags, ips, hostnames, port):
+def scan(ctx, ids, tags, ips, hostnames, port, no_cbom, no_opinion):
     """Scan endpoints and record the results.
 
     With no selection options every active endpoint in the system is scanned.
@@ -91,6 +94,9 @@ def scan(ctx, ids, tags, ips, hostnames, port):
     all given criteria must match (so adding options narrows toward a single
     endpoint), while repeating one option (e.g. two --ip) matches any of those
     values. Disabled (retired) endpoints are always skipped.
+
+    Each recorded raw scan is normalized into a CycloneDX CBOM and an opinion
+    by default; use --no-cbom / --no-opinion to store the raw scan only.
     """
     state = ctx.find_object(CliState)
     session = state.db.session
@@ -115,10 +121,17 @@ def scan(ctx, ids, tags, ips, hostnames, port):
     click.echo(f'Scanning {len(scannable)} endpoint(s)...')
 
     testssl = Testssl()
+    sshaudit = SshAudit()
+
+    def scanner_for(ep):
+        # SSH endpoints are scanned with ssh-audit; everything else with testssl.
+        if (ep.application_protocol or '').lower() == 'ssh':
+            return sshaudit
+        return testssl
 
     async def run_all():
         return await asyncio.gather(*(
-            testssl.scan(model.Endpoint.model_validate(ep))
+            scanner_for(ep).scan(model.Endpoint.model_validate(ep))
             for ep in scannable
         ), return_exceptions=True)
 
@@ -126,6 +139,7 @@ def scan(ctx, ids, tags, ips, hostnames, port):
 
     recorded = 0
     failed = 0
+    built = 0
     for ep, result in zip(scannable, results):
         label = f'{ep.ip or ep.hostname}:{ep.port}'
         # One endpoint failing (unreachable host, testssl error, ...) must not
@@ -134,23 +148,67 @@ def scan(ctx, ids, tags, ips, hostnames, port):
             failed += 1
             click.echo(f'  failed {label}: {result}')
             continue
-        session.add(model.ScanTable(
+        scan_row = model.ScanTable(
             result=result.result,
+            scanner=result.scanner,
+            scanner_version=result.scanner_version,
+            observed_ip=result.observed_ip,
+            sni=result.sni,
             start_time=result.start_time,
             time_taken=result.time_taken,
             belong_to_endpoint_id=ep.id,
-        ))
+        )
+        session.add(scan_row)
         recorded += 1
         click.echo(f'  scanned {label}')
 
+        # Normalize into CBOM (+ opinion) by default. A build failure must not
+        # lose the raw scan, which is the only irreproducible artifact.
+        if not no_cbom:
+            session.flush()  # assign scan_row.id for the FK
+            try:
+                op.store_cbom_for_scan(session, scan_row, with_opinion=not no_opinion)
+                built += 1
+            except Exception as e:
+                click.echo(f'  cbom failed {label}: {e}')
+
     session.commit()
+    summary = f'Done. Recorded {recorded} scan(s)'
+    if not no_cbom:
+        summary += f'; built {built} CBOM(s)'
     if failed:
-        click.echo(f'Done. Recorded {recorded} scan(s); {failed} failed.')
-    else:
-        click.echo(f'Done. Recorded {recorded} scan(s).')
+        summary += f'; {failed} failed'
+    click.echo(summary + '.')
 
 
 cli.add_command(import_group)
+
+
+@cli.group()
+def cbom():
+    """Build and manage the CBOM / opinion layers."""
+    pass
+
+
+@cbom.command('build')
+@click.option('--no-opinion', is_flag=True, help='Backfill CBOMs but not opinions')
+@click.pass_context
+def cbom_build(ctx, no_opinion):
+    """Backfill CBOMs (and opinions) for raw scans that lack a current one.
+
+    Rebuilds any scan whose CBOM is missing or was built by an older builder
+    version, then derives opinions for CBOMs missing a current-ruleset opinion.
+    Safe to run repeatedly; it only touches what is missing or stale.
+    """
+    state = ctx.find_object(CliState)
+    session = state.db.session
+    n_cbom = op.backfill_cboms(session, with_opinion=not no_opinion)
+    n_opinion = 0 if no_opinion else op.backfill_opinions(session)
+    session.commit()
+    message = f'Built {n_cbom} CBOM(s)'
+    if not no_opinion:
+        message += f'; {n_opinion} opinion(s)'
+    click.echo(message + '.')
 
 
 @cli.command()

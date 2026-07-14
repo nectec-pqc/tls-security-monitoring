@@ -2,10 +2,44 @@ import re
 import shutil
 
 import pytest
+from bs4 import BeautifulSoup
 
 import tlssec.core.model as m
 from tlssec.asyncio import run_subprocess, CompletedProcess
 from tlssec.core.nmap import Nmap
+
+
+def _port_tag(xml):
+    return BeautifulSoup(xml, 'xml').find('port')
+
+
+def test_detect_tls_mode_tunnel_ssl_is_implicit():
+    # nmap -sV positively detected a TLS wrapper.
+    port = _port_tag('<port portid="443"><service name="http" tunnel="ssl"/></port>')
+    assert Nmap._detect_tls_mode(port) == m.TlsMode.implicit
+
+
+def test_detect_tls_mode_wrapped_service_name_is_implicit():
+    # No -sV: a port-table implicit-TLS service name is enough.
+    port = _port_tag('<port portid="465"><service name="smtps"/></port>')
+    assert Nmap._detect_tls_mode(port) == m.TlsMode.implicit
+
+
+def test_detect_tls_mode_ssl_cert_on_implicit_port_is_implicit():
+    # No -sV, but a cert on a known wrapped-TLS port -> implicit, not STARTTLS.
+    port = _port_tag('<port portid="443"><service name="https"/><script id="ssl-cert"/></port>')
+    assert Nmap._detect_tls_mode(port) == m.TlsMode.implicit
+
+
+def test_detect_tls_mode_ssl_cert_on_starttls_port_is_explicit():
+    # A cert obtained on a plaintext port means TLS was negotiated via STARTTLS.
+    port = _port_tag('<port portid="25"><service name="smtp"/><script id="ssl-cert"/></port>')
+    assert Nmap._detect_tls_mode(port) == m.TlsMode.explicit
+
+
+def test_detect_tls_mode_no_tls_evidence_is_none():
+    port = _port_tag('<port portid="80"><service name="http"/></port>')
+    assert Nmap._detect_tls_mode(port) == m.TlsMode.none
 
 
 async def test_call_nmap():
@@ -74,12 +108,18 @@ async def test_discover_endpoints(
         'localhost',
         base_output_dir = cache_dir,
         ports = '4400-4450',
+        # Skip -sV to keep the test fast (it is abnormally slow against
+        # openssl s_server) and exercise the no-version-detection heuristic.
+        detect_version = False,
     )
     assert completed_process.returncode == 0
     assert len(endpoints) == 1
     assert endpoints[0].hostname == 'localhost'
     assert endpoints[0].port == 4433
     assert endpoints[0].transport_protocol == 'tcp'
+    # Without -sV there is no tunnel="ssl"; 4433 is a non-standard port with no
+    # implicit-TLS service name, so the cert is attributed to STARTTLS. (With
+    # -sV this same server is correctly detected as implicit.)
     assert endpoints[0].tls_mode == m.TlsMode.explicit
 
     # NOTE: The following tests checks XML file directly.

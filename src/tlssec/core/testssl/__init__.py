@@ -1,6 +1,7 @@
 import os
 import json
 import asyncio
+import ipaddress
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -38,13 +39,19 @@ class Testssl:
         async with self.semaphore:
             return await run_subprocess('testssl', *args, **kwargs)
 
-    # Map an endpoint's application_protocol to the argument testssl expects for
-    # its `--starttls` option, used when TLS is negotiated after a plaintext
-    # handshake (explicit / STARTTLS endpoints).
+    # Map an endpoint's application_protocol (an nmap service name) to the value
+    # testssl.sh expects for its `--starttls` option, used only for explicit /
+    # STARTTLS endpoints (TLS negotiated after a plaintext handshake).
+    #
+    # Keys are nmap service names, covering both the `-sV` detection names
+    # (nmap-service-probes -- e.g. XMPP is `xmpp` or `jabber`) and the
+    # port-table names (nmap-services -- e.g. 5222 is `xmpp-client`). Values are
+    # testssl's documented `--starttls` protocols (testssl.sh man page).
+    # Implicit / wrapped-TLS service names (smtps, imaps, pop3s, ftps, ldaps)
+    # are intentionally absent: those are scanned as implicit TLS, no --starttls.
     STARTTLS_PROTOCOLS = {
         'smtp': 'smtp',
         'submission': 'smtp',
-        'smtps': 'smtp',
         'lmtp': 'lmtp',
         'pop3': 'pop3',
         'imap': 'imap',
@@ -55,6 +62,8 @@ class Testssl:
         'nntp': 'nntp',
         'sieve': 'sieve',
         'xmpp': 'xmpp',
+        'jabber': 'xmpp',
+        'xmpp-client': 'xmpp',
         'postgres': 'postgres',
         'postgresql': 'postgres',
         'mysql': 'mysql',
@@ -93,6 +102,7 @@ class Testssl:
             )
             if starttls is None:
                 raise ValueError(
+                    f'We cannot handle this protocol at the moment'
                     f'cannot scan STARTTLS endpoint {target}: no --starttls'
                     f' mapping for application protocol'
                     f' {endpoint.application_protocol!r}'
@@ -125,9 +135,32 @@ class Testssl:
 
         return m.Scan(
             result = result,
+            scanner = m.Scanner.testssl,
+            scanner_version = result.get('version') if isinstance(result, dict) else None,
+            observed_ip = self._observed_ip(result),
+            # testssl scans by hostname when available, sending it as SNI.
+            sni = endpoint.hostname,
             start_time = start_time,
             time_taken = time_taken,
         )
+
+    @staticmethod
+    def _observed_ip(result) -> str | None:
+        """The IP testssl actually connected to, from its scan result.
+
+        This can differ from the endpoint's own IP when a hostname resolves to a
+        different / rotating address than nmap saw (load balancer, round-robin
+        DNS). Returns None if absent or not a valid IP.
+        """
+        if not isinstance(result, dict):
+            return None
+        scan_results = result.get('scanResult') or []
+        if not scan_results:
+            return None
+        try:
+            return str(ipaddress.ip_address(scan_results[0].get('ip')))
+        except (ValueError, TypeError):
+            return None
 
     @classmethod
     def extract_json(

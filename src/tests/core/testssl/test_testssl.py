@@ -132,6 +132,33 @@ async def test_scan_writes_jsonfile_and_returns_result(monkeypatch):
     assert '--starttls' not in capture['args']
 
 
+async def test_scan_records_observed_ip_and_sni(monkeypatch):
+    ts = Testssl()
+    # testssl reports it connected to a different IP than the endpoint's own,
+    # as happens behind a load balancer / round-robin DNS.
+    result = {'scanResult': [{'ip': '203.0.113.5', 'port': '443'}]}
+    monkeypatch.setattr(Testssl, 'call', _fake_call_writing(result))
+
+    ep = m.Endpoint(ip='198.51.100.1', hostname='api.example.com', port=443,
+                    tls_mode=m.TlsMode.implicit)
+    scan = await ts.scan(ep)
+
+    assert str(scan.observed_ip) == '203.0.113.5'
+    assert scan.sni == 'api.example.com'
+
+
+async def test_scan_observed_ip_absent_is_none(monkeypatch):
+    ts = Testssl()
+    monkeypatch.setattr(Testssl, 'call', _fake_call_writing({'scanResult': []}))
+
+    ep = m.Endpoint(ip='198.51.100.1', hostname=None, port=443,
+                    tls_mode=m.TlsMode.implicit)
+    scan = await ts.scan(ep)
+
+    assert scan.observed_ip is None
+    assert scan.sni is None
+
+
 async def test_scan_prefers_hostname_over_ip(monkeypatch):
     ts = Testssl()
     capture = {}
@@ -165,6 +192,18 @@ async def test_scan_explicit_unknown_protocol_raises(monkeypatch):
                     application_protocol='weirdproto', tls_mode=m.TlsMode.explicit)
     with pytest.raises(ValueError, match='starttls'):
         await ts.scan(ep)
+
+
+def test_starttls_mapper_values_are_official():
+    # Every mapped value must be a protocol testssl.sh --starttls accepts, per
+    # the official man page (testssl.sh 3.2, doc/testssl.1.md).
+    official = {
+        'ftp', 'smtp', 'pop3', 'imap', 'xmpp', 'sieve', 'xmpp-server',
+        'telnet', 'ldap', 'irc', 'lmtp', 'nntp', 'postgres', 'mysql',
+    }
+    assert set(Testssl.STARTTLS_PROTOCOLS.values()) <= official
+    # Wrapped / implicit-TLS service names must not be treated as STARTTLS.
+    assert not ({'smtps', 'imaps', 'pop3s', 'ftps', 'ldaps'} & set(Testssl.STARTTLS_PROTOCOLS))
 
 
 async def test_scan_requires_host():

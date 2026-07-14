@@ -4,7 +4,7 @@ import pytest
 from click.testing import CliRunner
 from sqlalchemy import select
 
-from tlssec.cli import cli, Nmap, Testssl
+from tlssec.cli import cli, Nmap, Testssl, SshAudit
 from tlssec.database.database import Database
 import tlssec.core.model as model
 import tlssec.core.operation as op
@@ -461,6 +461,10 @@ def _scans(session):
     return list(session.scalars(select(model.ScanTable)).all())
 
 
+def _cboms(session):
+    return list(session.scalars(select(model.CbomTable)).all())
+
+
 def test_delete_endpoint_with_scan_history_is_retired(runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
     session.flush()
@@ -723,8 +727,108 @@ def test_scan_reports_failures_without_aborting(runner, session, monkeypatch):
     result = runner.invoke(cli, ['scan', '--tag', 'prod'])
     assert result.exit_code == 0, result.output
     assert 'failed 10.0.0.2:443' in result.output
-    assert 'Recorded 1 scan(s); 1 failed' in result.output
+    # Raw scan recorded and its CBOM built for the one that succeeded.
+    assert 'Recorded 1 scan(s)' in result.output
+    assert 'built 1 CBOM(s)' in result.output
+    assert '1 failed' in result.output
 
     # The endpoint that scanned successfully is still stored.
     scans = _scans(session)
     assert len(scans) == 1
+
+
+def test_scan_builds_cbom_and_opinion_by_default(runner, session, monkeypatch):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    session.flush()
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+    assert 'built 1 CBOM(s)' in result.output
+
+    cboms = _cboms(session)
+    assert len(cboms) == 1
+    assert cboms[0].document['bomFormat'] == 'CycloneDX'
+    assert len(cboms[0].opinions) == 1
+
+
+def test_scan_records_observed_ip_and_sni(runner, session, monkeypatch):
+    op.make_endpoint(session, 443, '10.0.0.1', 'svc.example.com', ['prod'])
+    session.flush()
+
+    async def fake(self, endpoint):
+        # testssl reached a different backend IP than the endpoint's own.
+        return model.Scan(
+            result={'scanResult': [{'ip': '10.0.0.2'}]},
+            scanner=model.Scanner.testssl,
+            observed_ip='10.0.0.2',
+            sni='svc.example.com',
+        )
+
+    monkeypatch.setattr(Testssl, 'scan', fake)
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+
+    scan = _scans(session)[0]
+    assert str(scan.observed_ip) == '10.0.0.2'  # round-trips through INET
+    assert scan.sni == 'svc.example.com'
+
+
+def test_scan_no_cbom_flag_stores_raw_only(runner, session, monkeypatch):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    session.flush()
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod', '--no-cbom'])
+    assert result.exit_code == 0, result.output
+    assert 'built' not in result.output
+    assert len(_scans(session)) == 1
+    assert _cboms(session) == []
+
+
+def test_cbom_build_backfills_raw_only_scan(runner, session, monkeypatch):
+    op.make_endpoint(session, 443, '10.0.0.9', None, ['bf'])
+    session.flush()
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
+    # Store the raw scan without a CBOM, then backfill via the CLI.
+    runner.invoke(cli, ['scan', '--tag', 'bf', '--no-cbom'])
+
+    result = runner.invoke(cli, ['cbom', 'build'])
+    assert result.exit_code == 0, result.output
+    assert 'Built' in result.output
+
+    scan = session.scalars(
+        select(model.ScanTable)
+        .join(model.EndpointTable)
+        .where(model.EndpointTable.ip == '10.0.0.9')
+    ).one()
+    assert scan.cbom is not None
+
+
+def test_scan_dispatches_ssh_endpoint_to_sshaudit(runner, session, monkeypatch):
+    ep = op.make_endpoint(session, 22, '10.0.0.5', None, ['prod'])
+    ep.application_protocol = 'ssh'
+    session.flush()
+
+    used = []
+
+    def factory(label, scanner):
+        async def fake(self, endpoint):
+            used.append(label)
+            return model.Scan(result={'banner': {}}, scanner=scanner)
+        return fake
+
+    monkeypatch.setattr(Testssl, 'scan', factory('tls', model.Scanner.testssl))
+    monkeypatch.setattr(SshAudit, 'scan', factory('ssh', model.Scanner.ssh_audit))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+    assert used == ['ssh']  # routed by application_protocol, not testssl
+
+    scan = session.scalars(
+        select(model.ScanTable)
+        .join(model.EndpointTable)
+        .where(model.EndpointTable.ip == '10.0.0.5')
+    ).one()
+    assert scan.scanner == model.Scanner.ssh_audit
