@@ -1,6 +1,7 @@
 import os
 import asyncio
 from pathlib import Path
+import re
 
 import yaml
 
@@ -99,11 +100,19 @@ class Testssl:
                             qs_safe = standard.tls.is_symenc_quantum_safe(symenc)
                             extract['qs']['symmetric_encryption']['safe' if qs_safe else 'unsafe'].add(symenc)
 
+            # Currently, if there are multiple host certs, one that appear latter will overwrite.
+            # FIXME: All certs must be listed, don't overwrite. Use captured serial number to match records.
             for sd_item in scan.get('serverDefaults', []):
                 match sd_item:
-                    case {'id': 'cert_signatureAlgorithm', 'finding': str(algo)}:
+                    case {
+                        'id': str(item_id),
+                        'finding': str(algo),
+                    } if (m := re.fullmatch(r'cert_signatureAlgorithm(?: <hostCert#(?P<serial>\d+)>)?', item_id)):
                         extract['qs']['server_cert_signature']['algo'] = algo
-                    case {'id': 'cert_keySize', 'finding': str(key_size)}:
+                    case {
+                        'id': str(item_id),
+                        'finding': str(key_size),
+                    } if (m := re.fullmatch(r'cert_keySize(?: <hostCert#(?P<serial>\d+)>)?', item_id)):
                         extract['qs']['server_cert_signature']['key_size'] = key_size
             
             extracts.append(extract)
