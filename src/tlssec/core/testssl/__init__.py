@@ -47,7 +47,7 @@ class Testssl:
     def extract_json(
         cls,
         source: dict | list | os.PathLike,
-    ) -> dict:
+    ) -> list[dict]:
         if not isinstance(source, dict | list):
             with open(source) as f:
                 source = yaml.safe_load(f)
