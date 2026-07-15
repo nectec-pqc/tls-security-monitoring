@@ -80,7 +80,7 @@ execute new version immediately without rebuilding container image.
 In dev environment, run:
 
 ```shell
-pytest /opt/app/
+pytest /opt/app/src
 ```
 
 to execute all automated tests within the app.

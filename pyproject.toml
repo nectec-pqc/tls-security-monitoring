@@ -48,9 +48,12 @@ exclude-newer = "7 days"
 exclude-newer-package = {ssh-audit = "3 days"}
 
 [tool.pytest]
+testpaths = ["src/tests"]
 # Deselect slow tests by default. Use `-m ''` to include slow tests.
 addopts = ["-m", "not slow"]
+strict = true
 markers = [
     "slow: take a long time to run",
+    "regen_case: regenerate test case stored as files, not a real test",
 ]
 asyncio_mode = "auto"

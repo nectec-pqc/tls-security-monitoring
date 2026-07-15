@@ -9,6 +9,28 @@ from tlssec.database.database import Database
 import tlssec.core.model as model
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        '--regen-case',
+        action = 'store_true',
+        default = False,
+        help = 'Regenerate test cases stored as files instead of running tests.'
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption('--regen-case'):
+        skip = pytest.mark.skip(reason = 'disabled during --regen-case')
+        for item in items:
+            if 'regen_case' not in item.keywords:
+                item.add_marker(skip)
+    else:
+        skip = pytest.mark.skip(reason = 'use --regen-case to run')
+        for item in items:
+            if 'regen_case' in item.keywords:
+                item.add_marker(skip)
+
+
 @pytest.fixture(scope='session')
 def database():
     return Database()

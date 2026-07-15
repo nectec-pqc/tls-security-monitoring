@@ -39,14 +39,7 @@ async def test_scan_local(testssl, current_openssl_server):
     assert any('X25519MLKEM768' in line for line in result.stdout)
 
 
-# TODO: Maybe create a command to generate test case file
-# instead of piggybacking on test running infrastructure?
-# TODO: Make proper tests for testssl json generation cases
-@pytest.mark.skip(
-    'Not a real test.'
-    ' For producing test case file used in other tests.'
-)
-@pytest.mark.slow
+@pytest.mark.regen_case
 async def test_generate_testssl_json(testssl, current_openssl_server):
     import json
     out_dir = Path(__file__).parent / 'result_cases/current_openssl_server'
