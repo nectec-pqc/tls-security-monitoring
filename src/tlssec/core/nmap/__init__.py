@@ -129,7 +129,7 @@ class Nmap:
         target: str,
         *,
         base_output_dir: Path | None = None,
-        xml_path_template: str = '{datestring}_{target}.nmap.xml',
+        xml_path_template: str = 'nmap/{datestring}_{target}.nmap.xml',
         # NOTE: `-sV` take a long time on service responding with unrecognizable data.
         # TODO: Find a different way to speed up in that case.
         detect_version: bool = False,
@@ -159,7 +159,7 @@ class Nmap:
             # TODO: Do we validate port string, or receive as structured list instead?
             options.append(f'-p{ports}')
         if base_output_dir:
-            xml_path = base_output_dir / 'nmap' / xml_path_template.format(
+            xml_path = base_output_dir / xml_path_template.format(
                 datestring = datetime.now().replace(microsecond = 0).isoformat(),
                 target = cls.encode_target_for_filename(target),
             )

@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.95 scan initiated Thu Jul 16 03:02:39 2026 as: nmap -vv -&#45;script=ssl-cert -Pn -p4400-4450 -oX /opt/app/src/tests/core/nmap/result_cases/current_openssl_server/tmp.xml localhost -->
+<nmaprun args="nmap -vv --script=ssl-cert -Pn -p4400-4450 -oX /opt/app/src/tests/core/nmap/result_cases/current_openssl_server/tmp.xml localhost" scanner="nmap" start="1784170959" startstr="Thu Jul 16 03:02:39 2026" version="7.95" xmloutputversion="1.05">
+ <scaninfo numservices="51" protocol="tcp" services="4400-4450" type="connect"/>
+ <verbose level="2"/>
+ <debugging level="0"/>
+ <taskbegin task="NSE" time="1784170959"/>
+ <taskend task="NSE" time="1784170959"/>
+ <taskbegin task="Connect Scan" time="1784170959"/>
+ <taskend extrainfo="51 total ports" task="Connect Scan" time="1784170959"/>
+ <taskbegin task="NSE" time="1784170959"/>
+ <taskend task="NSE" time="1784170959"/>
+ <host endtime="1784170959" starttime="1784170959">
+  <status reason="user-set" reason_ttl="0" state="up"/>
+  <address addr="127.0.0.1" addrtype="ipv4"/>
+  <hostnames>
+   <hostname name="localhost" type="user"/>
+   <hostname name="localhost" type="PTR"/>
+  </hostnames>
+  <ports>
+   <port portid="4400" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="ds-srv"/>
+   </port>
+   <port portid="4401" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="ds-srvr"/>
+   </port>
+   <port portid="4402" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="ds-clnt"/>
+   </port>
+   <port portid="4403" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="ds-user"/>
+   </port>
+   <port portid="4404" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="ds-admin"/>
+   </port>
+   <port portid="4405" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="ds-mail"/>
+   </port>
+   <port portid="4406" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="ds-slp"/>
+   </port>
+   <port portid="4407" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="nacagent"/>
+   </port>
+   <port portid="4408" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="slscc"/>
+   </port>
+   <port portid="4409" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="netcabinet-com"/>
+   </port>
+   <port portid="4410" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="itwo-server"/>
+   </port>
+   <port portid="4411" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="found"/>
+   </port>
+   <port portid="4412" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="smallchat"/>
+   </port>
+   <port portid="4413" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="avi-nms"/>
+   </port>
+   <port portid="4414" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="updog"/>
+   </port>
+   <port portid="4415" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="brcd-vr-req"/>
+   </port>
+   <port portid="4416" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="pjj-player"/>
+   </port>
+   <port portid="4417" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="workflowdir"/>
+   </port>
+   <port portid="4418" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="axysbridge"/>
+   </port>
+   <port portid="4419" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="cbp"/>
+   </port>
+   <port portid="4420" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="nvm-express"/>
+   </port>
+   <port portid="4421" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="scaleft"/>
+   </port>
+   <port portid="4422" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="tsepisp"/>
+   </port>
+   <port portid="4423" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="thingkit"/>
+   </port>
+   <port portid="4424" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+   </port>
+   <port portid="4425" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="netrockey6"/>
+   </port>
+   <port portid="4426" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="beacon-port-2"/>
+   </port>
+   <port portid="4427" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="drizzle"/>
+   </port>
+   <port portid="4428" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="omviserver"/>
+   </port>
+   <port portid="4429" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="omviagent"/>
+   </port>
+   <port portid="4430" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="rsqlserver"/>
+   </port>
+   <port portid="4431" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="wspipe"/>
+   </port>
+   <port portid="4432" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="l-acoustics"/>
+   </port>
+   <port portid="4433" protocol="tcp">
+    <state reason="syn-ack" reason_ttl="0" state="open"/>
+    <service conf="3" method="table" name="vop"/>
+    <script id="ssl-cert" output="Subject: commonName=localhost
+Issuer: commonName=localhost
+Public Key type: rsa
+Public Key bits: 2048
+Signature Algorithm: sha256WithRSAEncryption
+Not valid before: 2026-07-16T03:02:39
+Not valid after:  2026-08-15T03:02:39
+MD5:   a2c3:b022:0ab9:be90:2210:96c3:3188:dcb0
+SHA-1: 4b27:e8be:5cd3:8afa:2871:848b:bb56:6efe:05e1:e0d3
+-----BEGIN CERTIFICATE-----
+MIIDCTCCAfGgAwIBAgIUHTyPwKQv8ZIdby7c8lhaCDqbNeEwDQYJKoZIhvcNAQEL
+BQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDcxNjAzMDIzOVoXDTI2MDgx
+NTAzMDIzOVowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEF
+AAOCAQ8AMIIBCgKCAQEAiDll9OQrNS42RCf2CFuXmO/Bdgccn3WCiuwq8jh9tJ7v
+2BI5FvxDzn+B+5BZgWMCUOTd+iNknegbPeXfRwxjnhfafpdf+GyHn3WZoFS8YNYf
+RozQlPc5ULlfYNBTkRpmOozw/xTioi1XHve4MCV8puWeHZcWbv7mRgpQb/7kPWjS
+4wlKTfmEghQncLEwHvcmWy6siiV4jeVLuPnCQOgz0vhpM4jOUYpd2gzqxI7Rjw1j
+2fI/biZ1pr/NxJcwbPMoJCgvUo+nMp/nAj/+tdU+BCePVPiffudlDQnsE9M7A4z3
+C801vGn7K3D5Ov2IURFsfotWsj5fB1TvV2YE9mewTwIDAQABo1MwUTAdBgNVHQ4E
+FgQUWSM48VIwofjSrtmPRWr4HCZIbvowHwYDVR0jBBgwFoAUWSM48VIwofjSrtmP
+RWr4HCZIbvowDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAga3J
+vxAbjTG9DO/nJrCFWJjjwoPQ4fEZzV/WgKW9i2MoNUHzQO5NPMZFoxVta7u6b+Hs
+F+Ch9rVPR42RrKrSauH+Au/KqEjwZKUrT5MZ5CymvOWIGHlrayOd7aafEmKxETZB
+CHgxLi4AJWMjt/0SjY76fqUVXuKhJ65YnWFYL29M+bohPZt4cAi17+PSodKmYW1Q
+B65BXtgfffTsQmBcgrCb5SWa2OvgNiTz+X4Q9AOHeTCkrUxxNcC3SwbqqiX4J7X2
+/j2tMOgf9CJVV6v67B7u6/kgtjhE7maH5FSgADwYmGUHiw7UvKSRvMfG1qhrPPTl
+eJuxnw89vZO7dawsmA==
+-----END CERTIFICATE-----
+">
+     <table key="subject">
+      <elem key="commonName">
+       localhost
+      </elem>
+     </table>
+     <table key="issuer">
+      <elem key="commonName">
+       localhost
+      </elem>
+     </table>
+     <table key="pubkey">
+      <elem key="type">
+       rsa
+      </elem>
+      <elem key="bits">
+       2048
+      </elem>
+      <elem key="modulus">
+       883965F4E42B352E364427F6085B9798EFC176071C9F75828AEC2AF2387DB49EEFD8123916FC43CE7F81FB905981630250E4DDFA23649DE81B3DE5DF470C639E17DA7E975FF86C879F7599A054BC60D61F468CD094F73950B95F60D053911A663A8CF0FF14E2A22D571EF7B830257CA6E59E1D97166EFEE6460A506FFEE43D68D2E3094A4DF98482142770B1301EF7265B2EAC8A25788DE54BB8F9C240E833D2F8693388CE518A5DDA0CEAC48ED18F0D63D9F23F6E2675A6BFCDC497306CF32824282F528FA7329FE7023FFEB5D53E04278F54F89F7EE7650D09EC13D33B038CF70BCD35BC69FB2B70F93AFD8851116C7E8B56B23E5F0754EF576604F667B04F
+      </elem>
+      <elem key="exponent">
+       65537
+      </elem>
+     </table>
+     <table key="extensions">
+      <table>
+       <elem key="name">
+        X509v3 Subject Key Identifier
+       </elem>
+       <elem key="value">
+        59:23:38:F1:52:30:A1:F8:D2:AE:D9:8F:45:6A:F8:1C:26:48:6E:FA
+       </elem>
+      </table>
+      <table>
+       <elem key="name">
+        X509v3 Authority Key Identifier
+       </elem>
+       <elem key="value">
+        59:23:38:F1:52:30:A1:F8:D2:AE:D9:8F:45:6A:F8:1C:26:48:6E:FA
+       </elem>
+      </table>
+      <table>
+       <elem key="name">
+        X509v3 Basic Constraints
+       </elem>
+       <elem key="value">
+        CA:TRUE
+       </elem>
+       <elem key="critical">
+        true
+       </elem>
+      </table>
+     </table>
+     <elem key="sig_algo">
+      sha256WithRSAEncryption
+     </elem>
+     <table key="validity">
+      <elem key="notBefore">
+       2026-07-16T03:02:39
+      </elem>
+      <elem key="notAfter">
+       2026-08-15T03:02:39
+      </elem>
+     </table>
+     <elem key="md5">
+      a2c3b0220ab9be90221096c33188dcb0
+     </elem>
+     <elem key="sha1">
+      4b27e8be5cd38afa2871848bbb566efe05e1e0d3
+     </elem>
+     <elem key="pem">
+      -----BEGIN CERTIFICATE-----
+MIIDCTCCAfGgAwIBAgIUHTyPwKQv8ZIdby7c8lhaCDqbNeEwDQYJKoZIhvcNAQEL
+BQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDcxNjAzMDIzOVoXDTI2MDgx
+NTAzMDIzOVowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEF
+AAOCAQ8AMIIBCgKCAQEAiDll9OQrNS42RCf2CFuXmO/Bdgccn3WCiuwq8jh9tJ7v
+2BI5FvxDzn+B+5BZgWMCUOTd+iNknegbPeXfRwxjnhfafpdf+GyHn3WZoFS8YNYf
+RozQlPc5ULlfYNBTkRpmOozw/xTioi1XHve4MCV8puWeHZcWbv7mRgpQb/7kPWjS
+4wlKTfmEghQncLEwHvcmWy6siiV4jeVLuPnCQOgz0vhpM4jOUYpd2gzqxI7Rjw1j
+2fI/biZ1pr/NxJcwbPMoJCgvUo+nMp/nAj/+tdU+BCePVPiffudlDQnsE9M7A4z3
+C801vGn7K3D5Ov2IURFsfotWsj5fB1TvV2YE9mewTwIDAQABo1MwUTAdBgNVHQ4E
+FgQUWSM48VIwofjSrtmPRWr4HCZIbvowHwYDVR0jBBgwFoAUWSM48VIwofjSrtmP
+RWr4HCZIbvowDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAga3J
+vxAbjTG9DO/nJrCFWJjjwoPQ4fEZzV/WgKW9i2MoNUHzQO5NPMZFoxVta7u6b+Hs
+F+Ch9rVPR42RrKrSauH+Au/KqEjwZKUrT5MZ5CymvOWIGHlrayOd7aafEmKxETZB
+CHgxLi4AJWMjt/0SjY76fqUVXuKhJ65YnWFYL29M+bohPZt4cAi17+PSodKmYW1Q
+B65BXtgfffTsQmBcgrCb5SWa2OvgNiTz+X4Q9AOHeTCkrUxxNcC3SwbqqiX4J7X2
+/j2tMOgf9CJVV6v67B7u6/kgtjhE7maH5FSgADwYmGUHiw7UvKSRvMfG1qhrPPTl
+eJuxnw89vZO7dawsmA==
+-----END CERTIFICATE-----
+     </elem>
+    </script>
+   </port>
+   <port portid="4434" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+   </port>
+   <port portid="4435" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+   </port>
+   <port portid="4436" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+   </port>
+   <port portid="4437" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+   </port>
+   <port portid="4438" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+   </port>
+   <port portid="4439" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+   </port>
+   <port portid="4440" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+   </port>
+   <port portid="4441" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="netblox"/>
+   </port>
+   <port portid="4442" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="saris"/>
+   </port>
+   <port portid="4443" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="pharos"/>
+   </port>
+   <port portid="4444" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="krb524"/>
+   </port>
+   <port portid="4445" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="upnotifyp"/>
+   </port>
+   <port portid="4446" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="n1-fwp"/>
+   </port>
+   <port portid="4447" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="n1-rmgmt"/>
+   </port>
+   <port portid="4448" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="asc-slmd"/>
+   </port>
+   <port portid="4449" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="privatewire"/>
+   </port>
+   <port portid="4450" protocol="tcp">
+    <state reason="conn-refused" reason_ttl="0" state="closed"/>
+    <service conf="3" method="table" name="camp"/>
+   </port>
+  </ports>
+  <times rttvar="98" srtt="141" to="100000"/>
+ </host>
+ <taskbegin task="NSE" time="1784170959"/>
+ <taskend task="NSE" time="1784170959"/>
+ <runstats>
+  <finished elapsed="0.06" exit="success" summary="Nmap done at Thu Jul 16 03:02:39 2026; 1 IP address (1 host up) scanned in 0.06 seconds" time="1784170959" timestr="Thu Jul 16 03:02:39 2026"/>
+  <hosts down="0" total="1" up="1"/>
+ </runstats>
+</nmaprun>

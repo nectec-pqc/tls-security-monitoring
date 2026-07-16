@@ -1,7 +1,9 @@
 import re
 import shutil
+from pathlib import Path
 
 import pytest
+import bs4
 
 import tlssec.core.model as m
 from tlssec.asyncio import run_subprocess, CompletedProcess
@@ -118,3 +120,43 @@ async def test_discover_endpoints(
         assert len(open_ports) == 1, 'There should only be one open port'
         the_open_port = open_ports[0]
         assert the_open_port.attrs['portid'] == '4433'
+
+
+@pytest.mark.parametrize(
+    'kwargs, filename',
+    [
+        pytest.param(*x, id = x[1])
+        for x in (
+            (
+                {},
+                'success.nmap.xml',
+            ),
+        )
+    ],
+)
+@pytest.mark.regen_case
+async def test_generate_nmap_xml(
+    current_openssl_server,
+    kwargs,
+    filename,
+):
+    out_dir = Path(__file__).parent / 'result_cases/current_openssl_server'
+    out_dir.mkdir(parents = True, exist_ok = True)
+    tmp_file = out_dir / 'tmp.xml'
+    tmp_file.unlink(missing_ok = True)
+
+    completed_process, endpoints = await Nmap.discover_endpoints(
+        'localhost',
+        base_output_dir = out_dir,
+        xml_path_template = str(tmp_file.relative_to(out_dir)),
+        ports = '4400-4450',
+        **kwargs,
+    )
+    assert completed_process.returncode == 0
+
+    with open(out_dir / 'tmp.xml') as f:
+        soup = bs4.BeautifulSoup(f, 'xml')
+    with open(out_dir / filename, 'w') as f:
+        f.write(soup.prettify())
+
+    tmp_file.unlink(missing_ok = True)
