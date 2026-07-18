@@ -20,7 +20,13 @@ class SshAudit:
     # `ssh_audit.process_commandline`, then it would be usable but they don't.
     @staticmethod
     async def scan(target: str):
-        completed_process = await run_subprocess('ssh-audit', '--json', target)
+        completed_process = await run_subprocess(
+            'ssh-audit',
+            '--json',
+            '--no-colors',
+            '--batch',
+            target,
+        )
         # TODO store scan result in database
         # TODO: return scan result instead
         return completed_process
