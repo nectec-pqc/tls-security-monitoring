@@ -2,6 +2,8 @@ import logging
 _logger = logging.getLogger(__name__)
 
 import asyncio
+from datetime import datetime
+
 import click
 import yaml
 from pydantic import ValidationError
@@ -14,6 +16,8 @@ from .cli_state import CliState
 from .import_group import import_group
 from .adhoc import adhoc
 from tlssec.core.nmap import Nmap
+from tlssec.core.testssl import Testssl
+from tlssec.core.sshaudit import SshAudit
 
 
 @click.group('tlssec')
@@ -76,13 +80,170 @@ def show_settings(ctx):
 
 
 @cli.command()
-def scan():
-    """Start scanning"""
-    raise NotImplementedError
+@click.option('--id', 'ids', multiple=True, type=int, help='Select endpoint by id')
+@click.option('--tag', 'tags', multiple=True, help='Select endpoints carrying ALL of these tag path(s)')
+@click.option('--ip', 'ips', multiple=True, help='Select endpoints by IP address')
+@click.option('--hostname', 'hostnames', multiple=True, help='Select endpoints by hostname')
+@click.option('--port', type=int, default=None, help='Select endpoints by port')
+@click.option('--force', '-f', is_flag=True, help='Scan even if within the cooldown window')
+@click.option('--no-cbom', is_flag=True, help='Only store the raw scan; skip building CBOM and opinion')
+@click.option('--no-opinion', is_flag=True, help='Build the CBOM but skip the opinion layer')
+@click.pass_context
+def scan(ctx, ids, tags, ips, hostnames, port, force, no_cbom, no_opinion):
+    """Scan endpoints and record the results.
+
+    With no selection options every active endpoint in the system is scanned.
+    Narrow the target set with --id, --tag, --ip, --hostname and/or --port using
+    the same intersection semantics as `edit endpoint` and `delete endpoint`:
+    all given criteria must match (so adding options narrows toward a single
+    endpoint), while repeating one option (e.g. two --ip) matches any of those
+    values. Disabled (retired) endpoints are always skipped.
+
+    Endpoints scanned more recently than the configured cooldown
+    (TLSSEC_ENDPOINT_COOLDOWN, default 7 days) are skipped so repeated runs only
+    re-scan what is due; pass --force to scan them anyway. Retiring is separate:
+    --force does not scan retired endpoints (re-enable them with `edit endpoint
+    --enable`).
+
+    Each recorded raw scan is normalized into a CycloneDX CBOM and an opinion
+    by default; use --no-cbom / --no-opinion to store the raw scan only.
+    """
+    state = ctx.find_object(CliState)
+    session = state.db.session
+
+    try:
+        endpoints = op.select_endpoints(
+            session,
+            ids=list(ids),
+            tag_paths=list(tags),
+            ips=list(ips),
+            hostnames=list(hostnames),
+            port=port,
+        )
+    except ValueError as e:
+        raise click.UsageError(str(e))
+
+    # One timestamp for the whole run: the cooldown cutoff reference and the
+    # last_seen stamp written to every scanned endpoint below.
+    now = datetime.now()
+
+    scannable = [ep for ep in endpoints if ep.retire_at is None]
+    if force:
+        in_cooldown = 0
+    else:
+        cooldown = state.settings.endpoint_cooldown
+        due = [ep for ep in scannable if not op.is_in_cooldown(ep, cooldown, now)]
+        in_cooldown = len(scannable) - len(due)
+        scannable = due
+
+    if not scannable:
+        if in_cooldown:
+            click.echo(
+                f'All {in_cooldown} matched endpoint(s) are within the cooldown'
+                f' window; use --force to scan anyway.'
+            )
+        else:
+            click.echo('No endpoints to scan.')
+        return
+
+    message = f'Scanning {len(scannable)} endpoint(s)...'
+    if in_cooldown:
+        message += f' ({in_cooldown} skipped: in cooldown)'
+    click.echo(message)
+
+    testssl = Testssl()
+    sshaudit = SshAudit()
+
+    def scanner_for(ep):
+        # SSH endpoints are scanned with ssh-audit; everything else with testssl.
+        if (ep.application_protocol or '').lower() == 'ssh':
+            return sshaudit
+        return testssl
+
+    async def run_all():
+        return await asyncio.gather(*(
+            scanner_for(ep).scan(model.Endpoint.model_validate(ep))
+            for ep in scannable
+        ), return_exceptions=True)
+
+    results = asyncio.run(run_all())
+
+    recorded = 0
+    failed = 0
+    built = 0
+    for ep, result in zip(scannable, results):
+        label = f'{ep.ip or ep.hostname}:{ep.port}'
+        # One endpoint failing (unreachable host, testssl error, ...) must not
+        # discard the scans that did succeed.
+        if isinstance(result, Exception):
+            failed += 1
+            click.echo(f'  failed {label}: {result}')
+            continue
+        scan_row = model.ScanTable(
+            result=result.result,
+            scanner=result.scanner,
+            scanner_version=result.scanner_version,
+            observed_ip=result.observed_ip,
+            sni=result.sni,
+            start_time=result.start_time,
+            time_taken=result.time_taken,
+            belong_to_endpoint_id=ep.id,
+        )
+        session.add(scan_row)
+        # last_seen is the scheduling clock read by the cooldown filter above;
+        # stamp it whenever a raw scan is recorded (independent of CBOM success).
+        ep.last_seen = now
+        recorded += 1
+        click.echo(f'  scanned {label}')
+
+        # Normalize into CBOM (+ opinion) by default. A build failure must not
+        # lose the raw scan, which is the only irreproducible artifact.
+        if not no_cbom:
+            session.flush()  # assign scan_row.id for the FK
+            try:
+                op.store_cbom_for_scan(session, scan_row, with_opinion=not no_opinion)
+                built += 1
+            except Exception as e:
+                click.echo(f'  cbom failed {label}: {e}')
+
+    session.commit()
+    summary = f'Done. Recorded {recorded} scan(s)'
+    if not no_cbom:
+        summary += f'; built {built} CBOM(s)'
+    if failed:
+        summary += f'; {failed} failed'
+    click.echo(summary + '.')
 
 
 cli.add_command(import_group)
 cli.add_command(adhoc)
+
+
+@cli.group()
+def cbom():
+    """Build and manage the CBOM / opinion layers."""
+    pass
+
+
+@cbom.command('build')
+@click.option('--no-opinion', is_flag=True, help='Backfill CBOMs but not opinions')
+@click.pass_context
+def cbom_build(ctx, no_opinion):
+    """Backfill CBOMs (and opinions) for raw scans that lack a current one.
+
+    Rebuilds any scan whose CBOM is missing or was built by an older builder
+    version, then derives opinions for CBOMs missing a current-ruleset opinion.
+    Safe to run repeatedly; it only touches what is missing or stale.
+    """
+    state = ctx.find_object(CliState)
+    session = state.db.session
+    n_cbom = op.backfill_cboms(session, with_opinion=not no_opinion)
+    n_opinion = 0 if no_opinion else op.backfill_opinions(session)
+    session.commit()
+    message = f'Built {n_cbom} CBOM(s)'
+    if not no_opinion:
+        message += f'; {n_opinion} opinion(s)'
+    click.echo(message + '.')
 
 
 @cli.command()
@@ -224,6 +385,87 @@ def endpoint(ctx, ids, tags, ips, hostnames, port, add_tags, remove_tags, change
 
     action = 'Disabled' if disabled else 'Enabled' if disabled is False else 'Updated'
     click.echo(f'{action} {len(endpoints)} endpoint(s).')
+
+
+@cli.group(chain=True)
+@click.pass_context
+def delete(ctx):
+    """Delete objects from the database"""
+    pass
+
+
+@delete.result_callback()
+@click.pass_context
+def delete_commit(ctx, results, **kwargs):
+    state = ctx.find_object(CliState)
+    state.db.session.commit()
+
+
+@delete.command()
+@click.option('--id', 'ids', multiple=True, type=int, help='Select endpoint by id')
+@click.option('--tag', 'tags', multiple=True, help='Select endpoints carrying ALL of these tag path(s)')
+@click.option('--ip', 'ips', multiple=True, help='Select endpoints by IP address')
+@click.option('--hostname', 'hostnames', multiple=True, help='Select endpoints by hostname')
+@click.option('--port', type=int, default=None, help='Select endpoints by port')
+@click.option('--yes', '-y', is_flag=True, help='Delete without confirmation prompt')
+@click.pass_context
+def endpoint(ctx, ids, tags, ips, hostnames, port, yes):
+    """Delete endpoint(s) permanently.
+
+    Select endpoints with --id, --tag, --ip, --hostname and/or --port using the
+    same intersection semantics as `edit endpoint`: all given criteria must
+    match, while repeating one option (e.g. two --ip) matches any of those
+    values. Endpoints that carry scan history are not deleted but instead
+    retired (disabled) so their history is preserved while they stop being
+    scanned; history-free endpoints are removed outright.
+    """
+    state = ctx.find_object(CliState)
+    session = state.db.session
+
+    if not (ids or tags or ips or hostnames or port is not None):
+        raise click.UsageError('select endpoints with --id, --tag, --ip, --hostname and/or --port')
+
+    try:
+        endpoints = op.select_endpoints(
+            session,
+            ids=list(ids),
+            tag_paths=list(tags),
+            ips=list(ips),
+            hostnames=list(hostnames),
+            port=port,
+        )
+    except ValueError as e:
+        raise click.UsageError(str(e))
+
+    if not endpoints:
+        click.echo('No endpoints matched.')
+        return
+
+    deletable = [ep for ep in endpoints if not op.endpoint_has_scans(session, ep)]
+    retire = [ep for ep in endpoints if ep not in deletable]
+
+    for ep in retire:
+        click.echo(f'  retiring {ep.id}: has scan history, disabling instead of deleting')
+
+    if not deletable:
+        if retire:
+            op.set_endpoints_disabled(session, retire, True)
+            click.echo(f'Retired {len(retire)} endpoint(s); deleted 0.')
+        else:
+            click.echo('Nothing to delete.')
+        return
+
+    if not yes:
+        for ep in deletable:
+            click.echo(f'  {ep.id}: {ep.ip or ep.hostname}:{ep.port}')
+        if not click.confirm(f'Delete {len(deletable)} endpoint(s)?', default=False):
+            click.echo('Aborted.')
+            return
+
+    op.delete_endpoints(session, deletable)
+    if retire:
+        op.set_endpoints_disabled(session, retire, True)
+    click.echo(f'Deleted {len(deletable)} endpoint(s); retired {len(retire)}.')
 
 
 @cli.command()

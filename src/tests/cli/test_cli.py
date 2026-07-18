@@ -1,10 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 from click.testing import CliRunner
 from sqlalchemy import select
 
-from tlssec.cli import cli, Nmap
+from tlssec.cli import cli, Nmap, Testssl, SshAudit
 from tlssec.database.database import Database
 import tlssec.core.model as model
 import tlssec.core.operation as op
@@ -387,6 +387,123 @@ def test_edit_endpoint_no_match_is_noop(runner, session):
     assert 'No endpoints matched' in result.output
 
 
+# --- delete endpoint -------------------------------------------------------
+
+def test_delete_endpoint_by_id(runner, session):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
+    op.make_endpoint(session, 443, '10.0.0.2', None, ['web'])
+    session.flush()
+    ep_id = ep.id
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id), '--yes'])
+    assert result.exit_code == 0, result.output
+    assert 'Deleted 1 endpoint' in result.output
+
+    ips = set(_by_ip(session))
+    assert ips == {'10.0.0.2'}  # only the selected endpoint is gone
+
+
+def test_delete_endpoint_by_tag_hits_all(runner, session):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
+    op.make_endpoint(session, 443, '10.0.0.3', None, ['staging'])
+    session.flush()
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--tag', 'prod', '--yes'])
+    assert result.exit_code == 0, result.output
+
+    assert set(_by_ip(session)) == {'10.0.0.3'}  # different tag, untouched
+
+
+def test_delete_endpoint_confirm_yes(runner, session):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
+    session.flush()
+    ep_id = ep.id
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id)], input='y\n')
+    assert result.exit_code == 0, result.output
+    assert _endpoints(session) == []
+
+
+def test_delete_endpoint_confirm_declined_keeps_endpoint(runner, session):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
+    session.flush()
+    ep_id = ep.id
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id)], input='n\n')
+    assert result.exit_code == 0, result.output
+    assert 'Aborted' in result.output
+    assert set(_by_ip(session)) == {'10.0.0.1'}  # nothing deleted
+
+
+def test_delete_endpoint_requires_selector(runner, session):
+    result = runner.invoke(cli, ['delete', 'endpoint', '--yes'])
+    assert result.exit_code == 2, result.output
+
+
+def test_delete_endpoint_unknown_id(runner, session):
+    result = runner.invoke(cli, ['delete', 'endpoint', '--id', '999999', '--yes'])
+    assert result.exit_code == 2, result.output
+    assert 'no endpoint with id' in result.output
+
+
+def test_delete_endpoint_no_match_is_noop(runner, session):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
+    session.flush()
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--tag', 'does/not/exist', '--yes'])
+    assert result.exit_code == 0, result.output
+    assert 'No endpoints matched' in result.output
+    assert set(_by_ip(session)) == {'10.0.0.1'}
+
+
+def _scans(session):
+    return list(session.scalars(select(model.ScanTable)).all())
+
+
+def _cboms(session):
+    return list(session.scalars(select(model.CbomTable)).all())
+
+
+def test_delete_endpoint_with_scan_history_is_retired(runner, session):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
+    session.flush()
+    session.add(model.ScanTable(result={'ok': True}, belong_to_endpoint_id=ep.id))
+    session.flush()
+    ep_id = ep.id
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id), '--yes'])
+    assert result.exit_code == 0, result.output
+    assert 'Retired 1 endpoint' in result.output
+
+    # Endpoint is retired (disabled), not deleted; its scan history is preserved.
+    kept = _by_ip(session)
+    assert set(kept) == {'10.0.0.1'}
+    assert kept['10.0.0.1'].retire_at is not None
+    scans = _scans(session)
+    assert len(scans) == 1
+    assert scans[0].belong_to_endpoint_id == ep_id
+
+
+def test_delete_endpoint_retires_scanned_deletes_fresh(runner, session):
+    # Two endpoints share 'prod': one has scan history, one does not.
+    scanned = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
+    session.flush()
+    session.add(model.ScanTable(result={'ok': True}, belong_to_endpoint_id=scanned.id))
+    session.flush()
+
+    result = runner.invoke(cli, ['delete', 'endpoint', '--tag', 'prod', '--yes'])
+    assert result.exit_code == 0, result.output
+    assert 'Deleted 1 endpoint(s); retired 1' in result.output
+
+    # History-free endpoint is deleted; scanned one is retired with its scan kept.
+    kept = _by_ip(session)
+    assert set(kept) == {'10.0.0.1'}
+    assert kept['10.0.0.1'].retire_at is not None
+    assert len(_scans(session)) == 1
+
+
 # --- nmap ------------------------------------------------------------------
 
 def test_nmap_no_matching_endpoints(runner, session):
@@ -497,3 +614,318 @@ def test_nmap_no_new_endpoints(runner, session, monkeypatch):
     assert result.exit_code == 0, result.output
     assert 'No new endpoints discovered' in result.output
     assert {ep.port for ep in _endpoints(session)} == {443}
+
+
+# --- scan ------------------------------------------------------------------
+
+def _fake_scan_factory(record):
+    """Build a Testssl.scan replacement that records each scanned endpoint."""
+    async def fake_scan(self, endpoint):
+        record.append((str(endpoint.ip), endpoint.port))
+        return model.Scan(result={'target': f'{endpoint.ip}:{endpoint.port}'})
+    return fake_scan
+
+
+def test_scan_all_endpoints_by_default(runner, session, monkeypatch):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    op.make_endpoint(session, 8443, '10.0.0.2', None, ['staging'])
+    session.flush()
+
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    result = runner.invoke(cli, ['scan'])
+    assert result.exit_code == 0, result.output
+    assert 'Scanning 2 endpoint(s)' in result.output
+    assert 'Recorded 2 scan(s)' in result.output
+
+    # A scan row was recorded for every endpoint, linked back to it.
+    scans = _scans(session)
+    assert len(scans) == 2
+    linked = {s.belong_to_endpoint_id for s in scans}
+    assert linked == {ep.id for ep in _endpoints(session)}
+
+
+def test_scan_narrows_by_tag(runner, session, monkeypatch):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    op.make_endpoint(session, 443, '10.0.0.2', None, ['staging'])
+    session.flush()
+
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+
+    # Only the prod endpoint was scanned.
+    assert scanned == [('10.0.0.1', 443)]
+    scans = _scans(session)
+    assert len(scans) == 1
+
+
+def test_scan_narrows_by_ip_and_port(runner, session, monkeypatch):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    op.make_endpoint(session, 8443, '10.0.0.1', None, ['prod'])
+    session.flush()
+
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    result = runner.invoke(cli, ['scan', '--ip', '10.0.0.1', '--port', '8443'])
+    assert result.exit_code == 0, result.output
+
+    assert scanned == [('10.0.0.1', 8443)]  # --ip + --port pins one endpoint
+
+
+def test_scan_skips_disabled_endpoints(runner, session, monkeypatch):
+    active = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    disabled = op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
+    disabled.retire_at = datetime.now()
+    session.flush()
+    active_id = active.id
+
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+
+    assert scanned == [('10.0.0.1', 443)]  # retired endpoint skipped
+    scans = _scans(session)
+    assert [s.belong_to_endpoint_id for s in scans] == [active_id]
+
+
+def test_scan_no_matching_endpoints(runner, session, monkeypatch):
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'does/not/exist'])
+    assert result.exit_code == 0, result.output
+    assert 'No endpoints to scan' in result.output
+    assert scanned == []
+    assert _scans(session) == []
+
+
+def test_scan_unknown_id_errors(runner, session):
+    result = runner.invoke(cli, ['scan', '--id', '999999'])
+    assert result.exit_code == 2, result.output
+    assert 'no endpoint with id' in result.output
+
+
+def test_scan_reports_failures_without_aborting(runner, session, monkeypatch):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
+    session.flush()
+
+    async def fake_scan(self, endpoint):
+        if str(endpoint.ip) == '10.0.0.2':
+            raise RuntimeError('boom')
+        return model.Scan(result={'ok': True})
+
+    monkeypatch.setattr(Testssl, 'scan', fake_scan)
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+    assert 'failed 10.0.0.2:443' in result.output
+    # Raw scan recorded and its CBOM built for the one that succeeded.
+    assert 'Recorded 1 scan(s)' in result.output
+    assert 'built 1 CBOM(s)' in result.output
+    assert '1 failed' in result.output
+
+    # The endpoint that scanned successfully is still stored.
+    scans = _scans(session)
+    assert len(scans) == 1
+
+
+def test_scan_builds_cbom_and_opinion_by_default(runner, session, monkeypatch):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    session.flush()
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+    assert 'built 1 CBOM(s)' in result.output
+
+    cboms = _cboms(session)
+    assert len(cboms) == 1
+    assert cboms[0].document['bomFormat'] == 'CycloneDX'
+    assert len(cboms[0].opinions) == 1
+
+
+def test_scan_records_observed_ip_and_sni(runner, session, monkeypatch):
+    op.make_endpoint(session, 443, '10.0.0.1', 'svc.example.com', ['prod'])
+    session.flush()
+
+    async def fake(self, endpoint):
+        # testssl reached a different backend IP than the endpoint's own.
+        return model.Scan(
+            result={'scanResult': [{'ip': '10.0.0.2'}]},
+            scanner=model.Scanner.testssl,
+            observed_ip='10.0.0.2',
+            sni='svc.example.com',
+        )
+
+    monkeypatch.setattr(Testssl, 'scan', fake)
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+
+    scan = _scans(session)[0]
+    assert str(scan.observed_ip) == '10.0.0.2'  # round-trips through INET
+    assert scan.sni == 'svc.example.com'
+
+
+def test_scan_no_cbom_flag_stores_raw_only(runner, session, monkeypatch):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    session.flush()
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod', '--no-cbom'])
+    assert result.exit_code == 0, result.output
+    assert 'built' not in result.output
+    assert len(_scans(session)) == 1
+    assert _cboms(session) == []
+
+
+def test_cbom_build_backfills_raw_only_scan(runner, session, monkeypatch):
+    op.make_endpoint(session, 443, '10.0.0.9', None, ['bf'])
+    session.flush()
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
+    # Store the raw scan without a CBOM, then backfill via the CLI.
+    runner.invoke(cli, ['scan', '--tag', 'bf', '--no-cbom'])
+
+    result = runner.invoke(cli, ['cbom', 'build'])
+    assert result.exit_code == 0, result.output
+    assert 'Built' in result.output
+
+    scan = session.scalars(
+        select(model.ScanTable)
+        .join(model.EndpointTable)
+        .where(model.EndpointTable.ip == '10.0.0.9')
+    ).one()
+    assert scan.cbom is not None
+
+
+def test_scan_dispatches_ssh_endpoint_to_sshaudit(runner, session, monkeypatch):
+    ep = op.make_endpoint(session, 22, '10.0.0.5', None, ['prod'])
+    ep.application_protocol = 'ssh'
+    session.flush()
+
+    used = []
+
+    def factory(label, scanner):
+        async def fake(self, endpoint):
+            used.append(label)
+            return model.Scan(result={'banner': {}}, scanner=scanner)
+        return fake
+
+    monkeypatch.setattr(Testssl, 'scan', factory('tls', model.Scanner.testssl))
+    monkeypatch.setattr(SshAudit, 'scan', factory('ssh', model.Scanner.ssh_audit))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+    assert used == ['ssh']  # routed by application_protocol, not testssl
+
+    scan = session.scalars(
+        select(model.ScanTable)
+        .join(model.EndpointTable)
+        .where(model.EndpointTable.ip == '10.0.0.5')
+    ).one()
+    assert scan.scanner == model.Scanner.ssh_audit
+
+
+# --- scan cooldown ---------------------------------------------------------
+
+def test_scan_updates_last_seen(runner, session, monkeypatch):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    ep.last_seen = datetime(2000, 1, 1)  # long ago -> due for scanning
+    session.flush()
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+
+    # last_seen is bumped to the run time (tolerate any session tz offset).
+    updated = _by_ip(session)['10.0.0.1'].last_seen
+    assert updated.replace(tzinfo=None) > datetime(2020, 1, 1)
+
+
+def test_scan_skips_endpoint_in_cooldown(runner, session, monkeypatch):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    ep.last_seen = datetime.now()  # just scanned -> inside default 7-day cooldown
+    session.flush()
+
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+    assert 'within the cooldown' in result.output
+    assert scanned == []
+    assert _scans(session) == []
+
+
+def test_scan_force_bypasses_cooldown(runner, session, monkeypatch):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    ep.last_seen = datetime.now()  # inside cooldown
+    session.flush()
+
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod', '--force'])
+    assert result.exit_code == 0, result.output
+    assert scanned == [('10.0.0.1', 443)]
+    assert len(_scans(session)) == 1
+
+
+def test_scan_due_endpoint_past_cooldown_is_scanned(runner, session, monkeypatch):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    ep.last_seen = datetime.now() - timedelta(days=30)  # past 7-day cooldown
+    session.flush()
+
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+    assert scanned == [('10.0.0.1', 443)]
+
+
+def test_scan_does_not_update_last_seen_on_failure(runner, session, monkeypatch):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    ep.last_seen = datetime(2000, 1, 1)  # old -> due, but the scan will fail
+    session.flush()
+
+    async def fake_scan(self, endpoint):
+        raise RuntimeError('boom')
+
+    monkeypatch.setattr(Testssl, 'scan', fake_scan)
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+    assert 'failed' in result.output
+    # A failed scan records nothing, so last_seen must not advance.
+    assert _by_ip(session)['10.0.0.1'].last_seen.replace(tzinfo=None) < datetime(2010, 1, 1)
+
+
+def test_newly_added_endpoint_is_immediately_scannable(runner, session, monkeypatch):
+    # Regression: `add endpoint` must NOT stamp last_seen. Otherwise a freshly
+    # added endpoint looks just-scanned and sits in cooldown for 7 days, so a
+    # plain `scan` right after adding would silently skip it.
+    add = runner.invoke(cli, ['add', 'endpoint', '--ip', '10.0.0.7', '--tag', 'fresh'])
+    assert add.exit_code == 0, add.output
+
+    ep = _by_ip(session)['10.0.0.7']
+    assert ep.last_seen is None  # never scanned -> due, not in cooldown
+
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    # No --force: the endpoint must be scanned on the very next run.
+    result = runner.invoke(cli, ['scan', '--tag', 'fresh'])
+    assert result.exit_code == 0, result.output
+    assert scanned == [('10.0.0.7', 443)]
+    assert len(_scans(session)) == 1
+    # And the successful scan starts the cooldown clock.
+    assert _by_ip(session)['10.0.0.7'].last_seen is not None
