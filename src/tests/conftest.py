@@ -41,6 +41,10 @@ def empty_database_session(database):
     connection = database.engine.connect()
     transaction = connection.begin()
     with Session(bind=connection, join_transaction_mode='create_savepoint') as session:
+        # Delete children before parents to satisfy FKs:
+        # opinion -> cbom -> scan -> endpoint.
+        session.execute(delete(model.OpinionTable))
+        session.execute(delete(model.CbomTable))
         session.execute(delete(model.ScanTable))
         session.execute(delete(model.EndpointTagMapTable))
         session.execute(delete(model.EndpointTable))
