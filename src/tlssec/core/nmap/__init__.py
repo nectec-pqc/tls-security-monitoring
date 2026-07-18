@@ -167,7 +167,7 @@ class Nmap:
         target: str,
         *,
         base_output_dir: Path | None = None,
-        xml_path_template: str = '{datestring}_{target}.nmap.xml',
+        xml_path_template: str = 'nmap/{datestring}_{target}.nmap.xml',
         # `-sV` is required for reliable implicit-vs-explicit TLS detection:
         # nmap only emits tunnel="ssl" (positive wrapped-TLS evidence) under
         # version detection. It can be slow on services returning
