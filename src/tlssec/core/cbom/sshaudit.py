@@ -1,4 +1,4 @@
-"""Build a CycloneDX 1.6 CBOM from an ``ssh-audit --json`` result.
+"""Build a CycloneDX 2.6 CBOM from an ``ssh-audit --json`` result.
 
 SSH has no TLS-style cipher suites; it negotiates independent lists of
 key-exchange, host-key, cipher and MAC algorithms. Each becomes an individual

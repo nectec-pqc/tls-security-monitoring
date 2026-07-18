@@ -2,6 +2,8 @@ import logging
 _logger = logging.getLogger(__name__)
 
 import asyncio
+from datetime import datetime
+
 import click
 import yaml
 from pydantic import ValidationError
@@ -82,10 +84,11 @@ def show_settings(ctx):
 @click.option('--ip', 'ips', multiple=True, help='Select endpoints by IP address')
 @click.option('--hostname', 'hostnames', multiple=True, help='Select endpoints by hostname')
 @click.option('--port', type=int, default=None, help='Select endpoints by port')
+@click.option('--force', '-f', is_flag=True, help='Scan even if within the cooldown window')
 @click.option('--no-cbom', is_flag=True, help='Only store the raw scan; skip building CBOM and opinion')
 @click.option('--no-opinion', is_flag=True, help='Build the CBOM but skip the opinion layer')
 @click.pass_context
-def scan(ctx, ids, tags, ips, hostnames, port, no_cbom, no_opinion):
+def scan(ctx, ids, tags, ips, hostnames, port, force, no_cbom, no_opinion):
     """Scan endpoints and record the results.
 
     With no selection options every active endpoint in the system is scanned.
@@ -94,6 +97,12 @@ def scan(ctx, ids, tags, ips, hostnames, port, no_cbom, no_opinion):
     all given criteria must match (so adding options narrows toward a single
     endpoint), while repeating one option (e.g. two --ip) matches any of those
     values. Disabled (retired) endpoints are always skipped.
+
+    Endpoints scanned more recently than the configured cooldown
+    (TLSSEC_ENDPOINT_COOLDOWN, default 7 days) are skipped so repeated runs only
+    re-scan what is due; pass --force to scan them anyway. Retiring is separate:
+    --force does not scan retired endpoints (re-enable them with `edit endpoint
+    --enable`).
 
     Each recorded raw scan is normalized into a CycloneDX CBOM and an opinion
     by default; use --no-cbom / --no-opinion to store the raw scan only.
@@ -113,12 +122,33 @@ def scan(ctx, ids, tags, ips, hostnames, port, no_cbom, no_opinion):
     except ValueError as e:
         raise click.UsageError(str(e))
 
+    # One timestamp for the whole run: the cooldown cutoff reference and the
+    # last_seen stamp written to every scanned endpoint below.
+    now = datetime.now()
+
     scannable = [ep for ep in endpoints if ep.retire_at is None]
+    if force:
+        in_cooldown = 0
+    else:
+        cooldown = state.settings.endpoint_cooldown
+        due = [ep for ep in scannable if not op.is_in_cooldown(ep, cooldown, now)]
+        in_cooldown = len(scannable) - len(due)
+        scannable = due
+
     if not scannable:
-        click.echo('No endpoints to scan.')
+        if in_cooldown:
+            click.echo(
+                f'All {in_cooldown} matched endpoint(s) are within the cooldown'
+                f' window; use --force to scan anyway.'
+            )
+        else:
+            click.echo('No endpoints to scan.')
         return
 
-    click.echo(f'Scanning {len(scannable)} endpoint(s)...')
+    message = f'Scanning {len(scannable)} endpoint(s)...'
+    if in_cooldown:
+        message += f' ({in_cooldown} skipped: in cooldown)'
+    click.echo(message)
 
     testssl = Testssl()
     sshaudit = SshAudit()
@@ -159,6 +189,9 @@ def scan(ctx, ids, tags, ips, hostnames, port, no_cbom, no_opinion):
             belong_to_endpoint_id=ep.id,
         )
         session.add(scan_row)
+        # last_seen is the scheduling clock read by the cooldown filter above;
+        # stamp it whenever a raw scan is recorded (independent of CBOM success).
+        ep.last_seen = now
         recorded += 1
         click.echo(f'  scanned {label}')
 

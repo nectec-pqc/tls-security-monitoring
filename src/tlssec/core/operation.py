@@ -248,6 +248,26 @@ def make_endpoint(session, port, ip, hostname, tags=()):
     return endpoint
 
 
+def is_in_cooldown(endpoint: m.EndpointTable, cooldown, now: datetime) -> bool:
+    """True if ``endpoint`` was scanned within the cooldown window.
+
+    ``last_seen`` is the scheduling clock: the scan command stamps it with the
+    scan time on every recorded scan, so an endpoint scanned more recently than
+    ``now - cooldown`` is still cooling down and should be skipped. An endpoint
+    that has never been scanned (``last_seen is None``) is always due.
+
+    ``last_seen`` may come back tz-aware from Postgres (``timestamptz``) or be a
+    naive value freshly created in-session; both sides are normalized to naive
+    before comparison so a mixed-awareness pair never raises.
+    """
+    if endpoint.last_seen is None:
+        return False
+    last = endpoint.last_seen
+    last = last.replace(tzinfo=None) if last.tzinfo else last
+    now = now.replace(tzinfo=None) if now.tzinfo else now
+    return last > now - cooldown
+
+
 # --- CBOM / opinion layers -------------------------------------------------
 
 def store_opinion_for_cbom(

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 from click.testing import CliRunner
@@ -832,3 +832,78 @@ def test_scan_dispatches_ssh_endpoint_to_sshaudit(runner, session, monkeypatch):
         .where(model.EndpointTable.ip == '10.0.0.5')
     ).one()
     assert scan.scanner == model.Scanner.ssh_audit
+
+
+# --- scan cooldown ---------------------------------------------------------
+
+def test_scan_updates_last_seen(runner, session, monkeypatch):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    ep.last_seen = datetime(2000, 1, 1)  # long ago -> due for scanning
+    session.flush()
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+
+    # last_seen is bumped to the run time (tolerate any session tz offset).
+    updated = _by_ip(session)['10.0.0.1'].last_seen
+    assert updated.replace(tzinfo=None) > datetime(2020, 1, 1)
+
+
+def test_scan_skips_endpoint_in_cooldown(runner, session, monkeypatch):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    ep.last_seen = datetime.now()  # just scanned -> inside default 7-day cooldown
+    session.flush()
+
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+    assert 'within the cooldown' in result.output
+    assert scanned == []
+    assert _scans(session) == []
+
+
+def test_scan_force_bypasses_cooldown(runner, session, monkeypatch):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    ep.last_seen = datetime.now()  # inside cooldown
+    session.flush()
+
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod', '--force'])
+    assert result.exit_code == 0, result.output
+    assert scanned == [('10.0.0.1', 443)]
+    assert len(_scans(session)) == 1
+
+
+def test_scan_due_endpoint_past_cooldown_is_scanned(runner, session, monkeypatch):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    ep.last_seen = datetime.now() - timedelta(days=30)  # past 7-day cooldown
+    session.flush()
+
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+    assert scanned == [('10.0.0.1', 443)]
+
+
+def test_scan_does_not_update_last_seen_on_failure(runner, session, monkeypatch):
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
+    ep.last_seen = datetime(2000, 1, 1)  # old -> due, but the scan will fail
+    session.flush()
+
+    async def fake_scan(self, endpoint):
+        raise RuntimeError('boom')
+
+    monkeypatch.setattr(Testssl, 'scan', fake_scan)
+
+    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    assert result.exit_code == 0, result.output
+    assert 'failed' in result.output
+    # A failed scan records nothing, so last_seen must not advance.
+    assert _by_ip(session)['10.0.0.1'].last_seen.replace(tzinfo=None) < datetime(2010, 1, 1)
