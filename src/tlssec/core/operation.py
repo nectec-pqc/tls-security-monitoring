@@ -232,13 +232,13 @@ def delete_endpoints(session: Session, endpoints: list[m.EndpointTable]):
 
 
 def make_endpoint(session, port, ip, hostname, tags=()):
-    now = datetime.now()
     endpoint = m.EndpointTable(
         port=port,
         ip=ip,
         hostname=hostname,
-        first_seen=now,
-        last_seen=now,
+        first_seen=datetime.now(),
+        # last_seen is left NULL until the first recorded scan, so a freshly
+        # added endpoint is due immediately instead of sitting in cooldown.
     )
     session.add(endpoint)
     session.flush()

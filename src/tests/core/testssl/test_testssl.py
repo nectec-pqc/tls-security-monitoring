@@ -147,6 +147,21 @@ async def test_scan_records_observed_ip_and_sni(monkeypatch):
     assert scan.sni == 'api.example.com'
 
 
+async def test_scan_strips_scanner_version(monkeypatch):
+    ts = Testssl()
+    # testssl emits "$VERSION $GIT_REL_SHORT"; a packaged (non-git) install
+    # leaves a trailing space, e.g. '3.2.1 '. The structured column is trimmed,
+    # while scan.result keeps testssl's output verbatim.
+    result = {'version': '3.2.1 ', 'scanResult': [{'ip': '127.0.0.1', 'port': '443'}]}
+    monkeypatch.setattr(Testssl, 'call', _fake_call_writing(result))
+
+    ep = m.Endpoint(ip='127.0.0.1', hostname=None, port=443, tls_mode=m.TlsMode.implicit)
+    scan = await ts.scan(ep)
+
+    assert scan.scanner_version == '3.2.1'        # trimmed for the structured column
+    assert scan.result['version'] == '3.2.1 '     # raw scan kept verbatim
+
+
 async def test_scan_observed_ip_absent_is_none(monkeypatch):
     ts = Testssl()
     monkeypatch.setattr(Testssl, 'call', _fake_call_writing({'scanResult': []}))

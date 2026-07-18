@@ -74,17 +74,18 @@ class Endpoint(BaseModel):
         ),
     )
     first_seen: datetime = None
-    last_seen: datetime = None
+    # last_seen is the last *scan* time (the cooldown clock). It stays None until
+    # the first recorded scan, so a newly tracked endpoint reads as never-scanned.
+    last_seen: datetime | None = None
     retire_at: datetime | None = None
 
     @model_validator(mode = 'after')
-    def default_now(self):
-        # Ensure defaulting to now get the exact same value across multiple fields
-        now = datetime.now()
+    def default_first_seen(self):
+        # first_seen marks when tracking began, so default it to now. last_seen is
+        # intentionally NOT defaulted: leaving it None keeps a fresh endpoint "due"
+        # (never scanned) instead of looking just-scanned to the cooldown filter.
         if self.first_seen is None:
-            self.first_seen = now
-        if self.last_seen is None:
-            self.last_seen = now
+            self.first_seen = datetime.now()
         return self
 
 
@@ -124,7 +125,11 @@ class EndpointTable(Base):
         default = None,
     )
     first_seen: Mapped[datetime] = mapped_column(DateTime(timezone = True))
-    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone = True))
+    # Nullable: unset until the first recorded scan (the cooldown clock).
+    last_seen: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone = True),
+        nullable = True,
+    )
     retire_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone = True),
         nullable = True,

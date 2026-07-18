@@ -136,13 +136,27 @@ class Testssl:
         return m.Scan(
             result = result,
             scanner = m.Scanner.testssl,
-            scanner_version = result.get('version') if isinstance(result, dict) else None,
+            scanner_version = self._scanner_version(result),
             observed_ip = self._observed_ip(result),
             # testssl scans by hostname when available, sending it as SNI.
             sni = endpoint.hostname,
             start_time = start_time,
             time_taken = time_taken,
         )
+
+    @staticmethod
+    def _scanner_version(result) -> str | None:
+        """testssl's version string, trimmed.
+
+        testssl writes ``"version": "$VERSION $GIT_REL_SHORT"``; for a packaged
+        (non-git) install ``GIT_REL_SHORT`` is empty, leaving a trailing space
+        (e.g. ``'3.2.1 '``). Trim it so the structured scanner_version is clean.
+        The raw ``scan.result`` still keeps testssl's output verbatim.
+        """
+        if not isinstance(result, dict):
+            return None
+        version = (result.get('version') or '').strip()
+        return version or None
 
     @staticmethod
     def _observed_ip(result) -> str | None:

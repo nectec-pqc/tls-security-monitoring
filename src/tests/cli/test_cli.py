@@ -907,3 +907,25 @@ def test_scan_does_not_update_last_seen_on_failure(runner, session, monkeypatch)
     assert 'failed' in result.output
     # A failed scan records nothing, so last_seen must not advance.
     assert _by_ip(session)['10.0.0.1'].last_seen.replace(tzinfo=None) < datetime(2010, 1, 1)
+
+
+def test_newly_added_endpoint_is_immediately_scannable(runner, session, monkeypatch):
+    # Regression: `add endpoint` must NOT stamp last_seen. Otherwise a freshly
+    # added endpoint looks just-scanned and sits in cooldown for 7 days, so a
+    # plain `scan` right after adding would silently skip it.
+    add = runner.invoke(cli, ['add', 'endpoint', '--ip', '10.0.0.7', '--tag', 'fresh'])
+    assert add.exit_code == 0, add.output
+
+    ep = _by_ip(session)['10.0.0.7']
+    assert ep.last_seen is None  # never scanned -> due, not in cooldown
+
+    scanned = []
+    monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
+
+    # No --force: the endpoint must be scanned on the very next run.
+    result = runner.invoke(cli, ['scan', '--tag', 'fresh'])
+    assert result.exit_code == 0, result.output
+    assert scanned == [('10.0.0.7', 443)]
+    assert len(_scans(session)) == 1
+    # And the successful scan starts the cooldown clock.
+    assert _by_ip(session)['10.0.0.7'].last_seen is not None

@@ -113,7 +113,6 @@ class Nmap:
         endpoints = []
         for host in source.find_all('host'):
             host_start = host.attrs.get('starttime', None)
-            host_end = host.attrs.get('endtime', None)
             address = host.find('address').attrs.get('addr', None)
             hostnames = cls.extract_ordered_hostnames(host)
             preferred_hostname = (
@@ -154,7 +153,9 @@ class Nmap:
                     application_protocol = application_protocol,
                     service_info = ' '.join(service_infos) or None,
                     first_seen = host_start,
-                    last_seen = host_end,
+                    # Port discovery is not a TLS/SSH scan: leave last_seen unset
+                    # so a newly discovered endpoint is due for its first scan.
+                    last_seen = None,
                     tls_mode = tls_mode,
                 ))
         return endpoints
