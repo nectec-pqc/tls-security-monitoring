@@ -20,6 +20,7 @@ wheels/
 /workdir/*
 !/workdir/README.md
 !/workdir/.bashrc
+!/workdir/.tlssec-bash-autocomplete.bash
 !/workdir/notebooks/
 !/workdir/.ipython/
 !/workdir/.jupyter/
