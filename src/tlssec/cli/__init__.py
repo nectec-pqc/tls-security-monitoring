@@ -12,6 +12,7 @@ from tlssec.settings import Settings
 from tlssec.database.database import Database
 import tlssec.core.model as model
 import tlssec.core.operation as op
+from .colored_help import ColoredGroup, ColoredCommand
 from .cli_state import CliState
 from .import_group import import_group
 from .adhoc import adhoc
@@ -20,7 +21,10 @@ from tlssec.core.testssl import Testssl
 from tlssec.core.sshaudit import SshAudit
 
 
-@click.group('tlssec')
+@click.group(
+    'tlssec',
+    cls = ColoredGroup,
+)
 @click.option(
     '--config', 'config_file',
     default=None,
@@ -47,7 +51,7 @@ def cli(ctx, config_file):
         logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 
-@cli.command()
+@cli.command(cls = ColoredCommand)
 @click.option(
     '--reset',
     is_flag=True,
@@ -62,13 +66,16 @@ def init(ctx, reset):
     op.initialize_database(state.db.engine)
 
 
-@cli.group()
+@cli.group(cls = ColoredGroup)
 def show():
     """Show system status"""
     pass
 
 
-@show.command(name='settings')
+@show.command(
+    name = 'settings',
+    cls = ColoredCommand,
+)
 @click.pass_context
 def show_settings(ctx):
     """Show effective settings.
@@ -79,7 +86,7 @@ def show_settings(ctx):
     print(state.settings.model_dump_json(indent=2))
 
 
-@cli.command()
+@cli.command(cls = ColoredCommand)
 @click.option('--id', 'ids', multiple=True, type=int, help='Select endpoint by id')
 @click.option('--tag', 'tags', multiple=True, help='Select endpoints carrying ALL of these tag path(s)')
 @click.option('--ip', 'ips', multiple=True, help='Select endpoints by IP address')
@@ -219,13 +226,13 @@ cli.add_command(import_group)
 cli.add_command(adhoc)
 
 
-@cli.group()
+@cli.group(cls = ColoredGroup)
 def cbom():
     """Build and manage the CBOM / opinion layers."""
     pass
 
 
-@cbom.command('build')
+@cbom.command('build', cls = ColoredCommand)
 @click.option('--no-opinion', is_flag=True, help='Backfill CBOMs but not opinions')
 @click.pass_context
 def cbom_build(ctx, no_opinion):
@@ -246,13 +253,16 @@ def cbom_build(ctx, no_opinion):
     click.echo(message + '.')
 
 
-@cli.command()
+@cli.command(cls = ColoredCommand)
 def report():
     """Produce report"""
     raise NotImplementedError
 
 
-@cli.group(chain=True)
+@cli.group(
+    chain = True,
+    cls = ColoredGroup,
+)
 @click.pass_context
 def add(ctx):
     """Add objects to the database"""
@@ -266,7 +276,7 @@ def add_commit(ctx, results, **kwargs):
     state.db.session.commit()
 
 
-@add.command()
+@add.command(cls = ColoredCommand)
 @click.option('--tag', multiple=True, help='Tag path e.g. network/tls')
 @click.option('--from_file', type=click.File('r'))
 @click.option('--port', type=int, default=443)
@@ -296,7 +306,10 @@ def endpoint(ctx, tag, from_file, port, ip, hostname):
         ep = op.make_endpoint(session, port, ip, hostname, list(tag))
 
 
-@cli.group(chain=True)
+@cli.group(
+    chain = True,
+    cls = ColoredGroup,
+)
 @click.pass_context
 def edit(ctx):
     """Edit objects in the database"""
@@ -310,7 +323,7 @@ def edit_commit(ctx, results, **kwargs):
     state.db.session.commit()
 
 
-@edit.command()
+@edit.command(cls = ColoredCommand)
 @click.option('--id', 'ids', multiple=True, type=int, help='Select endpoint by id')
 @click.option('--tag', 'tags', multiple=True, help='Select endpoints carrying ALL of these tag path(s)')
 @click.option('--ip', 'ips', multiple=True, help='Select endpoints by IP address')
@@ -387,7 +400,10 @@ def endpoint(ctx, ids, tags, ips, hostnames, port, add_tags, remove_tags, change
     click.echo(f'{action} {len(endpoints)} endpoint(s).')
 
 
-@cli.group(chain=True)
+@cli.group(
+    chain = True,
+    cls = ColoredGroup,
+)
 @click.pass_context
 def delete(ctx):
     """Delete objects from the database"""
@@ -401,7 +417,7 @@ def delete_commit(ctx, results, **kwargs):
     state.db.session.commit()
 
 
-@delete.command()
+@delete.command(cls = ColoredCommand)
 @click.option('--id', 'ids', multiple=True, type=int, help='Select endpoint by id')
 @click.option('--tag', 'tags', multiple=True, help='Select endpoints carrying ALL of these tag path(s)')
 @click.option('--ip', 'ips', multiple=True, help='Select endpoints by IP address')
@@ -468,7 +484,7 @@ def endpoint(ctx, ids, tags, ips, hostnames, port, yes):
     click.echo(f'Deleted {len(deletable)} endpoint(s); retired {len(retire)}.')
 
 
-@cli.command()
+@cli.command(cls = ColoredCommand)
 @click.option(
     '--tag',
     multiple = True,

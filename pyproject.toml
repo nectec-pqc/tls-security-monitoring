@@ -10,6 +10,7 @@ requires-python = ">=3.14"
 dependencies = [
     "beautifulsoup4>=4.14.3",
     "click>=8.3.2",
+    "click-help-colors>=0.9.4",
     "cyclonedx-python-lib>=11.11.0",
     "lxml>=6.1.1",
     "pandas>=3.0.3",

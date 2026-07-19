@@ -6,16 +6,20 @@ import click
 
 import tlssec.core.model as model
 import tlssec.core.operation as op
+from .colored_help import ColoredGroup, ColoredCommand
 from .cli_state import CliState
 
 
-@click.group(name = 'import')
+@click.group(
+    name = 'import',
+    cls = ColoredGroup,
+)
 def import_group():
     """Add objects to tlssec database"""
     pass
 
 
-@import_group.command()
+@import_group.command(cls = ColoredCommand)
 @click.argument(
     'paths',
     metavar = 'files',
