@@ -2,6 +2,8 @@ import logging
 _logger = logging.getLogger(__name__)
 
 import asyncio
+import json
+from pathlib import Path
 from datetime import datetime
 
 import click
@@ -213,6 +215,152 @@ def scan(ctx, ids, tags, ips, hostnames, port, force, no_cbom, no_opinion):
     if failed:
         summary += f'; {failed} failed'
     click.echo(summary + '.')
+
+
+# --- view: read back stored raw / CBOM / opinion layers --------------------
+
+_VIEW_LAYERS = ('raw', 'cbom', 'opinion')
+
+
+def _safe_component(text):
+    """Filesystem-safe slug: keep alnum and . _ + - ; replace the rest with _."""
+    return ''.join(c if (c.isalnum() or c in '._+-') else '_' for c in text) or 'all'
+
+
+def _selection_slug(ids, tags, ips, hostnames, port):
+    """Name outputs after *what was used to select* the endpoints.
+
+    e.g. ``hostname-100m.forest.go.th``, ``id-1+port-443``, or ``all`` when no
+    selector was given.
+    """
+    parts = []
+    for label, values in (('id', ids), ('tag', tags), ('ip', ips), ('hostname', hostnames)):
+        parts += [f'{label}-{v}' for v in values]
+    if port is not None:
+        parts.append(f'port-{port}')
+    return _safe_component('+'.join(parts) if parts else 'all')
+
+
+def _latest_opinion(scan):
+    """Newest opinion (highest id) on the scan's CBOM, or None."""
+    if scan.cbom is None or not scan.cbom.opinions:
+        return None
+    return max(scan.cbom.opinions, key=lambda o: o.id)
+
+
+def _layer_payload(scan, layer):
+    """The stored JSON for one layer of a scan, or None if it does not exist."""
+    if layer == 'raw':
+        return scan.result
+    if layer == 'cbom':
+        return scan.cbom.document if scan.cbom else None
+    opinion_row = _latest_opinion(scan)
+    return opinion_row.verdict if opinion_row else None
+
+
+def _layer_created(scan, layer):
+    """Create time of a layer, used for the filename; falls back to now."""
+    if layer == 'raw':
+        dt = scan.start_time
+    elif layer == 'cbom':
+        dt = scan.cbom.created_at if scan.cbom else None
+    else:
+        opinion_row = _latest_opinion(scan)
+        dt = opinion_row.created_at if opinion_row else None
+    dt = dt or datetime.now()
+    return dt.replace(tzinfo=None) if dt.tzinfo else dt
+
+
+def _unique_path(directory, base):
+    """``<base>.json`` in ``directory``, suffixing ``_2``, ``_3``, ... on collision."""
+    path = directory / f'{base}.json'
+    n = 2
+    while path.exists():
+        path = directory / f'{base}_{n}.json'
+        n += 1
+    return path
+
+
+@cli.command()
+@click.option('--id', 'ids', multiple=True, type=int, help='Select endpoint by id')
+@click.option('--tag', 'tags', multiple=True, help='Select endpoints carrying ALL of these tag path(s)')
+@click.option('--ip', 'ips', multiple=True, help='Select endpoints by IP address')
+@click.option('--hostname', 'hostnames', multiple=True, help='Select endpoints by hostname')
+@click.option('--port', type=int, default=None, help='Select endpoints by port')
+@click.option('--raw', 'want_raw', is_flag=True, help='Include the raw scan result (Layer 1)')
+@click.option('--cbom', 'want_cbom', is_flag=True, help='Include the CBOM document (Layer 2)')
+@click.option('--opinion', 'want_opinion', is_flag=True, help='Include the latest opinion verdict (Layer 3)')
+@click.option('--output', '-o', is_flag=True, help='Write each layer to a JSON file in output_dir instead of printing')
+@click.pass_context
+def view(ctx, ids, tags, ips, hostnames, port, want_raw, want_cbom, want_opinion, output):
+    """View stored raw scan / CBOM / opinion for selected endpoints.
+
+    Endpoints are selected exactly like `scan`: --id/--tag/--ip/--hostname/--port
+    are ANDed together (repeating one option ORs its values) and passing no
+    selector selects every endpoint. For each selected endpoint every scan is
+    emitted, newest first.
+
+    Choose at least one layer with --raw / --cbom / --opinion. Without --output
+    the JSON is printed; with --output each (scan, layer) is written to
+    output_dir as <create-time>_<layer>_<selection>.json, e.g.
+    2026-07-18T02-09-44_opinion_hostname-100m.forest.go.th.json
+    """
+    state = ctx.find_object(CliState)
+    session = state.db.session
+
+    layers = [name for name, want in zip(_VIEW_LAYERS, (want_raw, want_cbom, want_opinion)) if want]
+    if not layers:
+        raise click.UsageError('choose at least one of --raw / --cbom / --opinion')
+
+    try:
+        endpoints = op.select_endpoints(
+            session,
+            ids=list(ids), tag_paths=list(tags), ips=list(ips),
+            hostnames=list(hostnames), port=port,
+        )
+    except ValueError as e:
+        raise click.UsageError(str(e))
+
+    if not endpoints:
+        click.echo('No endpoints matched.')
+        return
+
+    slug = _selection_slug(ids, tags, ips, hostnames, port)
+    out_dir = state.settings.output_dir
+    if output:
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+    emitted = 0
+    missing = 0
+    for ep in endpoints:
+        label = f'{ep.ip or ep.hostname}:{ep.port}'
+        # Newest scan first; start_time is naive (TIMESTAMP without tz).
+        scans = sorted(ep.scans, key=lambda s: s.start_time or datetime.min, reverse=True)
+        for scan_row in scans:
+            for layer in layers:
+                payload = _layer_payload(scan_row, layer)
+                if payload is None:
+                    missing += 1
+                    click.echo(f'  {label} scan {scan_row.id}: no {layer}')
+                    continue
+                if output:
+                    base = f'{_layer_created(scan_row, layer):%Y-%m-%dT%H-%M-%S}_{layer}_{slug}'
+                    path = _unique_path(out_dir, base)
+                    path.write_text(json.dumps(payload, indent=2, default=str))
+                    click.echo(f'  wrote {path.name}')
+                else:
+                    click.echo(f'# {label}  scan {scan_row.id}  [{layer}]')
+                    click.echo(json.dumps(payload, indent=2, default=str))
+                    click.echo('')
+                emitted += 1
+
+    if output:
+        message = f'Wrote {emitted} file(s) to {out_dir}'
+        if missing:
+            message += f'; {missing} layer(s) not built yet'
+        click.echo(message + '.')
+    elif emitted == 0:
+        click.echo('Nothing to show: selected endpoint(s) have no matching layers yet.')
 
 
 cli.add_command(import_group)

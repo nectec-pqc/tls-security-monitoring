@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 
 import pytest
@@ -929,3 +930,98 @@ def test_newly_added_endpoint_is_immediately_scannable(runner, session, monkeypa
     assert len(_scans(session)) == 1
     # And the successful scan starts the cooldown clock.
     assert _by_ip(session)['10.0.0.7'].last_seen is not None
+
+
+# --- view ------------------------------------------------------------------
+
+def _make_scanned(session, ip, tags, *, start_time, result=None, with_cbom=True):
+    """An endpoint with one recorded scan (and, by default, its CBOM+opinion)."""
+    ep = op.make_endpoint(session, 443, ip, None, tags)
+    session.flush()
+    scan = model.ScanTable(
+        result=result if result is not None else {'scanResult': []},
+        scanner=model.Scanner.testssl,
+        start_time=start_time,
+        belong_to_endpoint_id=ep.id,
+    )
+    session.add(scan)
+    session.flush()
+    if with_cbom:
+        op.store_cbom_for_scan(session, scan, with_opinion=True)
+    session.flush()
+    return ep, scan
+
+
+def test_view_requires_a_layer(runner, session):
+    op.make_endpoint(session, 443, '10.0.0.1', None, ['v'])
+    session.flush()
+    result = runner.invoke(cli, ['view', '--tag', 'v'])
+    assert result.exit_code == 2, result.output
+    assert 'at least one' in result.output
+
+
+def test_view_no_match(runner, session):
+    result = runner.invoke(cli, ['view', '--tag', 'does/not/exist', '--raw'])
+    assert result.exit_code == 0, result.output
+    assert 'No endpoints matched' in result.output
+
+
+def test_view_prints_requested_layers(runner, session):
+    _make_scanned(session, '10.0.0.1', ['v'], start_time=datetime(2026, 7, 18, 2, 9, 44))
+
+    result = runner.invoke(cli, ['view', '--tag', 'v', '--raw', '--cbom', '--opinion'])
+    assert result.exit_code == 0, result.output
+    assert '[raw]' in result.output
+    assert '[cbom]' in result.output
+    assert '[opinion]' in result.output
+    assert 'CycloneDX' in result.output  # the CBOM document body was printed
+
+
+def test_view_reports_missing_layer(runner, session):
+    # A raw-only scan (no CBOM) -> --cbom reports it as missing, does not crash.
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['v'])
+    session.flush()
+    session.add(model.ScanTable(
+        result={'x': 1}, start_time=datetime(2026, 7, 18), belong_to_endpoint_id=ep.id,
+    ))
+    session.flush()
+
+    result = runner.invoke(cli, ['view', '--tag', 'v', '--cbom'])
+    assert result.exit_code == 0, result.output
+    assert 'no cbom' in result.output
+
+
+def test_view_outputs_files_named_by_time_layer_and_filter(runner, session, tmp_path, monkeypatch):
+    monkeypatch.setenv('TLSSEC_OUTPUT_DIR', str(tmp_path))
+    _make_scanned(session, '10.0.0.1', ['v'], start_time=datetime(2026, 7, 18, 2, 9, 44),
+                  result={'scanResult': []})
+
+    result = runner.invoke(cli, ['view', '--ip', '10.0.0.1', '--raw', '--opinion', '--output'])
+    assert result.exit_code == 0, result.output
+
+    names = sorted(p.name for p in tmp_path.glob('*.json'))
+    assert len(names) == 2
+    # <create-time>_<layer>_<selection>.json ; selection reflects the --ip filter.
+    assert any(n.endswith('_raw_ip-10.0.0.1.json') for n in names)
+    assert any(n.endswith('_opinion_ip-10.0.0.1.json') for n in names)
+    # raw's timestamp is the scan's start_time.
+    assert any(n == '2026-07-18T02-09-44_raw_ip-10.0.0.1.json' for n in names)
+    # File content is the stored JSON verbatim.
+    raw_file = next(tmp_path.glob('*_raw_*.json'))
+    assert json.loads(raw_file.read_text()) == {'scanResult': []}
+
+
+def test_view_emits_all_scans_of_an_endpoint(runner, session, tmp_path, monkeypatch):
+    monkeypatch.setenv('TLSSEC_OUTPUT_DIR', str(tmp_path))
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['v'])
+    session.flush()
+    for t in (datetime(2026, 7, 10, 1, 0, 0), datetime(2026, 7, 18, 2, 0, 0)):
+        session.add(model.ScanTable(
+            result={'day': t.day}, start_time=t, belong_to_endpoint_id=ep.id,
+        ))
+    session.flush()
+
+    result = runner.invoke(cli, ['view', '--ip', '10.0.0.1', '--raw', '--output'])
+    assert result.exit_code == 0, result.output
+    # Both scans in history are exported, not just the latest.
+    assert len(list(tmp_path.glob('*_raw_ip-10.0.0.1.json'))) == 2
