@@ -14,6 +14,8 @@ from sqlalchemy import (
     Identity,
     String,
     DateTime,
+    Index,
+    func,
 )
 from sqlalchemy.orm import (
     Mapped,
@@ -140,3 +142,16 @@ class EndpointTable(Base):
         back_populates='endpoints',
     )
     scans: Mapped[list['ScanTable']] = relationship(back_populates='endpoint')
+
+
+# Scan identity: an endpoint is uniquely (hostname-or-ip, port, transport). This
+# is the same key nmap discovery de-dup uses (endpoint_identity_key) and exactly
+# what determines the scan target -- path / application_protocol are intentionally
+# excluded. host(ip) drops any netmask; COALESCE prefers the hostname over the ip.
+Index(
+    'uq_endpoint_identity',
+    func.coalesce(EndpointTable.hostname, func.host(EndpointTable.ip)),
+    EndpointTable.port,
+    EndpointTable.transport_protocol,
+    unique = True,
+)
