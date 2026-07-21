@@ -1,0 +1,2 @@
+{"additional_notes": [], "banner": {"comments": null, "protocol": null, "raw": "", "software": null}, "cves": [], "recommendations": {}, "target": "127.0.0.1:2222"}
+[exception] did not receive banner: Connection reset by peer

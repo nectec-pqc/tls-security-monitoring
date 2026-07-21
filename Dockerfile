@@ -25,6 +25,9 @@ ENV PATH="/opt/app/.venv/bin:$PATH"
 
 
 FROM base AS dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  openssh-server \
+  && rm -rf /var/lib/apt/lists/*
 RUN --mount=type=cache,target=/root/.cache/uv \
   uv sync --locked --no-install-project
 # Install application source code

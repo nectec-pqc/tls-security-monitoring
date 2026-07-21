@@ -11,16 +11,17 @@ import tlssec.core.model as m
 from tlssec.core.nmap import Nmap
 from tlssec.core.testssl import Testssl
 from tlssec.core.ssh_audit import SshAudit
+from .colored_help import ColoredGroup, ColoredCommand
 from .cli_state import CliState
 
 
-@click.group()
+@click.group(cls = ColoredGroup)
 def adhoc():
     """Experimental features"""
     pass
 
 
-@adhoc.command()
+@adhoc.command(cls = ColoredCommand)
 @click.option(
     '--force', '-f',
     is_flag = True,
@@ -88,7 +89,7 @@ SetToListDumper.add_representer(
 )
 
 
-@adhoc.command()
+@adhoc.command(cls = ColoredCommand)
 @click.option(
     '--force', '-f',
     is_flag = True,
@@ -140,7 +141,7 @@ def testssl_json_to_extracts_yaml(
         yaml.dump(extracts, f, Dumper=SetToListDumper)
 
 
-@adhoc.command()
+@adhoc.command(cls = ColoredCommand)
 @click.option(
     '--force', '-f',
     is_flag = True,
