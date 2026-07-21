@@ -3,7 +3,7 @@ _logger = logging.getLogger(__name__)
 
 from datetime import datetime
 
-from sqlalchemy import Engine, select, or_
+from sqlalchemy import Engine, select, or_, func
 from sqlalchemy.orm import Session
 
 from tlssec.database.base import Base
@@ -231,20 +231,59 @@ def delete_endpoints(session: Session, endpoints: list[m.EndpointTable]):
         session.delete(endpoint)
 
 
-def make_endpoint(session, port, ip, hostname, tags=()):
-    endpoint = m.EndpointTable(
-        port=port,
-        ip=ip,
-        hostname=hostname,
-        first_seen=datetime.now(),
-        # last_seen is left NULL until the first recorded scan, so a freshly
-        # added endpoint is due immediately instead of sitting in cooldown.
+def find_endpoint_by_identity(
+    session: Session,
+    ip=None,
+    hostname=None,
+    port: int = 443,
+    transport_protocol: str = 'tcp',
+) -> m.EndpointTable | None:
+    """Return the endpoint sharing this scan identity, or None.
+
+    Identity is ``(hostname-or-ip, port, transport_protocol)`` -- the same key as
+    ``endpoint_identity_key`` and the ``uq_endpoint_identity`` DB index. The host
+    part prefers the hostname and falls back to the ip.
+    """
+    host = hostname if hostname else (str(ip) if ip is not None else None)
+    if host is None:
+        return None
+    return session.scalar(
+        select(m.EndpointTable).where(
+            func.coalesce(m.EndpointTable.hostname, func.host(m.EndpointTable.ip)) == host,
+            m.EndpointTable.port == port,
+            m.EndpointTable.transport_protocol == transport_protocol,
+        )
     )
-    session.add(endpoint)
-    session.flush()
+
+
+def add_endpoint_tags(session: Session, endpoint: m.EndpointTable, tags):
+    """Attach each tag path in ``tags`` to ``endpoint`` (idempotent)."""
     for tag in tags:
         leaf_tag = resolve_tag(session, tag)
-        endpoint.tags.append(leaf_tag)
+        if leaf_tag not in endpoint.tags:
+            endpoint.tags.append(leaf_tag)
+
+
+def make_endpoint(session, port, ip, hostname, tags=()):
+    """Create the endpoint, or reuse the one with the same scan identity.
+
+    Adding an endpoint that already exists is idempotent: the row is never
+    duplicated (see ``find_endpoint_by_identity`` / ``uq_endpoint_identity``) and
+    only ``tags`` not already present are attached.
+    """
+    endpoint = find_endpoint_by_identity(session, ip=ip, hostname=hostname, port=port)
+    if endpoint is None:
+        endpoint = m.EndpointTable(
+            port=port,
+            ip=ip,
+            hostname=hostname,
+            first_seen=datetime.now(),
+            # last_seen is left NULL until the first recorded scan, so a freshly
+            # added endpoint is due immediately instead of sitting in cooldown.
+        )
+        session.add(endpoint)
+        session.flush()
+    add_endpoint_tags(session, endpoint, tags)
     return endpoint
 
 

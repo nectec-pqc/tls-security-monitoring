@@ -435,11 +435,21 @@ def endpoint(ctx, tag, from_file, port, ip, hostname):
         raw_endpoints = yaml.safe_load(from_file)
         for raw in raw_endpoints:
             tags = raw.pop('tags', [])
-            ep = model.EndpointTable(**model.Endpoint(**raw).model_dump(exclude={'id'}))
-            session.add(ep)
-            session.flush()
-            for t in list(tag) + tags:
-                ep.tags.append(op.resolve_tag(session, t))
+            ep_model = model.Endpoint(**raw)
+            # Reuse an existing endpoint with the same scan identity instead of
+            # inserting a duplicate; either way merge in the tags.
+            ep = op.find_endpoint_by_identity(
+                session,
+                ip=ep_model.ip,
+                hostname=ep_model.hostname,
+                port=ep_model.port,
+                transport_protocol=ep_model.transport_protocol,
+            )
+            if ep is None:
+                ep = model.EndpointTable(**ep_model.model_dump(exclude={'id'}))
+                session.add(ep)
+                session.flush()
+            op.add_endpoint_tags(session, ep, list(tag) + tags)
     else:
         ep = op.make_endpoint(session, port, ip, hostname, list(tag))
 

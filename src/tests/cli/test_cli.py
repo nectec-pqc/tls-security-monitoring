@@ -100,6 +100,34 @@ def test_add_endpoint_from_file(runner, session, tmp_path):
     assert {t.name for t in endpoints['b.example.com'].tags} == {'batch'}
 
 
+def test_add_duplicate_endpoint_reuses_and_merges_tags(runner, session):
+    # Same scan identity added twice -> one row, tags merged (idempotent add).
+    r1 = runner.invoke(cli, ['add', 'endpoint', '--ip', '10.0.0.1', '--tag', 'a'])
+    assert r1.exit_code == 0, r1.output
+    r2 = runner.invoke(cli, ['add', 'endpoint', '--ip', '10.0.0.1', '--tag', 'b'])
+    assert r2.exit_code == 0, r2.output
+
+    endpoints = _endpoints(session)
+    assert len(endpoints) == 1                                  # not duplicated
+    assert {t.name for t in endpoints[0].tags} == {'a', 'b'}    # tags merged
+
+
+def test_add_duplicate_endpoint_from_file_reuses(runner, session, tmp_path):
+    from_file = tmp_path / 'endpoints.yaml'
+    from_file.write_text(
+        '- hostname: dup.example.com\n'
+        '  tags: [first]\n'
+        '- hostname: dup.example.com\n'   # same identity as the first entry
+        '  tags: [second]\n'
+    )
+    result = runner.invoke(cli, ['add', 'endpoint', '--from_file', str(from_file)])
+    assert result.exit_code == 0, result.output
+
+    endpoints = _endpoints(session)
+    assert len(endpoints) == 1                                          # deduped
+    assert {t.name for t in endpoints[0].tags} == {'first', 'second'}   # tags merged
+
+
 # --- edit endpoint ---------------------------------------------------------
 # NOTE: the cli closes/expunges the session on exit, so pre-invoke ORM objects
 # become detached. Always re-query by ip after invoke to read the new state.
