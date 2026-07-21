@@ -1,5 +1,4 @@
 import re
-import shutil
 from pathlib import Path
 
 import pytest
@@ -84,30 +83,15 @@ async def test_scan_local_not_found(current_openssl_server):
         'Must see all ports as closed'
 
 
-@pytest.fixture
-def clean_nmap_output_dir(cache_dir):
-    output_dir = cache_dir / 'nmap'
-
-    def clear():
-        if output_dir.exists():
-            if output_dir.is_dir():
-                shutil.rmtree(output_dir)
-            else:
-                output_dir.unlink()
-
-    clear()
-    yield output_dir
-    clear()
-
-
 async def test_discover_endpoints(
     current_openssl_server,
-    cache_dir,
-    clean_nmap_output_dir,
+    tmp_path,
 ):
+    # Use a per-test tmp_path as the output base: `discover_endpoints` writes the
+    # XML straight into base_output_dir, and pytest cleans tmp_path up for us.
     completed_process, endpoints = await Nmap.discover_endpoints(
         'localhost',
-        base_output_dir = cache_dir,
+        base_output_dir = tmp_path,
         ports = '4400-4450',
         # Skip -sV to keep the test fast (it is abnormally slow against
         # openssl s_server) and exercise the no-version-detection heuristic.
@@ -125,7 +109,7 @@ async def test_discover_endpoints(
 
     # NOTE: The following tests checks XML file directly.
 
-    outfiles = list(clean_nmap_output_dir.glob('*_localhost.nmap.xml'))
+    outfiles = list(tmp_path.glob('*_localhost.nmap.xml'))
     assert len(outfiles) == 1
 
     from bs4 import BeautifulSoup
