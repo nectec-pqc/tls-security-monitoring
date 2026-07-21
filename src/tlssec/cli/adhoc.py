@@ -2,6 +2,7 @@ import logging
 _logger = logging.getLogger(__name__)
 from pathlib import Path
 from collections import defaultdict
+from datetime import datetime
 
 import click
 import pandas as pd
@@ -175,3 +176,41 @@ def ssh_audit_json_to_extracts_yaml(
         raise FileExistsError(f'file already exists {outpath}')
     with open(outpath, 'w') as f:
         yaml.dump(extracts, f, Dumper=SetToListDumper)
+
+
+# TODO: Export report together with data yaml in a single action
+# TODO: Receive all input scan files through the same channel, deduce their
+# type from file content automatically
+# TODO: Allow taking selecting input from within database too
+@adhoc.command(cls = ColoredCommand)
+@click.option(
+    '--out', '-o', 'report_path_pattern',
+    default = '{now:%Y-%m-%d}-report',
+    show_default = True,
+    help = 'Pattern for naming report directory.',
+)
+@click.pass_context
+def export_report(
+    ctx,
+    report_path_pattern,
+):
+    """Export results as a typst project
+
+    Currently it only export the typst project without actual data.
+    Use the other adhoc commands to populate the data directory.
+
+    This will overwrites files in --out directory.
+    User is expected to use version control like git on the --out directory
+    if there are some custom changes that needs to be kept.
+    """
+    from tlssec.core.export.typst import TypstTemplates
+    state = ctx.find_object(CliState)
+    report_path = state.settings.output_dir / report_path_pattern.format(now = datetime.now())
+    if report_path.is_file():
+        _logger.error(
+            'Can not create typst project.'
+            f' Target already exists and is a file: {report_path}'
+        )
+    report_path.mkdir(parents = True, exist_ok = True)
+    TypstTemplates.init('snapshot_report', report_path)
+    # TODO: Compile typst project into PDF automatically too
