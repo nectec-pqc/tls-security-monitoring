@@ -109,7 +109,7 @@ async def test_discover_endpoints(
 
     # NOTE: The following tests checks XML file directly.
 
-    outfiles = list(tmp_path.glob('*_localhost.nmap.xml'))
+    outfiles = list(tmp_path.glob('nmap/*_localhost.nmap.xml'))
     assert len(outfiles) == 1
 
     from bs4 import BeautifulSoup
