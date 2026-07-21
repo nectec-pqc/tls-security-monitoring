@@ -117,6 +117,7 @@ class Testssl:
                 '--jsonfile-pretty', str(json_path),
                 *options,
                 target,
+                idle_timeout = 120,
             )
             time_taken = round((datetime.now() - start_time).total_seconds())
 
