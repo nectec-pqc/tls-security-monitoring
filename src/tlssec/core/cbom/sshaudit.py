@@ -12,15 +12,9 @@ CVEs and recommendations are left for the opinion layer.
 from cyclonedx.model.bom import Bom
 from cyclonedx.model import crypto
 
-from ._base import _CryptoBomBuilder, _slug
+import tlssec.standard as standard
 
-# PQC key-exchange families -> NIST security category (matched as a substring
-# of the ssh algorithm name, e.g. 'mlkem768x25519-sha256').
-_KEM_NIST_LEVEL = {
-    'mlkem1024': 5, 'mlkem768': 3, 'mlkem512': 1,
-    'sntrup761': 2, 'sntrup4591761': 2,
-    'kyber-1024': 5, 'kyber-768': 3, 'kyber-512': 1,
-}
+from ._base import _CryptoBomBuilder, _slug
 
 # ssh-audit lists these protocol-extension markers among "kex"; they are not
 # cryptographic algorithms.
@@ -44,7 +38,12 @@ class _Builder(_CryptoBomBuilder):
             add(self._kex(item.get('algorithm')))
         for item in result.get('key', []):
             if name := item.get('algorithm'):
-                add(self.algorithm(name, crypto.CryptoPrimitive.SIGNATURE))
+                # PQC host keys (ML-DSA) carry a NIST category too; classical
+                # ones resolve to None.
+                add(self.algorithm(
+                    name, crypto.CryptoPrimitive.SIGNATURE,
+                    nist=standard.ssh.nist_level(name),
+                ))
         for item in result.get('enc', []):
             add(self._enc(item.get('algorithm')))
         for item in result.get('mac', []):
@@ -58,10 +57,9 @@ class _Builder(_CryptoBomBuilder):
     def _kex(self, name):
         if not name or name.startswith(_KEX_PSEUDO_PREFIXES):
             return None
-        low = name.lower()
-        for token, level in _KEM_NIST_LEVEL.items():
-            if token in low:
-                return self.algorithm(name, crypto.CryptoPrimitive.KEM, nist=level)
+        level = standard.ssh.nist_level(name)
+        if level is not None:
+            return self.algorithm(name, crypto.CryptoPrimitive.KEM, nist=level)
         return self.algorithm(name, crypto.CryptoPrimitive.KEY_AGREE)
 
     def _enc(self, name):

@@ -54,6 +54,19 @@ def test_host_keys_are_signature_algorithms(document):
     assert any(s.startswith(('ssh-ed25519', 'ecdsa-', 'rsa-', 'ssh-rsa')) for s in sigs)
 
 
+def test_pqc_host_key_tagged_with_nist_level():
+    # The openssh_server fixture offers only classical host keys, so build a
+    # minimal result to cover the ML-DSA path.
+    result = {'key': [{'algorithm': 'ssh-mldsa65'}, {'algorithm': 'ssh-ed25519'}]}
+    doc = cbom.build(m.Scan(result=result, scanner=m.Scanner.ssh_audit)).document
+    sigs = {
+        a['name']: a['cryptoProperties']['algorithmProperties']
+        for a in _by_type(doc)['algorithm']
+    }
+    assert sigs['ssh-mldsa65']['nistQuantumSecurityLevel'] == 3
+    assert sigs['ssh-ed25519'].get('nistQuantumSecurityLevel') is None
+
+
 def test_cipher_primitive_and_mode(document):
     algos = {
         a['name']: a['cryptoProperties']['algorithmProperties']
