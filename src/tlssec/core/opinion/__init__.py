@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 import tlssec.core.model as m
 import tlssec.standard as standard
 
-RULESET_VERSION = '0.1.0'
+RULESET_VERSION = '0.2.0'
 
 _WEAK_PROTOCOL_VERSIONS = {'SSL 2.0', 'SSL 3.0', '1.0', '1.1'}
 _WEAK_SYMENC = {'RC4', '3DES', 'DES', 'NULL'}
@@ -59,29 +59,40 @@ def _symenc_base(name: str) -> str:
     return name.split('@')[0].split('-')[0].upper()
 
 
+def _is_pqc(ap) -> bool:
+    """PQC iff the CBOM tagged a NIST category, which is scanner-agnostic."""
+    nist = ap.get('nistQuantumSecurityLevel')
+    return nist is not None and nist >= 1
+
+
 def _quantum(document):
     safe_kex, unsafe_kex, safe_sym, unsafe_sym = set(), set(), set(), set()
+    safe_sig, unsafe_sig = set(), set()
     for name, ap in _algorithms(document):
         primitive = ap.get('primitive')
         if primitive in ('kem', 'key-agree'):
-            # Quantum-safe if the CBOM tagged a NIST PQC level, or the name is a
-            # known quantum-safe KEM. The nist-level path keeps this verdict
-            # scanner-agnostic (testssl and ssh use different algorithm names).
-            nist = ap.get('nistQuantumSecurityLevel')
-            is_pqc = (nist is not None and nist >= 1) or name in standard.tls.quantum_safe_kems
-            (safe_kex if is_pqc else unsafe_kex).add(name)
+            (safe_kex if _is_pqc(ap) else unsafe_kex).add(name)
         elif primitive in ('block-cipher', 'stream-cipher'):
             is_safe = standard.tls.IS_SYMENC_QUANTUM_SAFE.get(_symenc_base(name))
             (safe_sym if is_safe else unsafe_sym).add(name)
+        elif primitive == 'signature':
+            (safe_sig if _is_pqc(ap) else unsafe_sig).add(name)
     return {
         # PQC-capable: offers at least one quantum-safe key establishment.
         'pqc_capable': bool(safe_kex),
         # Overall safe requires PQC key establishment AND no quantum-weak symmetric.
+        # Signatures are deliberately excluded: key establishment is exposed to
+        # harvest-now-decrypt-later, while a signature only enables live
+        # impersonation and cannot be forged retroactively.
         'quantum_safe': bool(safe_kex) and not unsafe_sym,
         'safe_key_establishment': sorted(safe_kex),
         'unsafe_key_establishment': sorted(unsafe_kex),
         'safe_symmetric': sorted(safe_sym),
         'unsafe_symmetric': sorted(unsafe_sym),
+        # Authentication axis, reported separately from `quantum_safe`.
+        'pqc_signature': bool(safe_sig),
+        'safe_signature': sorted(safe_sig),
+        'unsafe_signature': sorted(unsafe_sig),
     }
 
 

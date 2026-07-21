@@ -34,6 +34,36 @@ def test_opinion_metadata(verdict):
     assert verdict.cbom_id == 5
 
 
+def test_every_curated_tls_kem_is_tagged_with_a_nist_level():
+    # The verdict derives PQC purely from the CBOM's nistQuantumSecurityLevel,
+    # so any KEM we curate as quantum-safe must be tagged by the builder.
+    from tlssec.core.cbom.testssl import _KEM_NIST_LEVEL
+    import tlssec.standard as standard
+    missing = standard.tls.quantum_safe_kems - set(_KEM_NIST_LEVEL)
+    assert not missing, f'not tagged with a NIST level: {missing}'
+
+
+def test_signature_axis_reports_pqc_host_keys_without_changing_quantum_safe():
+    # ML-DSA host key + classical kex: the signature axis records it, but
+    # `quantum_safe` stays False (key establishment is still classical).
+    scan = m.Scan(
+        result={
+            'kex': [{'algorithm': 'curve25519-sha256'}],
+            'key': [{'algorithm': 'ssh-mldsa87'}, {'algorithm': 'ssh-ed25519'}],
+            'enc': [{'algorithm': 'aes256-gcm@openssh.com'}],
+        },
+        scanner=m.Scanner.ssh_audit,
+    )
+    q = opinion.derive(cbom.build(scan), scan).verdict['quantum']
+
+    assert q['pqc_signature'] is True
+    assert q['safe_signature'] == ['ssh-mldsa87']
+    assert q['unsafe_signature'] == ['ssh-ed25519']
+    # Authentication does not make the session quantum-safe.
+    assert q['pqc_capable'] is False
+    assert q['quantum_safe'] is False
+
+
 def test_quantum_pqc_capable_but_not_fully_safe(verdict):
     q = verdict.verdict['quantum']
     # Fixture offers the X25519MLKEM768 hybrid -> PQC capable...
