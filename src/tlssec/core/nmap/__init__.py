@@ -6,6 +6,7 @@ from datetime import datetime
 import re
 import unicodedata
 from typing import TextIO
+from contextlib import contextmanager
 
 import bs4
 
@@ -167,7 +168,7 @@ class Nmap:
         target: str,
         *,
         base_output_dir: Path | None = None,
-        xml_path_template: str = '{datestring}_{target}.nmap.xml',
+        xml_path_template: str = 'nmap/{datestring}_{target}.nmap.xml',
         # `-sV` is required for reliable implicit-vs-explicit TLS detection:
         # nmap only emits tunnel="ssl" (positive wrapped-TLS evidence) under
         # version detection. It can be slow on services returning
@@ -202,25 +203,26 @@ class Nmap:
         if ports:
             # TODO: Do we validate port string, or receive as structured list instead?
             options.append(f'-p{ports}')
-        if base_output_dir:
-            xml_path = base_output_dir / xml_path_template.format(
-                datestring = datetime.now().replace(microsecond = 0).isoformat(),
-                target = cls.encode_target_for_filename(target),
-            )
-            if xml_path.exists():
-                raise FileExistsError(f'Output path already exists at: {xml_path}')
-            xml_path.parent.mkdir(parents = True, exist_ok = True)
+
+        @contextmanager
+        def xml_path_context():
+            if base_output_dir:
+                xml_path = base_output_dir / xml_path_template.format(
+                    datestring = datetime.now().replace(microsecond = 0).isoformat(),
+                    target = cls.encode_target_for_filename(target),
+                )
+                if xml_path.exists():
+                    raise FileExistsError(f'Output path already exists at: {xml_path}')
+                xml_path.parent.mkdir(parents = True, exist_ok = True)
+                yield xml_path
+            else:
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    xml_path = Path(tmpdir) / 'scan.nmap.xml'
+                    yield xml_path
+
+        with xml_path_context() as xml_path:
             options += ('-oX', str(xml_path))
             completed_process = await run_subprocess('nmap', *options, target)
             endpoints = cls.extract_endpoints_from_xml(xml_path)
-        else:
-            # No persistent output requested, but nmap still has to write XML
-            # for us to parse it back. Use a throwaway temp file cleaned up after.
-            with tempfile.TemporaryDirectory() as tmpdir:
-                xml_path = Path(tmpdir) / 'scan.nmap.xml'
-                completed_process = await run_subprocess(
-                    'nmap', *options, '-oX', str(xml_path), target,
-                )
-                endpoints = cls.extract_endpoints_from_xml(xml_path)
 
         return completed_process, endpoints

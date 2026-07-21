@@ -242,7 +242,7 @@ async def test_scan_real_local(testssl, current_openssl_server):
     assert scan.time_taken is not None
     # The parsed result is consumable by the existing extractor.
     extracts = Testssl.extract_json(scan.result)
-    assert extracts and extracts[0]['port'] == '4433'
+    assert extracts and extracts[0]['port'] == 4433
 
 
 async def test_scan_raises_when_testssl_did_not_complete(monkeypatch):

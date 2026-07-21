@@ -7,13 +7,29 @@ import yaml
 from ssh_audit.ssh2_kexdb import SSH2_KexDB
 
 import tlssec.standard as standard
+from tlssec.asyncio import run_subprocess, CompletedProcess
 
 
 class SshAudit:
     """ssh-audit wrapper"""
 
-    # TODO: Try calling ssh-audit via python API directly
-    # instead of having to write result to file first.
+    # NOTE: We decided against calling ssh-audit via python because there are
+    # no clean python interface to use. In particular, `ssh_audit.main()` does
+    # not take python parameters instead, it process `sys.argv` directly. Had
+    # they at least encapsulate all commandline processing in
+    # `ssh_audit.process_commandline`, then it would be usable but they don't.
+    @staticmethod
+    async def scan(target: str):
+        completed_process = await run_subprocess(
+            'ssh-audit',
+            '--json',
+            '--no-colors',
+            '--batch',
+            target,
+        )
+        # TODO store scan result in database
+        # TODO: return scan result instead
+        return completed_process
 
     @dataclass
     class DbRecord:
