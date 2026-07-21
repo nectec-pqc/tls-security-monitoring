@@ -16,7 +16,7 @@ import tlssec.core.model as m
 from .testssl import build_bom_from_testssl
 from .sshaudit import build_bom_from_sshaudit
 
-BUILDER_VERSION = '0.1.0'
+BUILDER_VERSION = '0.2.0'
 
 _BUILDERS = {
     m.Scanner.testssl: build_bom_from_testssl,
