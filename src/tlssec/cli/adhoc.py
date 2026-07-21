@@ -178,7 +178,6 @@ def ssh_audit_json_to_extracts_yaml(
         yaml.dump(extracts, f, Dumper=SetToListDumper)
 
 
-# TODO: Export report together with data yaml in a single action
 # TODO: Receive all input scan files through the same channel, deduce their
 # type from file content automatically
 # TODO: Allow taking selecting input from within database too
@@ -204,6 +203,7 @@ def export_report(
     if there are some custom changes that needs to be kept.
     """
     from tlssec.core.export.typst import TypstTemplates
+    import subprocess
     state = ctx.find_object(CliState)
     report_path = state.settings.output_dir / report_path_pattern.format(now = datetime.now())
     if report_path.is_file():
@@ -211,6 +211,15 @@ def export_report(
             'Can not create typst project.'
             f' Target already exists and is a file: {report_path}'
         )
+    _logger.info(f'populating report template at {report_path}')
     report_path.mkdir(parents = True, exist_ok = True)
     TypstTemplates.init('snapshot_report', report_path)
-    # TODO: Compile typst project into PDF automatically too
+
+    # TODO: Add dynamic data yamls
+
+    _logger.info('compiling report')
+    subprocess.run(
+        ['typst', 'compile', 'main.typ'],
+        cwd = report_path,
+        check = True,
+    )

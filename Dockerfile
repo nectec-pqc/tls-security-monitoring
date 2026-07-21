@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   testssl.sh \
   nmap \
   && rm -rf /var/lib/apt/lists/*
+COPY --from=ghcr.io/typst/typst:0.15.1 /bin/typst /usr/local/bin/typst
+ENV TYPST_FONT_PATHS=/opt/app/src/tlssec/core/export/fonts
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
