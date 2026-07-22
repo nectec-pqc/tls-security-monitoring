@@ -25,9 +25,6 @@ class SshAudit:
     algorithms, so a non-zero return code is expected and is not treated as a
     failure -- only a killed process or unparseable output is.
     """
-    # Not a pytest test
-    __test__ = False
-
     def __init__(
         self,
         concurrency: int | asyncio.Semaphore = 128,

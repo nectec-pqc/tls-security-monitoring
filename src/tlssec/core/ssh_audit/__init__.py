@@ -38,6 +38,7 @@ class SshAudit:
         warnings: list[str] = field(default_factory = list)
         infos: list[str] = field(default_factory = list)
 
+    @staticmethod
     def lookup_ssh_audit_db(
         kind: Literal['kex', 'key', 'enc', 'mac'],
         name: str,
