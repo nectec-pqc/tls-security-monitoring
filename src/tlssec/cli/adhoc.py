@@ -218,8 +218,9 @@ def export_report(
     # TODO: Add dynamic data yamls
 
     _logger.info('compiling report')
-    subprocess.run(
+    completed_process = subprocess.run(
         ['typst', 'compile', 'main.typ'],
         cwd = report_path,
-        check = True,
     )
+    if completed_process != 0:
+        _logger.error('typst failed to compile the exported report');
