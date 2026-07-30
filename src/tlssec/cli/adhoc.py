@@ -211,6 +211,7 @@ def export_report(
             'Can not create typst project.'
             f' Target already exists and is a file: {report_path}'
         )
+        ctx.exit(1)
     _logger.info(f'populating report template at {report_path}')
     report_path.mkdir(parents = True, exist_ok = True)
     TypstTemplates.init('snapshot_report', report_path)
