@@ -47,15 +47,37 @@ class SshAudit:
         if record is None:
             return None
         return SshAudit.DbRecord(*record)
+    
+    @staticmethod
+    def try_parse(
+        source: dict | os.PathLike,
+    ) -> dict:
+        if not isinstance(source, dict):
+            with open(source) as f:
+                source = yaml.safe_load(f)
+        match source:
+            case {
+                'banner': dict(),
+                'compression': list(),
+                'cves': list(),
+                'enc': list(),
+                'fingerprints': list(),
+                'kex': list(),
+                'key': list(),
+                'mac': list(),
+                'target': str(),
+            }:
+                pass
+            case _:
+                raise ValueError('Content does not seem to be produced by `ssh-audti --json`')
+        return source
 
     @classmethod
     def extract_json(
         cls,
-        source: dict | list | os.PathLike,
+        source: dict | os.PathLike,
     ) -> dict:
-        if not isinstance(source, dict | list):
-            with open(source) as f:
-                source = yaml.safe_load(f)
+        source = cls.try_parse(source)
 
         # FIXME ssh-audit only record scan target as unparsed str in json.
         # To re-parse the target specification, one must follow the logic in:

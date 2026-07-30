@@ -178,11 +178,11 @@ class Testssl:
         except (ValueError, TypeError):
             return None
 
-    @classmethod
-    def extract_json(
-        cls,
+    @staticmethod
+    def try_parse(
         source: dict | list | os.PathLike,
-    ) -> list[dict]:
+    ) -> dict:
+        """"""
         if not isinstance(source, dict | list):
             with open(source) as f:
                 source = yaml.safe_load(f)
@@ -191,7 +191,30 @@ class Testssl:
                 'This might because the file is produced by testssl --json instead of --json-pretty.'
                 ' We do not support --json format yet.'
             );
+        if not isinstance(source, dict):
+            raise ValueError('Testssl content should be dictionary at this point')
+        # TODO: Use pydantic if you want to report validation error in details.
+        match source:
+            case {
+                "Invocation": str(),
+                "at": str(),
+                "version": str(),
+                "openssl": str(),
+                "startTime": str(),
+                "scanResult": list(),
+                "scanTime": str(),
+            }:
+                pass
+            case _:
+                raise ValueError('Content does not seem to be produced by `testssl --json-pretty`')
+        return source
 
+    @classmethod
+    def extract_json(
+        cls,
+        source: dict | list | os.PathLike,
+    ) -> list[dict]:
+        source = cls.try_parse(source)
         extracts = []
         for scan in source['scanResult']:
             extract = {

@@ -103,15 +103,30 @@ class Nmap:
             key = key,
         )
 
+    @staticmethod
+    def try_parse(
+        source: bs4.PageElement | os.PathLike,
+    ) -> bs4.PageElement:
+        if not isinstance(source, bs4.PageElement):
+            with open(source) as f:
+                source = bs4.BeautifulSoup(f, 'xml')
+
+        doctype = next((x for x in source.contents if isinstance(x, bs4.Doctype)), None)
+        if doctype is None:
+            raise ValueError('XML Source is missing `nmaprun` doctype')
+
+        nmaprun_tag = source.find('nmaprun', recursive = False)
+        if nmaprun_tag is None:
+            raise ValueError('XML Source is missing `nmaprun` tag')
+
+        return source
+
     @classmethod
     def extract_endpoints_from_xml(
         cls,
         source: bs4.PageElement | os.PathLike,
     ) -> list[m.Endpoint]:
-        if not isinstance(source, bs4.PageElement):
-            with open(source) as f:
-                source = bs4.BeautifulSoup(f, 'xml')
-
+        source = cls.try_parse(source)
         endpoints = []
         for host in source.find_all('host'):
             host_start = host.attrs.get('starttime', None)
