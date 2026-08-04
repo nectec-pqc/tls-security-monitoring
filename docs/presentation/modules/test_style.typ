@@ -3,12 +3,26 @@
 #show: init
 
 #slide[
-  = level 1 heading
+  = Level 1 heading
   content
-  == level 2 heading
+  == Level 2 heading
   content
-  === level 3 heading
+  === Level 3 heading
   content
-  ==== level 4 heading
+  ==== Level 4 heading
+  content
+]
+
+#section[SECTION 1]
+
+#slide[
+  == Level 2 heading
+  content
+]
+
+#section[SECTION 2]
+
+#slide[
+  == Level 2 heading
   content
 ]
