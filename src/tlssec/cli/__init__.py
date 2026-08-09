@@ -16,6 +16,7 @@ import tlssec.core.model as model
 import tlssec.core.operation as op
 from .colored_help import ColoredGroup, ColoredCommand
 from .cli_state import CliState
+from .show import show
 from .import_group import import_group
 from .adhoc import adhoc
 from tlssec.core.nmap import Nmap
@@ -66,33 +67,6 @@ def init(ctx, reset):
     if reset:
         op.drop_database(state.db.engine)
     op.initialize_database(state.db.engine)
-
-
-@cli.group(cls = ColoredGroup)
-def show():
-    """Show system status"""
-    pass
-
-
-@show.command()
-def version():
-    """Show CLI version"""
-    from importlib.metadata import version
-    print(version('tlssec'))
-
-
-@show.command(
-    name = 'settings',
-    cls = ColoredCommand,
-)
-@click.pass_context
-def show_settings(ctx):
-    """Show effective settings
-
-    (after merging defaults, environment variable, cli options together.)
-    """
-    state = ctx.find_object(CliState)
-    print(state.settings.model_dump_json(indent=2))
 
 
 @cli.command(cls = ColoredCommand)
@@ -377,6 +351,7 @@ def view(ctx, ids, tags, ips, hostnames, port, want_raw, want_cbom, want_opinion
         click.echo('Nothing to show: selected endpoint(s) have no matching layers yet.')
 
 
+cli.add_command(show)
 cli.add_command(import_group)
 cli.add_command(adhoc)
 
