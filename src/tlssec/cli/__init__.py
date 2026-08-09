@@ -74,13 +74,20 @@ def show():
     pass
 
 
+@show.command()
+def version():
+    """Show CLI version"""
+    from importlib.metadata import version
+    print(version('tlssec'))
+
+
 @show.command(
     name = 'settings',
     cls = ColoredCommand,
 )
 @click.pass_context
 def show_settings(ctx):
-    """Show effective settings.
+    """Show effective settings
 
     (after merging defaults, environment variable, cli options together.)
     """
