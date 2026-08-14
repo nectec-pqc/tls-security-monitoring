@@ -182,13 +182,12 @@ class Testssl:
     def try_parse(
         source: dict | list | os.PathLike,
     ) -> dict:
-        """"""
         if not isinstance(source, dict | list):
             with open(source) as f:
                 source = yaml.safe_load(f)
         if isinstance(source, list):
             raise ValueError(
-                'This might because the file is produced by testssl --json instead of --json-pretty.'
+                'This might be because the file is produced by testssl --json instead of --json-pretty.'
                 ' We do not support --json format yet.'
             );
         if not isinstance(source, dict):

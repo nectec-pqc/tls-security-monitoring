@@ -1,11 +1,8 @@
-import os
-import asyncio
 import tempfile
 from pathlib import Path
 from datetime import datetime
 import re
 import unicodedata
-from typing import TextIO
 from contextlib import contextmanager
 
 import bs4
@@ -22,13 +19,13 @@ class Nmap:
     # port-table names (nmap-services); ports are the IANA-registered
     # implicit-TLS ports. Used only as a fallback when nmap version detection
     # (`-sV`, which sets tunnel="ssl") is unavailable.
-    IMPLICIT_TLS_PORTS = frozenset({
+    IMPLICIT_TLS_PORTS = frozenset((
         443, 465, 563, 636, 853, 989, 990, 992, 993, 995, 5061, 6697,
-    })
-    IMPLICIT_TLS_SERVICES = frozenset({
+    ))
+    IMPLICIT_TLS_SERVICES = frozenset((
         'https', 'smtps', 'imaps', 'pop3s', 'ftps', 'ftps-data', 'ldaps',
         'nntps', 'telnets', 'ircs', 'ircs-u', 'sips', 'https-alt', 'dnss',
-    })
+    ))
 
     @classmethod
     def _detect_tls_mode(cls, port) -> 'm.TlsMode':
@@ -105,7 +102,7 @@ class Nmap:
 
     @staticmethod
     def try_parse(
-        source: bs4.PageElement | os.PathLike,
+        source: bs4.PageElement | Path,
     ) -> bs4.PageElement:
         if not isinstance(source, bs4.PageElement):
             with open(source) as f:
@@ -124,7 +121,7 @@ class Nmap:
     @classmethod
     def extract_endpoints_from_xml(
         cls,
-        source: bs4.PageElement | os.PathLike,
+        source: bs4.PageElement | Path,
     ) -> list[m.Endpoint]:
         source = cls.try_parse(source)
         endpoints = []
