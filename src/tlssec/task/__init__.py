@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from collections.abc import Generator
 from dataclasses import dataclass, field
 
 
@@ -15,6 +16,15 @@ class Task(ABC):
     @abstractmethod
     def step(self, value):
         ...
+
+    def walk(self) -> Generator[Task]:
+        # NOTE: Does not detect cycle
+        task = self
+        while True:
+            yield task
+            task = task.dependency
+            if task is None:
+                break
 
 
 class FirstSuccessTaskGroup:
@@ -64,10 +74,8 @@ class FirstSuccessTaskGroup:
         # FIXME: If any ancestor is a target and already registered (has higher priority),
         # the current task can never be reached add we should not register it.
 
-        # NOTE: does not detect cycle
-        while task is not None:
-            self.children[task.dependency].append(task)
-            task = task.dependency
+        for step in task.walk():
+            self.children[step.dependency].append(step)
         return True
 
     def execute_subtree(self, root: Task, value):

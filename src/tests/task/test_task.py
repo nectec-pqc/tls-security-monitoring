@@ -33,6 +33,17 @@ def test_task_chain(Append):
     assert result == '/abc'
 
 
+def test_task_walk(Append):
+    tasks = []
+    tasks.append(Append(item = 'a'))
+    tasks.append(Append(item = 'b', dependency = tasks[-1]))
+    tasks.append(Append(item = 'c', dependency = tasks[-1]))
+
+    result = list(tasks[-1].walk())
+    expected = list(reversed(tasks))
+    assert result == expected
+
+
 def test_task_deep_equality(Append):
     tasks = []
     a1 = Append(item = 'a')
