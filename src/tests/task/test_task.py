@@ -17,9 +17,11 @@ def Append():
 
 @pytest.fixture(scope = 'module')
 def Fail():
+    @dataclass(frozen = True, eq = False)
     class _Fail(Task):
+        error: Exception = Exception()
         def step(self, value):
-            raise Exception
+            raise self.error
     return _Fail
 
 
@@ -112,3 +114,13 @@ class TestFirstSuccessTaskGroup:
         group = FirstSuccessTaskGroup([child, prefix])
         result = group.run('/')
         assert result == '/ab'
+
+    def test_unskippable_exception(self, Append, Fail):
+        root = Append(item = 'a')
+        children = [
+            Fail(dependency = root, error = IndexError('Simulated unexpected error that should cause entire task group to fail')),
+            Append(item = 'b', dependency = root),
+        ]
+        group = FirstSuccessTaskGroup(children, skippable = ValueError)
+        with pytest.raises(IndexError):
+            result = group.run('/')
