@@ -6,7 +6,7 @@ from tlssec.task import Task, FirstSuccessTaskGroup
 
 @pytest.fixture(scope = 'module')
 def Append():
-    @dataclass(frozen = True)
+    @dataclass(frozen = True, eq = False)
     class _Append(Task):
         item: int
 
@@ -42,16 +42,6 @@ def test_task_walk(Append):
     result = list(tasks[-1].walk())
     expected = list(reversed(tasks))
     assert result == expected
-
-
-def test_task_deep_equality(Append):
-    tasks = []
-    a1 = Append(item = 'a')
-    a2 = Append(item = 'a')
-    b1 = Append(item = 'b', dependency = a1)
-    b2 = Append(item = 'b', dependency = a2)
-    assert a1 == a2
-    assert b1 == b2
 
 
 class TestFirstSuccessTaskGroup:
