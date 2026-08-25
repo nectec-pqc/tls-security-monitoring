@@ -39,6 +39,7 @@ class TaskFromFunc(Task):
         return self.step_func(value)
 
 
+# TODO: unmangle repr of returned value
 def as_task(dependency: Task | None = None):
     def decorator(f: Callable[[Any], Any]):
         return TaskFromFunc(dependency = dependency, step_func = f)
@@ -114,14 +115,15 @@ class FirstSuccessTaskGroup:
         if not children:
             # assert root in self.targets, 'All terminal task must be in target set due to initialization logic.'
             return result
+        errors = []
         for child in children:
             try:
                 return self.execute_subtree(child, result)
-            except self.skippable:
-                pass
+            except self.skippable as e:
+                errors.append(e)
         if root in self.targets:
             return result
-        raise Exception('No tasks succeeded')
+        raise ExceptionGroup('No alternative tasks were successful', errors)
 
     def run(self, value):
         return self.execute_subtree(None, value)

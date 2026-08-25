@@ -96,7 +96,7 @@ class TestFirstSuccessTaskGroup:
             Fail(dependency = root),
         ]
         group = FirstSuccessTaskGroup(children)
-        with pytest.raises(Exception, match = 'No tasks succeeded'):
+        with pytest.raises(Exception, match = 'No alternative tasks were successful'):
             result = group.run('/')
 
     def test_prefix_shadows_its_child(self, Append):
