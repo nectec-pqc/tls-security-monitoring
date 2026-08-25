@@ -10,9 +10,9 @@ class Task(ABC):
     dependency: Task | None = None
 
     def run(self, value):
-        if self.dependency is not None:
-            value = self.dependency.run(value)
-        return self.step(value)
+        for task in reversed(tuple(self.walk())):
+            value = task.step(value)
+        return value
 
     # NOTE: Can improve by defining `Task[Tin, TOut]` as generic type.
     # However, this be quite complicated. Leave it for now.
