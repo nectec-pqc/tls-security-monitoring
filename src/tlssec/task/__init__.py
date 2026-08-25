@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Generator
+from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import Callable, Any
 
 
 @dataclass(frozen = True, kw_only = True, eq = False)
@@ -13,18 +14,35 @@ class Task(ABC):
             value = self.dependency.run(value)
         return self.step(value)
 
+    # NOTE: Can improve by defining `Task[Tin, TOut]` as generic type.
+    # However, this be quite complicated. Leave it for now.
     @abstractmethod
     def step(self, value):
         ...
 
-    def walk(self) -> Generator[Task]:
-        # NOTE: Does not detect cycle
+    def walk(self) -> Iterator[Task]:
+        # NOTE: Does not detect cycle.
+        # The task chain is cycle-free if dependency is immutable.
         task = self
         while True:
             yield task
             task = task.dependency
             if task is None:
                 break
+
+
+@dataclass(frozen = True, kw_only = True, eq = False)
+class TaskFromFunc(Task):
+    step_func: Callable[[Any], Any]
+
+    def step(self, value):
+        return self.step_func(value)
+
+
+def as_task(dependency: Task | None = None):
+    def decorator(f: Callable[[Any], Any]):
+        return TaskFromFunc(dependency = dependency, step_func = f)
+    return decorator
 
 
 class FirstSuccessTaskGroup:

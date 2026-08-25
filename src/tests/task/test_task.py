@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 
 import pytest
 
-from tlssec.task import Task, FirstSuccessTaskGroup
+from tlssec.task import Task, FirstSuccessTaskGroup, as_task
 
 @pytest.fixture(scope = 'module')
 def Append():
@@ -42,6 +42,28 @@ def test_task_walk(Append):
     result = list(tasks[-1].walk())
     expected = list(reversed(tasks))
     assert result == expected
+
+
+class TestAsTaskDecorator:
+    def test_no_dependency(self):
+        @as_task()
+        def append_a(value: str) -> str:
+            return value + 'a'
+
+        result = append_a.run('/')
+        assert result == '/a'
+
+    def test_with_dependency(self):
+        @as_task()
+        def append_a(value: str) -> str:
+            return value + 'a'
+
+        @as_task(dependency = append_a)
+        def append_ab(value: str) -> str:
+            return value + 'b'
+
+        result = append_ab.run('/')
+        assert result == '/ab'
 
 
 class TestFirstSuccessTaskGroup:
