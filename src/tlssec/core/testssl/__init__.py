@@ -201,7 +201,8 @@ class Testssl:
                 "openssl": str(),
                 "startTime": str(),
                 "scanResult": list(),
-                "scanTime": str(),
+                # int in normal case. str when interrupted.
+                "scanTime": int() | str(),
             }:
                 pass
             case _:
