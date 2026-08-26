@@ -1,7 +1,6 @@
 import logging
 _logger = logging.getLogger(__name__)
 from pathlib import Path
-from collections import defaultdict
 from datetime import datetime
 
 import click
@@ -178,8 +177,6 @@ def ssh_audit_json_to_extracts_yaml(
         yaml.dump(extracts, f, Dumper=SetToListDumper)
 
 
-# TODO: Receive all input scan files through the same channel, deduce their
-# type from file content automatically
 # TODO: Allow taking selecting input from within database too
 @adhoc.command(cls = ColoredCommand)
 @click.option(
@@ -188,22 +185,33 @@ def ssh_audit_json_to_extracts_yaml(
     show_default = True,
     help = 'Pattern for naming report directory.',
 )
+@click.argument(
+    'sources',
+    type = click.Path(
+        exists = True,
+        dir_okay = False,
+        path_type = Path,
+    ),
+    nargs = -1,
+)
 @click.pass_context
 def export_report(
     ctx,
+    sources,
     report_path_pattern,
 ):
     """Export results as a typst project
 
-    Currently it only export the typst project without actual data.
-    Use the other adhoc commands to populate the data directory.
+    Take data files from sub-scanners as arguments.
+    They will be compiled into /data under report directory.
 
     This will overwrites files in --out directory.
     User is expected to use version control like git on the --out directory
     if there are some custom changes that needs to be kept.
     """
-    from tlssec.core.export.typst import TypstTemplates
     import subprocess
+    from tlssec.core.export.typst import TypstTemplates
+
     state = ctx.find_object(CliState)
     report_path = state.settings.output_dir / report_path_pattern.format(now = datetime.now())
     if report_path.is_file():
@@ -216,7 +224,7 @@ def export_report(
     report_path.mkdir(parents = True, exist_ok = True)
     TypstTemplates.init('snapshot_report', report_path)
 
-    # TODO: Add dynamic data yamls
+    compile_data_sources(sources, report_path / 'data')
 
     _logger.info('compiling report')
     completed_process = subprocess.run(
@@ -225,3 +233,31 @@ def export_report(
     )
     if completed_process != 0:
         _logger.error('typst failed to compile the exported report');
+
+
+def compile_data_sources(sources: list[Path], outdir: Path):
+    # TODO: combine extracts into single file? Do this after revising document format.
+    from collections import defaultdict
+    from tlssec.core.operation.file import external_document_loader
+    extracts = defaultdict(list)
+    for source in sources:
+        _logger.info(f'extracting from {source}')
+        filetype, content  = external_document_loader.run(source)
+        match filetype:
+            case 'testssl-pretty':
+                pass
+            case 'ssh-audit':
+                extracts['ssh-audit'].append(
+                    SshAudit.extract_json(content)
+                )
+            case 'nmap':
+                pass
+    outdir.mkdir(parents = True, exist_ok = True)
+
+    outpath = outdir / 'ssh_audit_extracts.yaml'
+    with open(outpath, 'w') as f:
+        yaml.dump(extracts['ssh-audit'], f, Dumper = SetToListDumper)
+    
+    # TODO: complete extraction of other types
+
+    return extracts
