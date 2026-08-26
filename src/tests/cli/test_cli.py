@@ -2,38 +2,24 @@ import json
 from datetime import datetime, timedelta
 
 import pytest
-from click.testing import CliRunner
 from sqlalchemy import select
 
 from tlssec.cli import cli, Nmap, Testssl, SshAudit
-from tlssec.database.database import Database
 import tlssec.core.model as model
 import tlssec.core.operation as op
-
-
-@pytest.fixture(name='runner')
-def cli_runner(session, monkeypatch):
-    """
-        This fix two problem
-        1. inject session into cli, let us have easy way to access to session since our cli alwyas create they own session
-        2. from using session fixture we get the rollback affect. Clean product DB
-    """
-    monkeypatch.setattr(Database, 'session', property(lambda self: session))
-    return CliRunner()
 
 
 def _endpoints(session):
     return list(session.scalars(select(model.EndpointTable)).all())
 
 
-def test_cli_home():
-    runner = CliRunner()
-    result = runner.invoke(cli)
+def test_cli_home(cli_runner):
+    result = cli_runner.invoke(cli)
     assert result.exit_code == 2, 'Expect "usage error" due to no subcommand selected'
 
 
-def test_add_endpoint_by_ip_with_tag(runner, session):
-    result = runner.invoke(
+def test_add_endpoint_by_ip_with_tag(cli_runner, session):
+    result = cli_runner.invoke(
         cli,
         ['add', 'endpoint', '--ip', '10.0.0.1', '--port', '8443', '--tag', 'network/tls'],
     )
@@ -47,8 +33,8 @@ def test_add_endpoint_by_ip_with_tag(runner, session):
     assert {str(t.fullpath) for t in ep.tags} == {'/network/tls'}
 
 
-def test_add_endpoint_by_hostname(runner, session):
-    result = runner.invoke(
+def test_add_endpoint_by_hostname(cli_runner, session):
+    result = cli_runner.invoke(
         cli,
         ['add', 'endpoint', '--hostname', 'example.com', '--tag', 'web'],
     )
@@ -61,16 +47,16 @@ def test_add_endpoint_by_hostname(runner, session):
     assert {t.name for t in endpoints[0].tags} == {'web'}
 
 
-def test_add_endpoint_requires_target(runner, session):
-    result = runner.invoke(cli, ['add', 'endpoint', '--tag', 'web'])
+def test_add_endpoint_requires_target(cli_runner, session):
+    result = cli_runner.invoke(cli, ['add', 'endpoint', '--tag', 'web'])
     assert result.exit_code == 2, result.output
     assert _endpoints(session) == []
 
 
-def test_add_endpoint_rejects_file_and_target(runner, session, tmp_path):
+def test_add_endpoint_rejects_file_and_target(cli_runner, session, tmp_path):
     from_file = tmp_path / 'endpoints.yaml'
     from_file.write_text('- hostname: example.com\n')
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli,
         ['add', 'endpoint', '--from_file', str(from_file), '--ip', '10.0.0.1'],
     )
@@ -78,7 +64,7 @@ def test_add_endpoint_rejects_file_and_target(runner, session, tmp_path):
     assert _endpoints(session) == []
 
 
-def test_add_endpoint_from_file(runner, session, tmp_path):
+def test_add_endpoint_from_file(cli_runner, session, tmp_path):
     from_file = tmp_path / 'endpoints.yaml'
     from_file.write_text(
         '- hostname: a.example.com\n'
@@ -88,7 +74,7 @@ def test_add_endpoint_from_file(runner, session, tmp_path):
         '  port: 8443\n'
     )
     # `--tag` applies to every endpoint in the file, `tags:` is per-endpoint.
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli,
         ['add', 'endpoint', '--from_file', str(from_file), '--tag', 'batch'],
     )
@@ -100,11 +86,11 @@ def test_add_endpoint_from_file(runner, session, tmp_path):
     assert {t.name for t in endpoints['b.example.com'].tags} == {'batch'}
 
 
-def test_add_duplicate_endpoint_reuses_and_merges_tags(runner, session):
+def test_add_duplicate_endpoint_reuses_and_merges_tags(cli_runner, session):
     # Same scan identity added twice -> one row, tags merged (idempotent add).
-    r1 = runner.invoke(cli, ['add', 'endpoint', '--ip', '10.0.0.1', '--tag', 'a'])
+    r1 = cli_runner.invoke(cli, ['add', 'endpoint', '--ip', '10.0.0.1', '--tag', 'a'])
     assert r1.exit_code == 0, r1.output
-    r2 = runner.invoke(cli, ['add', 'endpoint', '--ip', '10.0.0.1', '--tag', 'b'])
+    r2 = cli_runner.invoke(cli, ['add', 'endpoint', '--ip', '10.0.0.1', '--tag', 'b'])
     assert r2.exit_code == 0, r2.output
 
     endpoints = _endpoints(session)
@@ -112,7 +98,7 @@ def test_add_duplicate_endpoint_reuses_and_merges_tags(runner, session):
     assert {t.name for t in endpoints[0].tags} == {'a', 'b'}    # tags merged
 
 
-def test_add_duplicate_endpoint_from_file_reuses(runner, session, tmp_path):
+def test_add_duplicate_endpoint_from_file_reuses(cli_runner, session, tmp_path):
     from_file = tmp_path / 'endpoints.yaml'
     from_file.write_text(
         '- hostname: dup.example.com\n'
@@ -120,7 +106,7 @@ def test_add_duplicate_endpoint_from_file_reuses(runner, session, tmp_path):
         '- hostname: dup.example.com\n'   # same identity as the first entry
         '  tags: [second]\n'
     )
-    result = runner.invoke(cli, ['add', 'endpoint', '--from_file', str(from_file)])
+    result = cli_runner.invoke(cli, ['add', 'endpoint', '--from_file', str(from_file)])
     assert result.exit_code == 0, result.output
 
     endpoints = _endpoints(session)
@@ -140,12 +126,12 @@ def _tag_paths(endpoint):
     return {str(t.fullpath) for t in endpoint.tags}
 
 
-def test_edit_endpoint_add_tag(runner, session):
+def test_edit_endpoint_add_tag(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
     session.flush()
     ep_id = ep.id
 
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli,
         ['edit', 'endpoint', '--id', str(ep_id), '--add-tag', 'network/tls'],
     )
@@ -153,12 +139,12 @@ def test_edit_endpoint_add_tag(runner, session):
     assert _tag_paths(_by_ip(session)['10.0.0.1']) == {'/web', '/network/tls'}
 
 
-def test_edit_endpoint_remove_tag(runner, session):
+def test_edit_endpoint_remove_tag(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web', 'network/tls'])
     session.flush()
     ep_id = ep.id
 
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli,
         ['edit', 'endpoint', '--id', str(ep_id), '--remove-tag', 'web'],
     )
@@ -166,12 +152,12 @@ def test_edit_endpoint_remove_tag(runner, session):
     assert _tag_paths(_by_ip(session)['10.0.0.1']) == {'/network/tls'}
 
 
-def test_edit_endpoint_change_tag(runner, session):
+def test_edit_endpoint_change_tag(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
     session.flush()
     ep_id = ep.id
 
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli,
         ['edit', 'endpoint', '--id', str(ep_id), '--change-tag', 'web', 'network/tls'],
     )
@@ -179,14 +165,14 @@ def test_edit_endpoint_change_tag(runner, session):
     assert _tag_paths(_by_ip(session)['10.0.0.1']) == {'/network/tls'}
 
 
-def test_edit_endpoint_disable_by_tag(runner, session):
+def test_edit_endpoint_disable_by_tag(cli_runner, session):
     # Two endpoints share 'prod'; disabling by tag hits both.
     op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.3', None, ['staging'])
     session.flush()
 
-    result = runner.invoke(cli, ['edit', 'endpoint', '--tag', 'prod', '--disable'])
+    result = cli_runner.invoke(cli, ['edit', 'endpoint', '--tag', 'prod', '--disable'])
     assert result.exit_code == 0, result.output
 
     endpoints = _by_ip(session)
@@ -195,13 +181,13 @@ def test_edit_endpoint_disable_by_tag(runner, session):
     assert endpoints['10.0.0.3'].retire_at is None  # different tag, untouched
 
 
-def test_edit_endpoint_disable_specific_endpoint(runner, session):
+def test_edit_endpoint_disable_specific_endpoint(cli_runner, session):
     a = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
     session.flush()
     a_id = a.id
 
-    result = runner.invoke(cli, ['edit', 'endpoint', '--id', str(a_id), '--disable'])
+    result = cli_runner.invoke(cli, ['edit', 'endpoint', '--id', str(a_id), '--disable'])
     assert result.exit_code == 0, result.output
 
     endpoints = _by_ip(session)
@@ -209,12 +195,12 @@ def test_edit_endpoint_disable_specific_endpoint(runner, session):
     assert endpoints['10.0.0.2'].retire_at is None  # only the specified endpoint
 
 
-def test_edit_endpoint_select_by_ip(runner, session):
+def test_edit_endpoint_select_by_ip(cli_runner, session):
     op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
     session.flush()
 
-    result = runner.invoke(cli, ['edit', 'endpoint', '--ip', '10.0.0.1', '--disable'])
+    result = cli_runner.invoke(cli, ['edit', 'endpoint', '--ip', '10.0.0.1', '--disable'])
     assert result.exit_code == 0, result.output
 
     endpoints = _by_ip(session)
@@ -222,12 +208,12 @@ def test_edit_endpoint_select_by_ip(runner, session):
     assert endpoints['10.0.0.2'].retire_at is None
 
 
-def test_edit_endpoint_select_by_hostname(runner, session):
+def test_edit_endpoint_select_by_hostname(cli_runner, session):
     op.make_endpoint(session, 443, None, 'a.example.com', ['prod'])
     op.make_endpoint(session, 443, None, 'b.example.com', ['prod'])
     session.flush()
 
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli, ['edit', 'endpoint', '--hostname', 'a.example.com', '--add-tag', 'network/tls']
     )
     assert result.exit_code == 0, result.output
@@ -237,13 +223,13 @@ def test_edit_endpoint_select_by_hostname(runner, session):
     assert _tag_paths(by_host['b.example.com']) == {'/prod'}
 
 
-def test_edit_endpoint_ip_and_port_pin_single_endpoint(runner, session):
+def test_edit_endpoint_ip_and_port_pin_single_endpoint(cli_runner, session):
     # Same ip, two ports -> --ip + --port pins exactly one.
     op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 8443, '10.0.0.1', None, ['prod'])
     session.flush()
 
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli, ['edit', 'endpoint', '--ip', '10.0.0.1', '--port', '8443', '--disable']
     )
     assert result.exit_code == 0, result.output
@@ -253,13 +239,13 @@ def test_edit_endpoint_ip_and_port_pin_single_endpoint(runner, session):
     assert by_port[443].retire_at is None  # other port untouched
 
 
-def test_edit_endpoint_ip_and_hostname_intersect(runner, session):
+def test_edit_endpoint_ip_and_hostname_intersect(cli_runner, session):
     # ip and hostname are ANDed: only the endpoint matching BOTH is selected.
     op.make_endpoint(session, 443, '10.0.0.1', 'a.example.com', ['prod'])
     op.make_endpoint(session, 443, '10.0.0.2', 'b.example.com', ['prod'])
     session.flush()
 
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli,
         ['edit', 'endpoint', '--ip', '10.0.0.1', '--hostname', 'a.example.com', '--disable'],
     )
@@ -270,13 +256,13 @@ def test_edit_endpoint_ip_and_hostname_intersect(runner, session):
     assert endpoints['10.0.0.2'].retire_at is None
 
 
-def test_edit_endpoint_conflicting_criteria_match_nothing(runner, session):
+def test_edit_endpoint_conflicting_criteria_match_nothing(cli_runner, session):
     # ip of one endpoint + hostname of another -> intersection is empty.
     op.make_endpoint(session, 443, '10.0.0.1', 'a.example.com', ['prod'])
     op.make_endpoint(session, 443, '10.0.0.2', 'b.example.com', ['prod'])
     session.flush()
 
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli,
         ['edit', 'endpoint', '--ip', '10.0.0.1', '--hostname', 'b.example.com', '--disable'],
     )
@@ -288,14 +274,14 @@ def test_edit_endpoint_conflicting_criteria_match_nothing(runner, session):
     assert endpoints['10.0.0.2'].retire_at is None
 
 
-def test_edit_endpoint_id_and_tag_intersect(runner, session):
+def test_edit_endpoint_id_and_tag_intersect(cli_runner, session):
     # id 'a' has tag prod; id 'b' has tag staging. --id a --tag staging -> empty.
     a = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.2', None, ['staging'])
     session.flush()
     a_id = a.id
 
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli, ['edit', 'endpoint', '--id', str(a_id), '--tag', 'staging', '--disable']
     )
     assert result.exit_code == 0, result.output
@@ -303,14 +289,14 @@ def test_edit_endpoint_id_and_tag_intersect(runner, session):
     assert _by_ip(session)['10.0.0.1'].retire_at is None
 
 
-def test_edit_endpoint_repeated_ip_matches_any(runner, session):
+def test_edit_endpoint_repeated_ip_matches_any(cli_runner, session):
     # Two --ip values are ORed within the option.
     op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.3', None, ['prod'])
     session.flush()
 
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli, ['edit', 'endpoint', '--ip', '10.0.0.1', '--ip', '10.0.0.2', '--disable']
     )
     assert result.exit_code == 0, result.output
@@ -321,27 +307,27 @@ def test_edit_endpoint_repeated_ip_matches_any(runner, session):
     assert endpoints['10.0.0.3'].retire_at is None
 
 
-def test_edit_endpoint_redisable_keeps_original_timestamp(runner, session):
+def test_edit_endpoint_redisable_keeps_original_timestamp(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     session.flush()
     ep_id = ep.id
 
-    runner.invoke(cli, ['edit', 'endpoint', '--id', str(ep_id), '--disable'])
+    cli_runner.invoke(cli, ['edit', 'endpoint', '--id', str(ep_id), '--disable'])
     first = _by_ip(session)['10.0.0.1'].retire_at
     assert first is not None
 
     # Re-disabling (here via a bulk tag select) must not refresh retire_at.
-    result = runner.invoke(cli, ['edit', 'endpoint', '--tag', 'prod', '--disable'])
+    result = cli_runner.invoke(cli, ['edit', 'endpoint', '--tag', 'prod', '--disable'])
     assert result.exit_code == 0, result.output
     assert _by_ip(session)['10.0.0.1'].retire_at == first
 
 
-def test_edit_endpoint_change_missing_tag_does_not_add(runner, session):
+def test_edit_endpoint_change_missing_tag_does_not_add(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
     session.flush()
     ep_id = ep.id
 
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli,
         ['edit', 'endpoint', '--id', str(ep_id), '--change-tag', 'nope', 'network/tls'],
     )
@@ -351,13 +337,13 @@ def test_edit_endpoint_change_missing_tag_does_not_add(runner, session):
     assert _tag_paths(_by_ip(session)['10.0.0.1']) == {'/web'}
 
 
-def test_edit_endpoint_select_by_port_only(runner, session):
+def test_edit_endpoint_select_by_port_only(cli_runner, session):
     op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
     op.make_endpoint(session, 8443, '10.0.0.3', None, ['prod'])
     session.flush()
 
-    result = runner.invoke(cli, ['edit', 'endpoint', '--port', '443', '--disable'])
+    result = cli_runner.invoke(cli, ['edit', 'endpoint', '--port', '443', '--disable'])
     assert result.exit_code == 0, result.output
 
     endpoints = _by_ip(session)
@@ -366,12 +352,12 @@ def test_edit_endpoint_select_by_port_only(runner, session):
     assert endpoints['10.0.0.3'].retire_at is None  # different port
 
 
-def test_edit_endpoint_rejects_invalid_tag(runner, session):
+def test_edit_endpoint_rejects_invalid_tag(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
     session.flush()
     ep_id = ep.id
 
-    result = runner.invoke(
+    result = cli_runner.invoke(
         cli, ['edit', 'endpoint', '--id', str(ep_id), '--add-tag', 'bad name!']
     )
     assert result.exit_code == 2, result.output
@@ -381,50 +367,50 @@ def test_edit_endpoint_rejects_invalid_tag(runner, session):
     assert 'bad name!' not in names
 
 
-def test_edit_endpoint_enable_reenables_disabled(runner, session):
+def test_edit_endpoint_enable_reenables_disabled(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     ep.retire_at = datetime.now()
     session.flush()
 
     # Selecting by tag must still find a disabled endpoint to re-enable it.
-    result = runner.invoke(cli, ['edit', 'endpoint', '--tag', 'prod', '--enable'])
+    result = cli_runner.invoke(cli, ['edit', 'endpoint', '--tag', 'prod', '--enable'])
     assert result.exit_code == 0, result.output
     assert _by_ip(session)['10.0.0.1'].retire_at is None
 
 
-def test_edit_endpoint_requires_selector(runner, session):
-    result = runner.invoke(cli, ['edit', 'endpoint', '--disable'])
+def test_edit_endpoint_requires_selector(cli_runner, session):
+    result = cli_runner.invoke(cli, ['edit', 'endpoint', '--disable'])
     assert result.exit_code == 2, result.output
 
 
-def test_edit_endpoint_requires_action(runner, session):
+def test_edit_endpoint_requires_action(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
     session.flush()
-    result = runner.invoke(cli, ['edit', 'endpoint', '--id', str(ep.id)])
+    result = cli_runner.invoke(cli, ['edit', 'endpoint', '--id', str(ep.id)])
     assert result.exit_code == 2, result.output
 
 
-def test_edit_endpoint_unknown_id(runner, session):
-    result = runner.invoke(cli, ['edit', 'endpoint', '--id', '999999', '--disable'])
+def test_edit_endpoint_unknown_id(cli_runner, session):
+    result = cli_runner.invoke(cli, ['edit', 'endpoint', '--id', '999999', '--disable'])
     assert result.exit_code == 2, result.output
     assert 'no endpoint with id' in result.output
 
 
-def test_edit_endpoint_no_match_is_noop(runner, session):
-    result = runner.invoke(cli, ['edit', 'endpoint', '--tag', 'does/not/exist', '--disable'])
+def test_edit_endpoint_no_match_is_noop(cli_runner, session):
+    result = cli_runner.invoke(cli, ['edit', 'endpoint', '--tag', 'does/not/exist', '--disable'])
     assert result.exit_code == 0, result.output
     assert 'No endpoints matched' in result.output
 
 
 # --- delete endpoint -------------------------------------------------------
 
-def test_delete_endpoint_by_id(runner, session):
+def test_delete_endpoint_by_id(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
     op.make_endpoint(session, 443, '10.0.0.2', None, ['web'])
     session.flush()
     ep_id = ep.id
 
-    result = runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id), '--yes'])
+    result = cli_runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id), '--yes'])
     assert result.exit_code == 0, result.output
     assert 'Deleted 1 endpoint' in result.output
 
@@ -432,55 +418,55 @@ def test_delete_endpoint_by_id(runner, session):
     assert ips == {'10.0.0.2'}  # only the selected endpoint is gone
 
 
-def test_delete_endpoint_by_tag_hits_all(runner, session):
+def test_delete_endpoint_by_tag_hits_all(cli_runner, session):
     op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.3', None, ['staging'])
     session.flush()
 
-    result = runner.invoke(cli, ['delete', 'endpoint', '--tag', 'prod', '--yes'])
+    result = cli_runner.invoke(cli, ['delete', 'endpoint', '--tag', 'prod', '--yes'])
     assert result.exit_code == 0, result.output
 
     assert set(_by_ip(session)) == {'10.0.0.3'}  # different tag, untouched
 
 
-def test_delete_endpoint_confirm_yes(runner, session):
+def test_delete_endpoint_confirm_yes(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
     session.flush()
     ep_id = ep.id
 
-    result = runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id)], input='y\n')
+    result = cli_runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id)], input='y\n')
     assert result.exit_code == 0, result.output
     assert _endpoints(session) == []
 
 
-def test_delete_endpoint_confirm_declined_keeps_endpoint(runner, session):
+def test_delete_endpoint_confirm_declined_keeps_endpoint(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
     session.flush()
     ep_id = ep.id
 
-    result = runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id)], input='n\n')
+    result = cli_runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id)], input='n\n')
     assert result.exit_code == 0, result.output
     assert 'Aborted' in result.output
     assert set(_by_ip(session)) == {'10.0.0.1'}  # nothing deleted
 
 
-def test_delete_endpoint_requires_selector(runner, session):
-    result = runner.invoke(cli, ['delete', 'endpoint', '--yes'])
+def test_delete_endpoint_requires_selector(cli_runner, session):
+    result = cli_runner.invoke(cli, ['delete', 'endpoint', '--yes'])
     assert result.exit_code == 2, result.output
 
 
-def test_delete_endpoint_unknown_id(runner, session):
-    result = runner.invoke(cli, ['delete', 'endpoint', '--id', '999999', '--yes'])
+def test_delete_endpoint_unknown_id(cli_runner, session):
+    result = cli_runner.invoke(cli, ['delete', 'endpoint', '--id', '999999', '--yes'])
     assert result.exit_code == 2, result.output
     assert 'no endpoint with id' in result.output
 
 
-def test_delete_endpoint_no_match_is_noop(runner, session):
+def test_delete_endpoint_no_match_is_noop(cli_runner, session):
     op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
     session.flush()
 
-    result = runner.invoke(cli, ['delete', 'endpoint', '--tag', 'does/not/exist', '--yes'])
+    result = cli_runner.invoke(cli, ['delete', 'endpoint', '--tag', 'does/not/exist', '--yes'])
     assert result.exit_code == 0, result.output
     assert 'No endpoints matched' in result.output
     assert set(_by_ip(session)) == {'10.0.0.1'}
@@ -494,14 +480,14 @@ def _cboms(session):
     return list(session.scalars(select(model.CbomTable)).all())
 
 
-def test_delete_endpoint_with_scan_history_is_retired(runner, session):
+def test_delete_endpoint_with_scan_history_is_retired(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
     session.flush()
     session.add(model.ScanTable(result={'ok': True}, belong_to_endpoint_id=ep.id))
     session.flush()
     ep_id = ep.id
 
-    result = runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id), '--yes'])
+    result = cli_runner.invoke(cli, ['delete', 'endpoint', '--id', str(ep_id), '--yes'])
     assert result.exit_code == 0, result.output
     assert 'Retired 1 endpoint' in result.output
 
@@ -514,7 +500,7 @@ def test_delete_endpoint_with_scan_history_is_retired(runner, session):
     assert scans[0].belong_to_endpoint_id == ep_id
 
 
-def test_delete_endpoint_retires_scanned_deletes_fresh(runner, session):
+def test_delete_endpoint_retires_scanned_deletes_fresh(cli_runner, session):
     # Two endpoints share 'prod': one has scan history, one does not.
     scanned = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
@@ -522,7 +508,7 @@ def test_delete_endpoint_retires_scanned_deletes_fresh(runner, session):
     session.add(model.ScanTable(result={'ok': True}, belong_to_endpoint_id=scanned.id))
     session.flush()
 
-    result = runner.invoke(cli, ['delete', 'endpoint', '--tag', 'prod', '--yes'])
+    result = cli_runner.invoke(cli, ['delete', 'endpoint', '--tag', 'prod', '--yes'])
     assert result.exit_code == 0, result.output
     assert 'Deleted 1 endpoint(s); retired 1' in result.output
 
@@ -535,13 +521,13 @@ def test_delete_endpoint_retires_scanned_deletes_fresh(runner, session):
 
 # --- nmap ------------------------------------------------------------------
 
-def test_nmap_no_matching_endpoints(runner, session):
-    result = runner.invoke(cli, ['nmap', '--tag', 'does/not/exist'])
+def test_nmap_no_matching_endpoints(cli_runner, session):
+    result = cli_runner.invoke(cli, ['nmap', '--tag', 'does/not/exist'])
     assert result.exit_code == 0, result.output
     assert 'No endpoints found' in result.output
 
 
-def test_nmap_discovers_and_adds_endpoint(runner, session, monkeypatch):
+def test_nmap_discovers_and_adds_endpoint(cli_runner, session, monkeypatch):
     # Seed an existing endpoint so the tag resolves and gives nmap a host.
     op.make_endpoint(session, 443, '127.0.0.1', 'localhost', ['network/tls'])
     session.flush()
@@ -561,7 +547,7 @@ def test_nmap_discovers_and_adds_endpoint(runner, session, monkeypatch):
 
     monkeypatch.setattr(Nmap, 'discover_endpoints', fake_discover)
 
-    result = runner.invoke(cli, ['nmap', '--tag', 'network/tls'], input='y\n')
+    result = cli_runner.invoke(cli, ['nmap', '--tag', 'network/tls'], input='y\n')
     assert result.exit_code == 0, result.output
     assert 'Found 1 new endpoint' in result.output
 
@@ -572,7 +558,7 @@ def test_nmap_discovers_and_adds_endpoint(runner, session, monkeypatch):
     assert {str(t.fullpath) for t in new_ep.tags} == {'/network/tls'}
 
 
-def test_nmap_declined_endpoint_not_added(runner, session, monkeypatch):
+def test_nmap_declined_endpoint_not_added(cli_runner, session, monkeypatch):
     op.make_endpoint(session, 443, '127.0.0.1', 'localhost', ['network/tls'])
     session.flush()
 
@@ -591,14 +577,14 @@ def test_nmap_declined_endpoint_not_added(runner, session, monkeypatch):
 
     monkeypatch.setattr(Nmap, 'discover_endpoints', fake_discover)
 
-    result = runner.invoke(cli, ['nmap', '--tag', 'network/tls'], input='n\n')
+    result = cli_runner.invoke(cli, ['nmap', '--tag', 'network/tls'], input='n\n')
     assert result.exit_code == 0, result.output
 
     ports = {ep.port for ep in _endpoints(session)}
     assert ports == {443}  # declined 8443 was not persisted
 
 
-def test_nmap_skips_disabled_endpoint(runner, session, monkeypatch):
+def test_nmap_skips_disabled_endpoint(cli_runner, session, monkeypatch):
     # Only endpoint carrying the tag is disabled -> nothing scannable.
     ep = op.make_endpoint(session, 443, '127.0.0.1', 'localhost', ['network/tls'])
     ep.retire_at = datetime.now()
@@ -613,13 +599,13 @@ def test_nmap_skips_disabled_endpoint(runner, session, monkeypatch):
 
     monkeypatch.setattr(Nmap, 'discover_endpoints', fake_discover)
 
-    result = runner.invoke(cli, ['nmap', '--tag', 'network/tls'])
+    result = cli_runner.invoke(cli, ['nmap', '--tag', 'network/tls'])
     assert result.exit_code == 0, result.output
     assert 'No scannable hosts found' in result.output
     assert called is False  # disabled endpoint never triggers a scan
 
 
-def test_nmap_no_new_endpoints(runner, session, monkeypatch):
+def test_nmap_no_new_endpoints(cli_runner, session, monkeypatch):
     op.make_endpoint(session, 443, '127.0.0.1', 'localhost', ['network/tls'])
     session.flush()
 
@@ -639,7 +625,7 @@ def test_nmap_no_new_endpoints(runner, session, monkeypatch):
 
     monkeypatch.setattr(Nmap, 'discover_endpoints', fake_discover)
 
-    result = runner.invoke(cli, ['nmap', '--tag', 'network/tls'])
+    result = cli_runner.invoke(cli, ['nmap', '--tag', 'network/tls'])
     assert result.exit_code == 0, result.output
     assert 'No new endpoints discovered' in result.output
     assert {ep.port for ep in _endpoints(session)} == {443}
@@ -655,7 +641,7 @@ def _fake_scan_factory(record):
     return fake_scan
 
 
-def test_scan_all_endpoints_by_default(runner, session, monkeypatch):
+def test_scan_all_endpoints_by_default(cli_runner, session, monkeypatch):
     op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 8443, '10.0.0.2', None, ['staging'])
     session.flush()
@@ -663,7 +649,7 @@ def test_scan_all_endpoints_by_default(runner, session, monkeypatch):
     scanned = []
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
 
-    result = runner.invoke(cli, ['scan'])
+    result = cli_runner.invoke(cli, ['scan'])
     assert result.exit_code == 0, result.output
     assert 'Scanning 2 endpoint(s)' in result.output
     assert 'Recorded 2 scan(s)' in result.output
@@ -675,7 +661,7 @@ def test_scan_all_endpoints_by_default(runner, session, monkeypatch):
     assert linked == {ep.id for ep in _endpoints(session)}
 
 
-def test_scan_narrows_by_tag(runner, session, monkeypatch):
+def test_scan_narrows_by_tag(cli_runner, session, monkeypatch):
     op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.2', None, ['staging'])
     session.flush()
@@ -683,7 +669,7 @@ def test_scan_narrows_by_tag(runner, session, monkeypatch):
     scanned = []
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
 
-    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'prod'])
     assert result.exit_code == 0, result.output
 
     # Only the prod endpoint was scanned.
@@ -692,7 +678,7 @@ def test_scan_narrows_by_tag(runner, session, monkeypatch):
     assert len(scans) == 1
 
 
-def test_scan_narrows_by_ip_and_port(runner, session, monkeypatch):
+def test_scan_narrows_by_ip_and_port(cli_runner, session, monkeypatch):
     op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 8443, '10.0.0.1', None, ['prod'])
     session.flush()
@@ -700,13 +686,13 @@ def test_scan_narrows_by_ip_and_port(runner, session, monkeypatch):
     scanned = []
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
 
-    result = runner.invoke(cli, ['scan', '--ip', '10.0.0.1', '--port', '8443'])
+    result = cli_runner.invoke(cli, ['scan', '--ip', '10.0.0.1', '--port', '8443'])
     assert result.exit_code == 0, result.output
 
     assert scanned == [('10.0.0.1', 8443)]  # --ip + --port pins one endpoint
 
 
-def test_scan_skips_disabled_endpoints(runner, session, monkeypatch):
+def test_scan_skips_disabled_endpoints(cli_runner, session, monkeypatch):
     active = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     disabled = op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
     disabled.retire_at = datetime.now()
@@ -716,7 +702,7 @@ def test_scan_skips_disabled_endpoints(runner, session, monkeypatch):
     scanned = []
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
 
-    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'prod'])
     assert result.exit_code == 0, result.output
 
     assert scanned == [('10.0.0.1', 443)]  # retired endpoint skipped
@@ -724,24 +710,24 @@ def test_scan_skips_disabled_endpoints(runner, session, monkeypatch):
     assert [s.belong_to_endpoint_id for s in scans] == [active_id]
 
 
-def test_scan_no_matching_endpoints(runner, session, monkeypatch):
+def test_scan_no_matching_endpoints(cli_runner, session, monkeypatch):
     scanned = []
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
 
-    result = runner.invoke(cli, ['scan', '--tag', 'does/not/exist'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'does/not/exist'])
     assert result.exit_code == 0, result.output
     assert 'No endpoints to scan' in result.output
     assert scanned == []
     assert _scans(session) == []
 
 
-def test_scan_unknown_id_errors(runner, session):
-    result = runner.invoke(cli, ['scan', '--id', '999999'])
+def test_scan_unknown_id_errors(cli_runner, session):
+    result = cli_runner.invoke(cli, ['scan', '--id', '999999'])
     assert result.exit_code == 2, result.output
     assert 'no endpoint with id' in result.output
 
 
-def test_scan_reports_failures_without_aborting(runner, session, monkeypatch):
+def test_scan_reports_failures_without_aborting(cli_runner, session, monkeypatch):
     op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
     session.flush()
@@ -753,7 +739,7 @@ def test_scan_reports_failures_without_aborting(runner, session, monkeypatch):
 
     monkeypatch.setattr(Testssl, 'scan', fake_scan)
 
-    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'prod'])
     assert result.exit_code == 0, result.output
     assert 'failed 10.0.0.2:443' in result.output
     # Raw scan recorded and its CBOM built for the one that succeeded.
@@ -766,12 +752,12 @@ def test_scan_reports_failures_without_aborting(runner, session, monkeypatch):
     assert len(scans) == 1
 
 
-def test_scan_builds_cbom_and_opinion_by_default(runner, session, monkeypatch):
+def test_scan_builds_cbom_and_opinion_by_default(cli_runner, session, monkeypatch):
     op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     session.flush()
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
 
-    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'prod'])
     assert result.exit_code == 0, result.output
     assert 'built 1 CBOM(s)' in result.output
 
@@ -781,7 +767,7 @@ def test_scan_builds_cbom_and_opinion_by_default(runner, session, monkeypatch):
     assert len(cboms[0].opinions) == 1
 
 
-def test_scan_records_observed_ip_and_sni(runner, session, monkeypatch):
+def test_scan_records_observed_ip_and_sni(cli_runner, session, monkeypatch):
     op.make_endpoint(session, 443, '10.0.0.1', 'svc.example.com', ['prod'])
     session.flush()
 
@@ -796,7 +782,7 @@ def test_scan_records_observed_ip_and_sni(runner, session, monkeypatch):
 
     monkeypatch.setattr(Testssl, 'scan', fake)
 
-    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'prod'])
     assert result.exit_code == 0, result.output
 
     scan = _scans(session)[0]
@@ -804,26 +790,26 @@ def test_scan_records_observed_ip_and_sni(runner, session, monkeypatch):
     assert scan.sni == 'svc.example.com'
 
 
-def test_scan_no_cbom_flag_stores_raw_only(runner, session, monkeypatch):
+def test_scan_no_cbom_flag_stores_raw_only(cli_runner, session, monkeypatch):
     op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     session.flush()
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
 
-    result = runner.invoke(cli, ['scan', '--tag', 'prod', '--no-cbom'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'prod', '--no-cbom'])
     assert result.exit_code == 0, result.output
     assert 'built' not in result.output
     assert len(_scans(session)) == 1
     assert _cboms(session) == []
 
 
-def test_cbom_build_backfills_raw_only_scan(runner, session, monkeypatch):
+def test_cbom_build_backfills_raw_only_scan(cli_runner, session, monkeypatch):
     op.make_endpoint(session, 443, '10.0.0.9', None, ['bf'])
     session.flush()
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
     # Store the raw scan without a CBOM, then backfill via the CLI.
-    runner.invoke(cli, ['scan', '--tag', 'bf', '--no-cbom'])
+    cli_runner.invoke(cli, ['scan', '--tag', 'bf', '--no-cbom'])
 
-    result = runner.invoke(cli, ['cbom', 'build'])
+    result = cli_runner.invoke(cli, ['cbom', 'build'])
     assert result.exit_code == 0, result.output
     assert 'Built' in result.output
 
@@ -835,7 +821,7 @@ def test_cbom_build_backfills_raw_only_scan(runner, session, monkeypatch):
     assert scan.cbom is not None
 
 
-def test_scan_dispatches_ssh_endpoint_to_sshaudit(runner, session, monkeypatch):
+def test_scan_dispatches_ssh_endpoint_to_sshaudit(cli_runner, session, monkeypatch):
     ep = op.make_endpoint(session, 22, '10.0.0.5', None, ['prod'])
     ep.application_protocol = 'ssh'
     session.flush()
@@ -851,7 +837,7 @@ def test_scan_dispatches_ssh_endpoint_to_sshaudit(runner, session, monkeypatch):
     monkeypatch.setattr(Testssl, 'scan', factory('tls', model.Scanner.testssl))
     monkeypatch.setattr(SshAudit, 'scan', factory('ssh', model.Scanner.ssh_audit))
 
-    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'prod'])
     assert result.exit_code == 0, result.output
     assert used == ['ssh']  # routed by application_protocol, not testssl
 
@@ -865,13 +851,13 @@ def test_scan_dispatches_ssh_endpoint_to_sshaudit(runner, session, monkeypatch):
 
 # --- scan cooldown ---------------------------------------------------------
 
-def test_scan_updates_last_seen(runner, session, monkeypatch):
+def test_scan_updates_last_seen(cli_runner, session, monkeypatch):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     ep.last_seen = datetime(2000, 1, 1)  # long ago -> due for scanning
     session.flush()
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
 
-    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'prod'])
     assert result.exit_code == 0, result.output
 
     # last_seen is bumped to the run time (tolerate any session tz offset).
@@ -879,7 +865,7 @@ def test_scan_updates_last_seen(runner, session, monkeypatch):
     assert updated.replace(tzinfo=None) > datetime(2020, 1, 1)
 
 
-def test_scan_skips_endpoint_in_cooldown(runner, session, monkeypatch):
+def test_scan_skips_endpoint_in_cooldown(cli_runner, session, monkeypatch):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     ep.last_seen = datetime.now()  # just scanned -> inside default 7-day cooldown
     session.flush()
@@ -887,14 +873,14 @@ def test_scan_skips_endpoint_in_cooldown(runner, session, monkeypatch):
     scanned = []
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
 
-    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'prod'])
     assert result.exit_code == 0, result.output
     assert 'within the cooldown' in result.output
     assert scanned == []
     assert _scans(session) == []
 
 
-def test_scan_force_bypasses_cooldown(runner, session, monkeypatch):
+def test_scan_force_bypasses_cooldown(cli_runner, session, monkeypatch):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     ep.last_seen = datetime.now()  # inside cooldown
     session.flush()
@@ -902,13 +888,13 @@ def test_scan_force_bypasses_cooldown(runner, session, monkeypatch):
     scanned = []
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
 
-    result = runner.invoke(cli, ['scan', '--tag', 'prod', '--force'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'prod', '--force'])
     assert result.exit_code == 0, result.output
     assert scanned == [('10.0.0.1', 443)]
     assert len(_scans(session)) == 1
 
 
-def test_scan_due_endpoint_past_cooldown_is_scanned(runner, session, monkeypatch):
+def test_scan_due_endpoint_past_cooldown_is_scanned(cli_runner, session, monkeypatch):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     ep.last_seen = datetime.now() - timedelta(days=30)  # past 7-day cooldown
     session.flush()
@@ -916,12 +902,12 @@ def test_scan_due_endpoint_past_cooldown_is_scanned(runner, session, monkeypatch
     scanned = []
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
 
-    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'prod'])
     assert result.exit_code == 0, result.output
     assert scanned == [('10.0.0.1', 443)]
 
 
-def test_scan_does_not_update_last_seen_on_failure(runner, session, monkeypatch):
+def test_scan_does_not_update_last_seen_on_failure(cli_runner, session, monkeypatch):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     ep.last_seen = datetime(2000, 1, 1)  # old -> due, but the scan will fail
     session.flush()
@@ -931,18 +917,18 @@ def test_scan_does_not_update_last_seen_on_failure(runner, session, monkeypatch)
 
     monkeypatch.setattr(Testssl, 'scan', fake_scan)
 
-    result = runner.invoke(cli, ['scan', '--tag', 'prod'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'prod'])
     assert result.exit_code == 0, result.output
     assert 'failed' in result.output
     # A failed scan records nothing, so last_seen must not advance.
     assert _by_ip(session)['10.0.0.1'].last_seen.replace(tzinfo=None) < datetime(2010, 1, 1)
 
 
-def test_newly_added_endpoint_is_immediately_scannable(runner, session, monkeypatch):
+def test_newly_added_endpoint_is_immediately_scannable(cli_runner, session, monkeypatch):
     # Regression: `add endpoint` must NOT stamp last_seen. Otherwise a freshly
     # added endpoint looks just-scanned and sits in cooldown for 7 days, so a
     # plain `scan` right after adding would silently skip it.
-    add = runner.invoke(cli, ['add', 'endpoint', '--ip', '10.0.0.7', '--tag', 'fresh'])
+    add = cli_runner.invoke(cli, ['add', 'endpoint', '--ip', '10.0.0.7', '--tag', 'fresh'])
     assert add.exit_code == 0, add.output
 
     ep = _by_ip(session)['10.0.0.7']
@@ -952,7 +938,7 @@ def test_newly_added_endpoint_is_immediately_scannable(runner, session, monkeypa
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory(scanned))
 
     # No --force: the endpoint must be scanned on the very next run.
-    result = runner.invoke(cli, ['scan', '--tag', 'fresh'])
+    result = cli_runner.invoke(cli, ['scan', '--tag', 'fresh'])
     assert result.exit_code == 0, result.output
     assert scanned == [('10.0.0.7', 443)]
     assert len(_scans(session)) == 1
@@ -980,24 +966,24 @@ def _make_scanned(session, ip, tags, *, start_time, result=None, with_cbom=True)
     return ep, scan
 
 
-def test_view_requires_a_layer(runner, session):
+def test_view_requires_a_layer(cli_runner, session):
     op.make_endpoint(session, 443, '10.0.0.1', None, ['v'])
     session.flush()
-    result = runner.invoke(cli, ['view', '--tag', 'v'])
+    result = cli_runner.invoke(cli, ['view', '--tag', 'v'])
     assert result.exit_code == 2, result.output
     assert 'at least one' in result.output
 
 
-def test_view_no_match(runner, session):
-    result = runner.invoke(cli, ['view', '--tag', 'does/not/exist', '--raw'])
+def test_view_no_match(cli_runner, session):
+    result = cli_runner.invoke(cli, ['view', '--tag', 'does/not/exist', '--raw'])
     assert result.exit_code == 0, result.output
     assert 'No endpoints matched' in result.output
 
 
-def test_view_prints_requested_layers(runner, session):
+def test_view_prints_requested_layers(cli_runner, session):
     _make_scanned(session, '10.0.0.1', ['v'], start_time=datetime(2026, 7, 18, 2, 9, 44))
 
-    result = runner.invoke(cli, ['view', '--tag', 'v', '--raw', '--cbom', '--opinion'])
+    result = cli_runner.invoke(cli, ['view', '--tag', 'v', '--raw', '--cbom', '--opinion'])
     assert result.exit_code == 0, result.output
     assert '[raw]' in result.output
     assert '[cbom]' in result.output
@@ -1005,7 +991,7 @@ def test_view_prints_requested_layers(runner, session):
     assert 'CycloneDX' in result.output  # the CBOM document body was printed
 
 
-def test_view_reports_missing_layer(runner, session):
+def test_view_reports_missing_layer(cli_runner, session):
     # A raw-only scan (no CBOM) -> --cbom reports it as missing, does not crash.
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['v'])
     session.flush()
@@ -1014,17 +1000,17 @@ def test_view_reports_missing_layer(runner, session):
     ))
     session.flush()
 
-    result = runner.invoke(cli, ['view', '--tag', 'v', '--cbom'])
+    result = cli_runner.invoke(cli, ['view', '--tag', 'v', '--cbom'])
     assert result.exit_code == 0, result.output
     assert 'no cbom' in result.output
 
 
-def test_view_outputs_files_named_by_time_layer_and_filter(runner, session, tmp_path, monkeypatch):
+def test_view_outputs_files_named_by_time_layer_and_filter(cli_runner, session, tmp_path, monkeypatch):
     monkeypatch.setenv('TLSSEC_OUTPUT_DIR', str(tmp_path))
     _make_scanned(session, '10.0.0.1', ['v'], start_time=datetime(2026, 7, 18, 2, 9, 44),
                   result={'scanResult': []})
 
-    result = runner.invoke(cli, ['view', '--ip', '10.0.0.1', '--raw', '--opinion', '--output'])
+    result = cli_runner.invoke(cli, ['view', '--ip', '10.0.0.1', '--raw', '--opinion', '--output'])
     assert result.exit_code == 0, result.output
 
     names = sorted(p.name for p in tmp_path.glob('*.json'))
@@ -1039,7 +1025,7 @@ def test_view_outputs_files_named_by_time_layer_and_filter(runner, session, tmp_
     assert json.loads(raw_file.read_text()) == {'scanResult': []}
 
 
-def test_view_emits_all_scans_of_an_endpoint(runner, session, tmp_path, monkeypatch):
+def test_view_emits_all_scans_of_an_endpoint(cli_runner, session, tmp_path, monkeypatch):
     monkeypatch.setenv('TLSSEC_OUTPUT_DIR', str(tmp_path))
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['v'])
     session.flush()
@@ -1049,7 +1035,7 @@ def test_view_emits_all_scans_of_an_endpoint(runner, session, tmp_path, monkeypa
         ))
     session.flush()
 
-    result = runner.invoke(cli, ['view', '--ip', '10.0.0.1', '--raw', '--output'])
+    result = cli_runner.invoke(cli, ['view', '--ip', '10.0.0.1', '--raw', '--output'])
     assert result.exit_code == 0, result.output
     # Both scans in history are exported, not just the latest.
     assert len(list(tmp_path.glob('*_raw_ip-10.0.0.1.json'))) == 2
