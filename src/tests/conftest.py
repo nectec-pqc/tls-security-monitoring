@@ -54,6 +54,15 @@ def empty_database_session(database):
     connection.close()
 
 
+@pytest.fixture(scope = 'session')
+def tests_root():
+    """Parent directory containing all the test files.
+
+    To be used for 'root-relative' referencing of test files.
+    """
+    return Path(__file__).parent
+
+
 @pytest.fixture(scope='session')
 def cache_dir():
     path = Path.home() / '.cache/tlssec/test'
