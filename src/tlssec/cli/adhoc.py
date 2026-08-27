@@ -245,19 +245,33 @@ def compile_data_sources(sources: list[Path], outdir: Path):
         filetype, content  = external_document_loader.run(source)
         match filetype:
             case 'testssl-pretty':
-                pass
+                new_extracts = Testssl.extract_json(content)
+                if not new_extracts:
+                    continue
+                stdout_path = source.with_suffix('.stdout')
+                if stdout_path.exists():
+                    stdout_text = stdout_path.read_text()
+                    # TODO: Customize YAML dumper to use anchor for duplicated long string.
+                    for extract in new_extracts:
+                        extract['raw_text'] = stdout_text
+                extracts[filetype].extend(new_extracts)
             case 'ssh-audit':
-                extracts['ssh-audit'].append(
+                extracts[filetype].append(
                     SshAudit.extract_json(content)
                 )
             case 'nmap':
                 pass
+
     outdir.mkdir(parents = True, exist_ok = True)
+
+    outpath = outdir / 'testssl_extracts.yaml'
+    with open(outpath, 'w') as f:
+        yaml.dump(extracts['testssl-pretty'], f, Dumper = SetToListDumper)
 
     outpath = outdir / 'ssh_audit_extracts.yaml'
     with open(outpath, 'w') as f:
         yaml.dump(extracts['ssh-audit'], f, Dumper = SetToListDumper)
-    
+
     # TODO: complete extraction of other types
 
     return extracts

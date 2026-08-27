@@ -22,7 +22,6 @@ def test_report(cli_runner, tests_root):
         'core/nmap/result_cases/current_openssl_server/success.nmap.xml',
     ]
     sources = [tests_root / x for x in sources]
-    breakpoint()
     result = cli_runner.invoke(
         cli,
         ['adhoc', 'export-report', *map(str, sources)],
