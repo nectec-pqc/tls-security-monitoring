@@ -231,7 +231,7 @@ def export_report(
         ['typst', 'compile', 'main.typ'],
         cwd = report_path,
     )
-    if completed_process != 0:
+    if completed_process.returncode != 0:
         _logger.error('typst failed to compile the exported report');
 
 
