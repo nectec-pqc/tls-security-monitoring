@@ -260,7 +260,25 @@ def compile_data_sources(sources: list[Path], outdir: Path):
                     SshAudit.extract_json(content)
                 )
             case 'nmap':
-                pass
+                extracts[filetype].extend(
+                    Nmap.extract_endpoints_from_xml(content)
+                )
+
+    # post-processing endpoints from nmap to extracts
+    extracts['nmap'].sort(key = lambda x: (
+        not x.hostname,
+        x.hostname,
+        not x.ip,
+        x.ip,
+        not x.port,
+        x.port,
+    ))
+    extracts['nmap'] = [
+        endpoint.model_dump(mode = 'json', exclude = ['id', 'part_of_service_id'])
+        for endpoint in extracts['nmap']
+    ]
+    
+    # write extracts to file
 
     outdir.mkdir(parents = True, exist_ok = True)
 
@@ -272,6 +290,8 @@ def compile_data_sources(sources: list[Path], outdir: Path):
     with open(outpath, 'w') as f:
         yaml.dump(extracts['ssh-audit'], f, Dumper = SetToListDumper)
 
-    # TODO: complete extraction of other types
+    outpath = outdir / 'nmap_extracts.yaml'
+    with open(outpath, 'w') as f:
+        yaml.dump(extracts['nmap'], f)
 
     return extracts
