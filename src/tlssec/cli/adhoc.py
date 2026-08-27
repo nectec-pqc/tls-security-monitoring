@@ -90,6 +90,7 @@ def export_report(
     )
     if completed_process.returncode != 0:
         _logger.error('typst failed to compile the exported report');
+        ctx.exit(2)
 
 
 def compile_data_sources(sources: list[Path], outdir: Path):

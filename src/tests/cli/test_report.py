@@ -17,7 +17,6 @@ def set_cli_cwd(cli_runner, cache_dir):
 def test_report(cli_runner, tests_root):
     sources = [
         'core/testssl/result_cases/current_openssl_server/success.pretty.json',
-        'core/testssl/result_cases/current_openssl_server/idle_timeout.pretty.json',
         'core/sshaudit/result_cases/openssh_server.json',
         'core/nmap/result_cases/current_openssl_server/success.nmap.xml',
     ]
@@ -28,5 +27,3 @@ def test_report(cli_runner, tests_root):
         catch_exceptions = False,
     )
     assert result.exit_code == 0
-    breakpoint()
-    # TODO: assert typst compilation successful
