@@ -123,7 +123,20 @@ class FirstSuccessTaskGroup:
                 errors.append(e)
         if root in self.targets:
             return result
-        raise ExceptionGroup('No alternative tasks were successful', errors)
+        raise AllAlternativesFailledError(errors)
 
     def run(self, value):
         return self.execute_subtree(None, value)
+
+
+class AllAlternativesFailledError(ExceptionGroup):
+    def __new__(cls, errors):
+        self = super().__new__(
+            AllAlternativesFailledError,
+            'None of the alternative tasks were successful',
+            errors,
+        )
+        return self
+
+    def derive(self, errors):
+        return AllAlternativesFailledError(errors)

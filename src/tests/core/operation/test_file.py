@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from tlssec.core.operation.file import external_document_loader
+from tlssec.task import AllAlternativesFailledError
 
 
 @pytest.mark.parametrize(
@@ -21,11 +22,11 @@ from tlssec.core.operation.file import external_document_loader
             ),
             (
                 'core/ssh_audit/result_cases/can_not_resolve_hostname.ssh_audit.json',
-                pytest.raises(Exception),
+                pytest.raises(AllAlternativesFailledError),
             ),
             (
                 'core/ssh_audit/result_cases/rejected_because_recent_connection_looks_like_scanner.ssh_audit.json',
-                pytest.raises(Exception),
+                pytest.raises(AllAlternativesFailledError),
             ),
             (
                 'core/ssh_audit/result_cases/successful_scan_fail_audit.ssh_audit.json',

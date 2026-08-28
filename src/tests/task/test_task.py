@@ -2,7 +2,12 @@ from dataclasses import dataclass, field
 
 import pytest
 
-from tlssec.task import Task, FirstSuccessTaskGroup, as_task
+from tlssec.task import (
+    AllAlternativesFailledError,
+    FirstSuccessTaskGroup,
+    Task,
+    as_task,
+)
 
 @pytest.fixture(scope = 'module')
 def Append():
@@ -96,7 +101,7 @@ class TestFirstSuccessTaskGroup:
             Fail(dependency = root),
         ]
         group = FirstSuccessTaskGroup(children)
-        with pytest.raises(Exception, match = 'No alternative tasks were successful'):
+        with pytest.raises(AllAlternativesFailledError):
             result = group.run('/')
 
     def test_prefix_shadows_its_child(self, Append):
