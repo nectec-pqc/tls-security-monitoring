@@ -69,7 +69,7 @@ class SshAudit:
             }:
                 pass
             case _:
-                raise ValueError('Content does not seem to be produced by `ssh-audti --json`')
+                raise ValueError('Content does not seem to be produced by `ssh-audit --json`')
         return source
 
     @classmethod

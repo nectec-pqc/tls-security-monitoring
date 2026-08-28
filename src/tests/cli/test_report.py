@@ -17,7 +17,7 @@ def set_cli_cwd(cli_runner, cache_dir):
 def test_report(cli_runner, tests_root):
     sources = [
         'core/testssl/result_cases/current_openssl_server/success.pretty.json',
-        'core/sshaudit/result_cases/openssh_server.json',
+        'core/ssh_audit/result_cases/successful_scan_fail_audit.ssh_audit.json',
         'core/nmap/result_cases/current_openssl_server/success.nmap.xml',
     ]
     sources = [tests_root / x for x in sources]
