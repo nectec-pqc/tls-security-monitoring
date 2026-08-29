@@ -33,7 +33,11 @@ from tlssec.task import AllAlternativesFailledError
                 nullcontext('ssh-audit'),
             ),
             (
-                'core/nmap/result_cases/current_openssl_server/success.nmap.xml',
+                'core/nmap/result_cases/success_find_ssl_only.nmap.xml',
+                nullcontext('nmap'),
+            ),
+            (
+                'core/nmap/result_cases/success_find_both_ssh_and_ssl.nmap.xml',
                 nullcontext('nmap'),
             ),
         ]

@@ -151,8 +151,12 @@ async def test_discover_endpoints(
         pytest.param(*x, id = x[1])
         for x in (
             (
-                {},
-                'success.nmap.xml',
+                {'ports': '4400-4450'},
+                'success_find_ssl_only.nmap.xml',
+            ),
+            (
+                {'ports': '2222,4433'},
+                'success_find_both_ssh_and_ssl.nmap.xml',
             ),
         )
     ],
@@ -160,10 +164,11 @@ async def test_discover_endpoints(
 @pytest.mark.regen_case
 async def test_generate_nmap_xml(
     current_openssl_server,
+    current_openssh_server,
     kwargs,
     filename,
 ):
-    out_dir = Path(__file__).parent / 'result_cases/current_openssl_server'
+    out_dir = Path(__file__).parent / 'result_cases'
     out_dir.mkdir(parents = True, exist_ok = True)
     tmp_file = out_dir / 'tmp.xml'
     tmp_file.unlink(missing_ok = True)
@@ -172,13 +177,15 @@ async def test_generate_nmap_xml(
         'localhost',
         base_output_dir = out_dir,
         xml_path_template = str(tmp_file.relative_to(out_dir)),
-        ports = '4400-4450',
+        # NOTE: Nmap's service version detection gets confused by `openssl s_server` response leading to timeout.
+        # Therefore, at least for this test case generation, version detection is disabled.
+        detect_version = False,
         **kwargs,
     )
     assert completed_process.returncode == 0
 
     with open(out_dir / 'tmp.xml') as f:
-        soup = bs4.BeautifulSoup(f, 'xml')
+        soup = BeautifulSoup(f, 'xml')
     with open(out_dir / filename, 'w') as f:
         f.write(soup.prettify())
 

@@ -18,7 +18,7 @@ def test_report(cli_runner, tests_root):
     sources = [
         'core/testssl/result_cases/current_openssl_server/success.pretty.json',
         'core/ssh_audit/result_cases/successful_scan_fail_audit.ssh_audit.json',
-        'core/nmap/result_cases/current_openssl_server/success.nmap.xml',
+        'core/nmap/result_cases/success_find_both_ssh_and_ssl.nmap.xml',
     ]
     sources = [tests_root / x for x in sources]
     result = cli_runner.invoke(
