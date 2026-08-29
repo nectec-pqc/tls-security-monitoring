@@ -100,7 +100,10 @@ class FirstSuccessTaskGroup:
                 return False
 
         for step in task.walk():
-            self.children[step.dependency].append(step)
+            children = self.children[step.dependency]
+            if step in children:
+                break
+            children.append(step)
         self.targets.append(task)
         return True
 

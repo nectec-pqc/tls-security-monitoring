@@ -14,8 +14,12 @@ def Append():
     @dataclass(frozen = True, eq = False)
     class _Append(Task):
         item: int
+        # Tracks number of times `step()` method is called for performance assertion.
+        step_count: int = 0
 
         def step(self, value: str) -> str:
+            # bypass frozen
+            object.__setattr__(self, 'step_count', self.step_count + 1)
             return value + self.item
     return _Append
 
@@ -38,6 +42,8 @@ def test_task_chain(Append):
 
     result = tasks[-1].run('/')
     assert result == '/abc'
+    for task in tasks:
+        assert task.step_count == 1
 
 
 def test_task_walk(Append):
@@ -83,6 +89,9 @@ class TestFirstSuccessTaskGroup:
         group = FirstSuccessTaskGroup(children)
         result = group.run('/')
         assert result == '/ab'
+        assert root.step_count == 1, 'common root should only be executed once'
+        assert children[0].step_count == 1
+        assert children[1].step_count == 0, 'second child should not be reached since first child already succeeded'
 
     def test_skip_failing_branch(self, Append, Fail):
         root = Append(item = 'a')
@@ -93,6 +102,8 @@ class TestFirstSuccessTaskGroup:
         group = FirstSuccessTaskGroup(children)
         result = group.run('/')
         assert result == '/ab'
+        assert root.step_count == 1
+        assert children[1].step_count == 1
 
     def test_no_path_to_success(self, Append, Fail):
         root = Append(item = 'a')
@@ -103,6 +114,7 @@ class TestFirstSuccessTaskGroup:
         group = FirstSuccessTaskGroup(children)
         with pytest.raises(AllAlternativesFailledError):
             result = group.run('/')
+        assert root.step_count == 1
 
     def test_prefix_shadows_its_child(self, Append):
         root = Append(item = 'a')
@@ -111,6 +123,9 @@ class TestFirstSuccessTaskGroup:
         group = FirstSuccessTaskGroup([prefix, child])
         result = group.run('/')
         assert result == '/ab'
+        assert root.step_count == 1
+        assert prefix.step_count == 1
+        assert child.step_count == 0
 
     def test_prefix_is_fallback_for_its_child(self, Append, Fail):
         root = Append(item = 'a')
@@ -119,6 +134,8 @@ class TestFirstSuccessTaskGroup:
         group = FirstSuccessTaskGroup([child, prefix])
         result = group.run('/')
         assert result == '/ab'
+        assert root.step_count == 1
+        assert prefix.step_count == 1
 
     def test_unskippable_exception(self, Append, Fail):
         root = Append(item = 'a')
@@ -129,3 +146,5 @@ class TestFirstSuccessTaskGroup:
         group = FirstSuccessTaskGroup(children, skippable = ValueError)
         with pytest.raises(IndexError):
             result = group.run('/')
+        assert root.step_count == 1
+        assert children[1].step_count == 0
