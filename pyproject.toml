@@ -47,8 +47,6 @@ build-backend = "uv_build"
 
 [tool.uv]
 exclude-newer = "7 days"
-# NOTE: Add specifically to use 3.9.0 faster. TODO: Remove soon.
-exclude-newer-package = {ssh-audit = "3 days"}
 
 [tool.pytest]
 testpaths = ["src/tests"]
@@ -57,6 +55,6 @@ addopts = ["-m", "not slow"]
 strict = true
 markers = [
     "slow: take a long time to run",
-    "regen_case: regenerate test case stored as files, not a real test",
+    "regen_case: regenerate test case files. Enable via --regen-case option.",
 ]
 asyncio_mode = "auto"
