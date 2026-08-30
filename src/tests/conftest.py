@@ -94,7 +94,7 @@ def create_server_cert(
 @pytest.fixture(scope = 'session')
 def server_cert_rsa2048(cache_dir):
     return create_server_cert(
-        cache_dir / 'server_cert/rsa20248',
+        cache_dir / 'server_cert/rsa2048',
         'rsa:2048',
     )
 
@@ -102,7 +102,7 @@ def server_cert_rsa2048(cache_dir):
 @pytest.fixture(scope = 'session')
 def server_cert_ed25519(cache_dir):
     return create_server_cert(
-        cache_dir / 'server_cert/ed25519'
+        cache_dir / 'server_cert/ed25519',
         'ed25519',
     )
 
