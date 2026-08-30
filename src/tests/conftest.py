@@ -71,27 +71,48 @@ def cache_dir():
     return path
 
 
-@pytest.fixture(scope = 'module')
-def current_openssl_server(cache_dir):
-    """Start an openssl server to use as target of test scan on localhost.
-
-    This server will use the current openssl version installed in tlssec image.
-    """
-    # First ensure server certificate exists. Just issue a self-signed one.
-    server_config_dir = cache_dir / 'current_openssl_server'
-    server_config_dir.mkdir(parents = True, exist_ok = True)
+def create_server_cert(
+    path: Path,
+    key_spec: str,
+) -> Path:
+    path.mkdir(parents = True, exist_ok = True)
     subprocess.run(
         [
             'openssl', 'req', '-new', '-x509', '-nodes',
             '-out', 'server.crt',
             '-keyout', 'server.pem',
             '-subj', '/CN=localhost',
+            '-newkey', key_spec,
         ],
-        cwd = server_config_dir,
+        cwd = path,
         check = True,
         timeout = 1,
     )
+    return path
 
+
+@pytest.fixture(scope = 'session')
+def server_cert_rsa2048(cache_dir):
+    return create_server_cert(
+        cache_dir / 'server_cert/rsa20248',
+        'rsa:2048',
+    )
+
+
+@pytest.fixture(scope = 'session')
+def server_cert_ed25519(cache_dir):
+    return create_server_cert(
+        cache_dir / 'server_cert/ed25519'
+        'ed25519',
+    )
+
+
+@pytest.fixture(scope = 'module')
+def current_openssl_server(cache_dir, server_cert_rsa2048):
+    """Start an openssl server to use as target of test scan on localhost.
+
+    This server will use the current openssl version installed in tlssec image.
+    """
     # TODO: whole thing needs to handle exception by killing subprocess
     proc = subprocess.Popen(
         [
@@ -101,7 +122,7 @@ def current_openssl_server(cache_dir):
             '-cert', 'server.crt',
             '-port', '4433',
         ],
-        cwd = server_config_dir,
+        cwd = server_cert_rsa2048,
         stdout = subprocess.PIPE,
         stderr = subprocess.DEVNULL,
     )
