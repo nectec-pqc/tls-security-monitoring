@@ -122,7 +122,7 @@ class FirstSuccessTaskGroup:
         for child in children:
             try:
                 return self.execute_subtree(child, result)
-            except self.skippable as e:
+            except (self.skippable, AllAlternativesFailledError) as e:
                 errors.append(e)
         if root in self.targets:
             return result
