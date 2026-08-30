@@ -107,12 +107,16 @@ def server_cert_ed25519(cache_dir):
     )
 
 
-@pytest.fixture(scope = 'module')
-def current_openssl_server(cache_dir, server_cert_rsa2048):
+def _current_openssl_server(
+    port: int,
+    server_cert_dirs: list[Path], 
+):
     """Start an openssl server to use as target of test scan on localhost.
 
     This server will use the current openssl version installed in tlssec image.
     """
+    if len(server_cert_dirs) < 1:
+        raise ValueError('Must specify at least one server certificate directory')
     # TODO: whole thing needs to handle exception by killing subprocess
     proc = subprocess.Popen(
         [
@@ -120,9 +124,17 @@ def current_openssl_server(cache_dir, server_cert_rsa2048):
             '-www',
             '-key', 'server.pem',
             '-cert', 'server.crt',
-            '-port', '4433',
+            *(
+                arg
+                for path in server_cert_dirs[1:]
+                for arg in (
+                    '-xkey', str(path / 'server.pem'),
+                    '-xcert', str(path / 'server.crt'),
+                )
+            ),
+            '-port', str(port),
         ],
-        cwd = server_cert_rsa2048,
+        cwd = server_cert_dirs[0],
         stdout = subprocess.PIPE,
         stderr = subprocess.DEVNULL,
     )
@@ -137,6 +149,14 @@ def current_openssl_server(cache_dir, server_cert_rsa2048):
     except subprocess.TimeoutExpired:
         with proc:
             proc.kill()
+
+
+@pytest.fixture(scope = 'module')
+def current_openssl_server(server_cert_rsa2048):
+    yield from _current_openssl_server(
+        port = 4433,
+        server_cert_dirs = [server_cert_rsa2048],
+    )
 
 
 @pytest.fixture(scope = 'module')
