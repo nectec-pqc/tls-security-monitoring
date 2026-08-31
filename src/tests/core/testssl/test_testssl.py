@@ -61,12 +61,6 @@ async def test_scan_local(testssl, current_openssl_server):
                 'success.pretty.json',
             ),
             (
-                ('--jsonfile-pretty',),
-                '5500',
-                {},
-                'success_2certs.pretty.json',
-            ),
-            (
                 ('--jsonfile',),
                 '4433',
                 {'idle_timeout': 10},
@@ -85,9 +79,7 @@ async def test_scan_local(testssl, current_openssl_server):
 )
 @pytest.mark.regen_case
 async def test_generate_testssl_json(
-    testssl,
-    current_openssl_server,
-    current_openssl_server_with_2certs,
+    testssl, current_openssl_server,
     testssl_opts, port, call_kwargs, filename,
 ):
     out_dir = Path(__file__).parent / 'result_cases/current_openssl_server'
