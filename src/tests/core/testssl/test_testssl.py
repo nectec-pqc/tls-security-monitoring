@@ -44,22 +44,31 @@ async def test_scan_local(testssl, current_openssl_server):
 
 
 @pytest.mark.parametrize(
-    'testssl_opts, call_kwargs, filename',
+    'testssl_opts, port, call_kwargs, filename',
     [
-        pytest.param(*x, id = x[2])
+        pytest.param(*x, id = x[-1])
         for x in (
             (
                 ('--jsonfile',),
+                '4433',
                 {},
                 'success.json',
             ),
             (
                 ('--jsonfile-pretty',),
+                '4433',
                 {},
                 'success.pretty.json',
             ),
             (
+                ('--jsonfile-pretty',),
+                '5500',
+                {},
+                'success_2certs.pretty.json',
+            ),
+            (
                 ('--jsonfile',),
+                '4433',
                 {'idle_timeout': 10},
                 'idle_timeout.json',
             ),
@@ -67,6 +76,7 @@ async def test_scan_local(testssl, current_openssl_server):
             # previous process idle_timeout
             (
                 ('--jsonfile-pretty',),
+                '4433',
                 {'idle_timeout': 10},
                 'idle_timeout.pretty.json',
             ),
@@ -75,8 +85,10 @@ async def test_scan_local(testssl, current_openssl_server):
 )
 @pytest.mark.regen_case
 async def test_generate_testssl_json(
-    testssl, current_openssl_server,
-    testssl_opts, call_kwargs, filename,
+    testssl,
+    current_openssl_server,
+    current_openssl_server_with_2certs,
+    testssl_opts, port, call_kwargs, filename,
 ):
     out_dir = Path(__file__).parent / 'result_cases/current_openssl_server'
     out_dir.mkdir(parents = True, exist_ok = True)
@@ -84,7 +96,7 @@ async def test_generate_testssl_json(
     tmp_file.unlink(missing_ok = True)
 
     result = await testssl.call(
-        *testssl_opts, str(tmp_file), 'localhost:4433',
+        *testssl_opts, str(tmp_file), f'localhost:{port}',
         cwd = out_dir,
         **call_kwargs,
     )

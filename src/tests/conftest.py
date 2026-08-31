@@ -160,6 +160,17 @@ def current_openssl_server(server_cert_rsa2048):
 
 
 @pytest.fixture(scope = 'module')
+def current_openssl_server_with_2certs(server_cert_rsa2048, server_cert_ed25519):
+    yield from _current_openssl_server(
+        port = 5500,
+        server_cert_dirs = [
+            server_cert_rsa2048,
+            server_cert_ed25519,
+        ],
+    )
+
+
+@pytest.fixture(scope = 'module')
 def current_openssh_server(cache_dir):
     server_config_dir = (cache_dir / 'current_openssh_server').resolve()
     server_config_dir.mkdir(parents = True, exist_ok = True)
