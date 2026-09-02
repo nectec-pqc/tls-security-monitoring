@@ -38,6 +38,13 @@ def set_cwd(cli_runner, cache_dir, request):
             # Take care to use valid filesystem name.
             id = 'port 2222 ssh + port 4433 tls',
         ),
+        pytest.param(
+            [
+                'core/testssl/result_cases/minihttp/2certs.pretty.json',
+                'core/nmap/result_cases/success_single_endpoint_with_2certs.nmap.xml',
+            ],
+            id = 'port 5502 tls with 2 certs',
+        )
     ],
 )
 def test_report(set_cwd, cli_runner, tests_root, sources):

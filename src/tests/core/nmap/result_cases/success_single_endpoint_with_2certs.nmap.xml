@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.95 scan initiated Wed Sep  2 19:32:35 2026 as: nmap -vv -&#45;script=ssl-cert -Pn -p5502 -oX /opt/app/src/tests/core/nmap/result_cases/tmp.xml localhost -->
+<nmaprun args="nmap -vv --script=ssl-cert -Pn -p5502 -oX /opt/app/src/tests/core/nmap/result_cases/tmp.xml localhost" scanner="nmap" start="1788377555" startstr="Wed Sep  2 19:32:35 2026" version="7.95" xmloutputversion="1.05">
+ <scaninfo numservices="1" protocol="tcp" services="5502" type="connect"/>
+ <verbose level="2"/>
+ <debugging level="0"/>
+ <taskbegin task="NSE" time="1788377555"/>
+ <taskend task="NSE" time="1788377555"/>
+ <taskbegin task="Connect Scan" time="1788377555"/>
+ <taskend extrainfo="1 total ports" task="Connect Scan" time="1788377555"/>
+ <taskbegin task="NSE" time="1788377555"/>
+ <taskend task="NSE" time="1788377555"/>
+ <host endtime="1788377555" starttime="1788377555">
+  <status reason="user-set" reason_ttl="0" state="up"/>
+  <address addr="127.0.0.1" addrtype="ipv4"/>
+  <hostnames>
+   <hostname name="localhost" type="user"/>
+   <hostname name="localhost" type="PTR"/>
+  </hostnames>
+  <ports>
+   <port portid="5502" protocol="tcp">
+    <state reason="syn-ack" reason_ttl="0" state="open"/>
+    <service conf="3" method="table" name="fcp-srvr-inst1"/>
+   </port>
+  </ports>
+  <times rttvar="5000" srtt="82" to="100000"/>
+ </host>
+ <taskbegin task="NSE" time="1788377555"/>
+ <taskend task="NSE" time="1788377555"/>
+ <runstats>
+  <finished elapsed="0.06" exit="success" summary="Nmap done at Wed Sep  2 19:32:35 2026; 1 IP address (1 host up) scanned in 0.06 seconds" time="1788377555" timestr="Wed Sep  2 19:32:35 2026"/>
+  <hosts down="0" total="1" up="1"/>
+ </runstats>
+</nmaprun>

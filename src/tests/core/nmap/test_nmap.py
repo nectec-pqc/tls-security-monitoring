@@ -158,6 +158,10 @@ async def test_discover_endpoints(
                 {'ports': '2222,4433'},
                 'success_find_both_ssh_and_ssl.nmap.xml',
             ),
+            (
+                {'ports': '5502'},
+                'success_single_endpoint_with_2certs.nmap.xml',
+            ),
         )
     ],
 )
@@ -165,6 +169,7 @@ async def test_discover_endpoints(
 async def test_generate_nmap_xml(
     current_openssl_server,
     current_openssh_server,
+    minihttp_port5502_2certs,
     kwargs,
     filename,
 ):
