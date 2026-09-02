@@ -49,40 +49,63 @@ async def test_scan_local(testssl, current_openssl_server):
         pytest.param(*x, id = x[-1])
         for x in (
             (
-                ('--jsonfile',),
-                '4433',
+                ('--jsonfile-pretty',),
+                5500,
                 {},
-                'success.json',
+                'minihttp/no_tls.pretty.json',
             ),
             (
                 ('--jsonfile-pretty',),
-                '4433',
+                5501,
                 {},
-                'success.pretty.json',
+                'minihttp/1cert.pretty.json',
+            ),
+            (
+                ('--jsonfile-pretty',),
+                5502,
+                {},
+                'minihttp/2certs.pretty.json',
             ),
             (
                 ('--jsonfile',),
-                '4433',
+                4433,
+                {},
+                'current_openssl_server/success.json',
+            ),
+            (
+                ('--jsonfile-pretty',),
+                4433,
+                {},
+                'current_openssl_server/success.pretty.json',
+            ),
+            (
+                ('--jsonfile',),
+                4433,
                 {'idle_timeout': 10},
-                'idle_timeout.json',
+                'current_openssl_server/idle_timeout.json',
             ),
             # FIXME: Next process sometimes get stuck after
             # previous process idle_timeout
             (
                 ('--jsonfile-pretty',),
-                '4433',
+                4433,
                 {'idle_timeout': 10},
-                'idle_timeout.pretty.json',
+                'current_openssl_server/idle_timeout.pretty.json',
             ),
         )
     ],
 )
 @pytest.mark.regen_case
 async def test_generate_testssl_json(
-    testssl, current_openssl_server,
+    testssl,
+    minihttp_port5500_no_tls,
+    minihttp_port5501_1cert,
+    minihttp_port5502_2certs,
+    current_openssl_server,
     testssl_opts, port, call_kwargs, filename,
 ):
-    out_dir = Path(__file__).parent / 'result_cases/current_openssl_server'
+    out_path = Path(__file__).parent / 'result_cases' / filename
+    out_dir = out_path.parent
     out_dir.mkdir(parents = True, exist_ok = True)
     tmp_file = out_dir / 'tmp.json'
     tmp_file.unlink(missing_ok = True)
@@ -98,7 +121,7 @@ async def test_generate_testssl_json(
         # I have seen --json mode produce the last "scanTime" item
         # outside of its main list.
         content = json.load(f)
-    with open(out_dir / filename, 'w') as f:
+    with open(out_path, 'w') as f:
         json.dump(content, f, indent = 2)
         tmp_file.unlink(missing_ok = True)
 

@@ -1,0 +1,22 @@
+{
+  "clientProblem1": [
+    {
+      "id": "engine_problem",
+      "severity": "WARN",
+      "finding": "No engine or GOST support via engine with your /usr/bin/openssl"
+    }
+  ],
+  "Invocation": "testssl --jsonfile-pretty /opt/app/src/tests/core/testssl/result_cases/minihttp/tmp.json localhost:5500",
+  "at": "1742b238157c:/usr/bin/openssl",
+  "version": "3.2.1 ",
+  "openssl": "OpenSSL 3.5.5 from Fri Apr 3 10:05:32 2026",
+  "startTime": "1788317401",
+  "scanResult": [
+    {
+      "id": "optimal_proto",
+      "severity": "WARN",
+      "finding": "127.0.0.1:5500 doesn't seem to be a TLS/SSL enabled server."
+    }
+  ],
+  "scanTime": "Scan interrupted"
+}

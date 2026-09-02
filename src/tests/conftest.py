@@ -149,6 +149,51 @@ def current_openssl_server(server_cert_rsa2048):
     )
 
 
+def _minihttp(*args):
+    proc = subprocess.Popen(
+        ['python', '-m', 'tests.fixtures.service.minihttp', *args],
+        stdout = subprocess.DEVNULL,
+        stderr = subprocess.PIPE,
+    )
+    for line in proc.stderr:
+        if b'Uvicorn running on' in line:
+            break
+    yield proc
+    try:
+        proc.terminate()
+        proc.wait(timeout = 1)
+    except subprocess.TimeoutExpired:
+        with proc:
+            proc.kill()
+
+
+@pytest.fixture(scope = 'module')
+def minihttp_port5500_no_tls():
+    yield from _minihttp('--port', '5500')
+
+
+@pytest.fixture(scope = 'module')
+def minihttp_port5501_1cert(
+    server_cert_ed25519,
+):
+    yield from _minihttp(
+        '--port', '5501',
+        '--cert', str(server_cert_ed25519),
+    )
+
+
+@pytest.fixture(scope = 'module')
+def minihttp_port5502_2certs(
+    server_cert_ed25519,
+    server_cert_rsa2048,
+):
+    yield from _minihttp(
+        '--port', '5502',
+        '--cert', str(server_cert_ed25519),
+        '--cert', str(server_cert_rsa2048),
+    )
+
+
 @pytest.fixture(scope = 'module')
 def current_openssh_server(cache_dir):
     server_config_dir = (cache_dir / 'current_openssh_server').resolve()
