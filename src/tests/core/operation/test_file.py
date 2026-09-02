@@ -13,6 +13,22 @@ from tlssec.task import AllAlternativesFailledError
         pytest.param(*x, id = x[0])
         for x in [
             (
+                'core/testssl/result_cases/no_service.pretty.json',
+                nullcontext('testssl-pretty'),
+            ),
+            (
+                'core/testssl/result_cases/minihttp/no_tls.pretty.json',
+                nullcontext('testssl-pretty'),
+            ),
+            (
+                'core/testssl/result_cases/minihttp/1cert.pretty.json',
+                nullcontext('testssl-pretty'),
+            ),
+            (
+                'core/testssl/result_cases/minihttp/2certs.pretty.json',
+                nullcontext('testssl-pretty'),
+            ),
+            (
                 'core/testssl/result_cases/current_openssl_server/success.pretty.json',
                 nullcontext('testssl-pretty'),
             ),
