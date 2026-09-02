@@ -1,0 +1,22 @@
+{
+  "clientProblem1": [
+    {
+      "id": "engine_problem",
+      "severity": "WARN",
+      "finding": "No engine or GOST support via engine with your /usr/bin/openssl"
+    }
+  ],
+  "Invocation": "testssl --jsonfile-pretty /opt/app/src/tests/core/testssl/result_cases/tmp.json localhost:6000",
+  "at": "1742b238157c:/usr/bin/openssl",
+  "version": "3.2.1 ",
+  "openssl": "OpenSSL 3.5.5 from Fri Apr 3 10:05:32 2026",
+  "startTime": "1788317935",
+  "scanResult": [
+    {
+      "id": "scanProblem",
+      "severity": "FATAL",
+      "finding": "Can't connect to '127.0.0.1:6000' Make sure a firewall is not between you and your scanning target!"
+    }
+  ],
+  "scanTime": "Scan interrupted"
+}

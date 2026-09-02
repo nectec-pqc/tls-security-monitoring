@@ -50,6 +50,12 @@ async def test_scan_local(testssl, current_openssl_server):
         for x in (
             (
                 ('--jsonfile-pretty',),
+                6000,
+                {},
+                'no_service.pretty.json',
+            ),
+            (
+                ('--jsonfile-pretty',),
                 5500,
                 {},
                 'minihttp/no_tls.pretty.json',
