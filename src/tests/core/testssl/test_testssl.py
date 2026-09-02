@@ -1,7 +1,6 @@
 import asyncio
 import json
 from pathlib import Path
-import json
 
 import pytest
 
@@ -122,14 +121,18 @@ async def test_generate_testssl_json(
         **call_kwargs,
     )
 
-    with open(tmp_file) as f:
-        # FIXME: testssl sometimes produce invalid JSON.
-        # I have seen --json mode produce the last "scanTime" item
-        # outside of its main list.
-        content = json.load(f)
-    with open(out_path, 'w') as f:
-        json.dump(content, f, indent = 2)
-        tmp_file.unlink(missing_ok = True)
+    try:
+        with open(tmp_file) as f:
+            content = json.load(f)
+    except json.JSONDecodeError as e:
+        # testssl sometimes produce invalid JSON. I have seen --json
+        # mode produce the last "scanTime" item outside of its main list.
+        # In such case, we record result as is without prettifying.
+        tmp_file.replace(out_path)
+    else:
+        with open(out_path, 'w') as f:
+            json.dump(content, f, indent = 2)
+            tmp_file.unlink(missing_ok = True)
 
 
 # --- Testssl.scan (no real testssl; self.call is faked) --------------------
