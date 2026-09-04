@@ -6,7 +6,6 @@
 #let data = load()
 
 #include "front_sections.typ"
-#pagebreak()
 
 #templates.endpoint_discovery_section(data)
 #templates.post_quantum_readiness_section(data)
