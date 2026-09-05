@@ -1,11 +1,14 @@
-import os
-import json
-import asyncio
-import ipaddress
-import tempfile
+import logging
+_logger = logging.getLogger(__name__)
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
+import asyncio
+import ipaddress
+import json
+import os
 import re
+import tempfile
 
 import yaml
 
@@ -230,7 +233,7 @@ class Testssl:
                         'safe': set(),
                         'unsafe': set(),
                     },
-                    'server_cert_signature': {},
+                    'server_cert_signature': cls.extract_qs_server_cert_signature(scan),
                 },
             }
 
@@ -257,22 +260,42 @@ class Testssl:
                             symenc = standard.tls.guess_symenc_from_openssl_cipher_name(cipher)
                             qs_safe = standard.tls.is_symenc_quantum_safe(symenc)
                             extract['qs']['symmetric_encryption']['safe' if qs_safe else 'unsafe'].add(symenc)
-
-            # Currently, if there are multiple host certs, one that appear latter will overwrite.
-            # FIXME: All certs must be listed, don't overwrite. Use captured serial number to match records.
-            for sd_item in scan.get('serverDefaults', []):
-                match sd_item:
-                    case {
-                        'id': str(item_id),
-                        'finding': str(algo),
-                    } if (m := re.fullmatch(r'cert_signatureAlgorithm(?: <hostCert#(?P<serial>\d+)>)?', item_id)):
-                        extract['qs']['server_cert_signature']['algo'] = algo
-                    case {
-                        'id': str(item_id),
-                        'finding': str(key_size),
-                    } if (m := re.fullmatch(r'cert_keySize(?: <hostCert#(?P<serial>\d+)>)?', item_id)):
-                        extract['qs']['server_cert_signature']['key_size'] = key_size
             
             extracts.append(extract)
 
         return extracts
+
+    @staticmethod
+    def extract_qs_server_cert_signature(scan: dict):
+        cert_numbers = None
+        certs = defaultdict(dict)
+        for item in scan.get('serverDefaults', []):
+            match item:
+                case {'id': 'cert_numbers', 'finding': cert_numbers}:
+                    cert_numbers = int(cert_numbers)
+                case {
+                    'id': str(item_id),
+                    'finding': str(algo),
+                } if (m := re.fullmatch(r'cert_signatureAlgorithm(?: <hostCert#(?P<serial>\d+)>)?', item_id)):
+                    serial = int(m['serial'])
+                    certs[serial]['algo'] = algo
+                case {
+                    'id': str(item_id),
+                    'finding': str(key_size),
+                } if (m := re.fullmatch(r'cert_keySize(?: <hostCert#(?P<serial>\d+)>)?', item_id)):
+                    serial = int(m['serial'])
+                    certs[serial]['key_size'] = key_size
+
+        # TODO: check and warn if cert_numbers does not equal actual certificate details found
+        # TODO: put the server signature algorithm in to safe vs unsafe classification
+        # TODO: use set?
+        # TODO: update report template. model it after ssh-audit reporting
+
+        # Discard testssl serial number, convert certs into a simple list
+        certs = [certs[serial] for serial in sorted(certs)]
+        if len(certs) != cert_numbers:
+            _logger.warning('`cert_numbers` value does not match actual number of server certificate details contained in testssl document')
+
+        # Convert back to legacy output
+        # TODO: change the output format
+        return certs[0] if certs else {}
