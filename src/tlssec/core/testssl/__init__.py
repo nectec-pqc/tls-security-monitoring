@@ -277,13 +277,15 @@ class Testssl:
                     'id': str(item_id),
                     'finding': str(algo),
                 } if (m := re.fullmatch(r'cert_signatureAlgorithm(?: <hostCert#(?P<serial>\d+)>)?', item_id)):
-                    serial = int(m['serial'])
+                    serial = m['serial']
+                    serial = 1 if serial is None else int(serial)
                     certs[serial]['algo'] = algo
                 case {
                     'id': str(item_id),
                     'finding': str(key_size),
                 } if (m := re.fullmatch(r'cert_keySize(?: <hostCert#(?P<serial>\d+)>)?', item_id)):
-                    serial = int(m['serial'])
+                    serial = m['serial']
+                    serial = 1 if serial is None else int(serial)
                     certs[serial]['key_size'] = key_size
 
         # TODO: check and warn if cert_numbers does not equal actual certificate details found
