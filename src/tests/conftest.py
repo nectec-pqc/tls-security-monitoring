@@ -50,6 +50,7 @@ def empty_database_session(database):
         session.execute(delete(model.EndpointTagMapTable))
         session.execute(delete(model.EndpointTable))
         session.execute(delete(model.TagTable))
+        session.commit()
         yield session
     transaction.rollback()
     connection.close()
