@@ -271,22 +271,24 @@ class Testssl:
         certs = defaultdict(dict)
         for item in scan.get('serverDefaults', []):
             match item:
-                case {'id': 'cert_numbers', 'finding': cert_numbers}:
-                    cert_numbers = int(cert_numbers)
-                case {
-                    'id': str(item_id),
-                    'finding': str(algo),
-                } if (m := re.fullmatch(r'cert_signatureAlgorithm(?: <hostCert#(?P<serial>\d+)>)?', item_id)):
-                    serial = m['serial']
-                    serial = 1 if serial is None else int(serial)
-                    certs[serial]['algo'] = algo
-                case {
-                    'id': str(item_id),
-                    'finding': str(key_size),
-                } if (m := re.fullmatch(r'cert_keySize(?: <hostCert#(?P<serial>\d+)>)?', item_id)):
-                    serial = m['serial']
-                    serial = 1 if serial is None else int(serial)
-                    certs[serial]['key_size'] = key_size
+                case {'id': str(item_id), 'finding': str(finding)}:
+                    pass
+                case _:
+                    continue
+            match item_id:
+                case 'cert_numbers':
+                    cert_numbers = int(finding)
+                    continue
+            if cert_attr := re.fullmatch(r'(?P<name>\S+)(?: <hostCert#(?P<serial>\d+)>)?', item_id):
+                serial = cert_attr['serial']
+                serial = 1 if serial is None else int(serial)
+                match cert_attr['name']:
+                    case 'cert_signatureAlgorithm':
+                        certs[serial]['algo'] = finding
+                    case 'cert_keySize':
+                        certs[serial]['key_size'] = finding
+                    case _:
+                        continue
 
         # TODO: check and warn if cert_numbers does not equal actual certificate details found
         # TODO: put the server signature algorithm in to safe vs unsafe classification
