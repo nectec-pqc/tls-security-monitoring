@@ -287,6 +287,10 @@ class Testssl:
                         certs[serial]['algo'] = finding
                     case 'cert_keySize':
                         certs[serial]['key_size'] = finding
+                    case 'cert_serialNumber':
+                        certs[serial]['serial'] = finding
+                    case 'cert_fingerprintSHA256':
+                        certs[serial]['fingerprint_sha256'] = finding
                     case _:
                         continue
 
