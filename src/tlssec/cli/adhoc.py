@@ -11,6 +11,7 @@ import tlssec.core.model as m
 from tlssec.core.nmap import Nmap
 from tlssec.core.testssl import Testssl
 from tlssec.core.ssh_audit import SshAudit
+from tlssec.core.export.yaml import YamlDumper
 from .colored_help import ColoredGroup, ColoredCommand
 from .cli_state import CliState
 
@@ -19,19 +20,6 @@ from .cli_state import CliState
 def adhoc():
     """Experimental features"""
     pass
-
-
-# TODO: move to another file?
-class SetToListDumper(yaml.SafeDumper):
-    pass
-
-SetToListDumper.add_representer(
-    set,
-    (
-        lambda dumper, data:
-            dumper.represent_list(sorted(data))
-    ),
-)
 
 
 # TODO: Allow taking selecting input from within database too
@@ -142,14 +130,14 @@ def compile_data_sources(sources: list[Path], outdir: Path):
 
     outpath = outdir / 'testssl_extracts.yaml'
     with open(outpath, 'w') as f:
-        yaml.dump(extracts['testssl-pretty'], f, Dumper = SetToListDumper)
+        yaml.dump(extracts['testssl-pretty'], f, Dumper = YamlDumper)
 
     outpath = outdir / 'ssh_audit_extracts.yaml'
     with open(outpath, 'w') as f:
-        yaml.dump(extracts['ssh-audit'], f, Dumper = SetToListDumper)
+        yaml.dump(extracts['ssh-audit'], f, Dumper = YamlDumper)
 
     outpath = outdir / 'nmap_extracts.yaml'
     with open(outpath, 'w') as f:
-        yaml.dump(extracts['nmap'], f)
+        yaml.dump(extracts['nmap'], f, Dumper = YamlDumper)
 
     return extracts
