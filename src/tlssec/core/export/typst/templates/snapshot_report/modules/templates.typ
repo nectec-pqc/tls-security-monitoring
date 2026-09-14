@@ -47,6 +47,20 @@
 ]
 
 
+// TODO: Shorten algorithm names.
+// testssl output too is unnecessarily long.
+#let summarize_certs_algorithm(certs) = [
+  #align(left)[
+    #enum(
+      ..certs.map(cert => enum.item[
+        key: #raw(cert.key_algorithm),
+        sig: #raw(cert.signature_algorithm)
+      ])
+    )
+  ]
+]
+
+
 #let post_quantum_readiness_section(data) = [
   = Post-Quantum Readiness Summary
 
@@ -100,12 +114,20 @@
                   ]
                 ]
               ),
-              [
-                // TODO: update this when TLS can actually use QS signature algorithm
-                #text(fill: orange, weight: "bold")[Not Offered (WARN)] \
-                #testssl.qs.server_cert_signature.algo
-                //\ (#testssl.qs.server_cert_signature.key_size)
-              ],
+              (
+                if testssl.qs.server_certificate.safe in (none, ()) [
+                  #text(fill: orange, weight: "bold")[Not Offered (WARN)] \
+                  #summarize_certs_algorithm(testssl.qs.server_certificate.unsafe)
+                ] else [
+                  #text(fill: green, weight: "bold")[Offered (OK)] \
+                  #summarize_certs_algorithm(testssl.qs.server_certificate.safe)
+                  #if testssl.qs.server_certificate.unsafe not in (none, ()) [
+                    \
+                    #text(fill: orange, weight: "bold")[Not Enforced (WARN)] \
+                    #summarize_certs_algorithm(testssl.qs.server_certificate.unsafe)
+                  ]
+                ]
+              ),
             )
           }
           let ssh_audit = endpoint.scan_result.at("ssh_audit", default: none)
@@ -208,6 +230,45 @@
 )
 
 
+#let explain_certs_qs(certs) = [
+  #align(left)[
+    #enum(
+      ..certs.map(cert => enum.item[
+        A certificate
+        #if "serial" in cert [
+          with serial number: #raw(cert.serial)
+        ] \
+        is using
+        #{
+          let list = ()
+          list = (
+            [
+              #if not cert.safe_key_algorithm [
+                #text(fill: orange)[non quantum-safe]
+              ] else [
+                #text(fill: green)[quantum-safe]
+              ]
+              key algorithm:
+              #raw(cert.key_algorithm)
+            ],
+            [
+              #if not cert.safe_signature_algorithm [
+                #text(fill: orange)[non quantum-safe]
+              ] else [
+                #text(fill: green)[quantum-safe]
+              ]
+              signature algorithm:
+              #raw(cert.signature_algorithm)
+            ],
+          )
+          list.join("\nand ")
+        }
+      ])
+    )
+  ]
+]
+
+
 #let detailed_results_section(data) = [
   = Detailed Results
 
@@ -276,15 +337,29 @@
           ),
 
           [Quantum-safe certificate signature algorithm \ (server authentication)],
-          [
-            #text(fill: orange, weight: "bold")[Not Offered (WARN)] \
-            Does not advertise server certificate with quantum-safe signature algorithm.
-            The default certificate is using:
-            #testssl.qs.server_cert_signature.algo
-            (#testssl.qs.server_cert_signature.key_size)
+          (
+            if testssl.qs.server_certificate.safe in (none, ()) [
+              #text(fill: orange, weight: "bold")[Not Offered (WARN)] \
+              No server certificate was found whose signature algorithm and key
+              algorithm are both quantum-safe.
 
-            Standardization of quantum-safe TLSv1.3 signature algorithm is still being drafted.
-          ],
+              #explain_certs_qs(testssl.qs.server_certificate.unsafe)
+            ] else [
+              #text(fill: green, weight: "bold")[Offered (OK)] \
+
+              #explain_certs_qs(testssl.qs.server_certificate.safe)
+              #if testssl.qs.server_certificate.unsafe not in (none, ()) [
+
+                #text(fill: orange, weight: "bold")[Not Enforced (WARN)] \
+                Still allow the following unsafe certificates:
+
+                #explain_certs_qs(testssl.qs.server_certificate.unsafe)
+
+                Whether the quantum-safe certificate will be served to client
+                depends on client capabilities and server's preference.
+              ]
+            ]
+          ),
         )
       ]
 

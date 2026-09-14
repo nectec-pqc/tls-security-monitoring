@@ -166,6 +166,7 @@ class _Builder(_CryptoBomBuilder):
             )
         return by_version
 
+    # TODO: this does not handle multiple certificates correctly
     def _add_certificate(self, entry, host):
         sd = _by_id(entry.get('serverDefaults', []))
         if 'cert_signatureAlgorithm' not in sd and 'cert_keySize' not in sd:

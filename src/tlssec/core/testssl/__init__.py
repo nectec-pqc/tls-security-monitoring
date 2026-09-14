@@ -233,7 +233,7 @@ class Testssl:
                         'safe': set(),
                         'unsafe': set(),
                     },
-                    'server_cert_signature': cls.extract_qs_server_cert_signature(scan),
+                    'server_certificate': cls.extract_qs_server_certificate(scan),
                 },
             }
 
@@ -266,7 +266,23 @@ class Testssl:
         return extracts
 
     @staticmethod
-    def extract_qs_server_cert_signature(scan: dict):
+    def is_sig_algo_qs(name: str) -> bool:
+        """Is certificate's signature algorithm name as reported by testssl quantum safe?"""
+        return (
+            name.startswith('ML-DSA')
+            or name.startswith('SLH-DSA')
+        )
+
+    @staticmethod
+    def is_key_algo_qs(name: str) -> bool:
+        """Is certificate's key algorithm name as reported by testssl quantum safe?"""
+        return (
+            name.startswith('ML-DSA')
+            or name.startswith('SLH-DSA')
+        )
+
+    @staticmethod
+    def extract_qs_server_certificate(scan: dict):
         cert_numbers = None
         certs = defaultdict(dict)
         for item in scan.get('serverDefaults', []):
@@ -284,9 +300,9 @@ class Testssl:
                 serial = 1 if serial is None else int(serial)
                 match cert_attr['name']:
                     case 'cert_signatureAlgorithm':
-                        certs[serial]['algo'] = finding
+                        certs[serial]['signature_algorithm'] = finding
                     case 'cert_keySize':
-                        certs[serial]['key_size'] = finding
+                        certs[serial]['key_algorithm'] = finding
                     case 'cert_serialNumber':
                         certs[serial]['serial'] = finding
                     case 'cert_fingerprintSHA256':
@@ -294,16 +310,19 @@ class Testssl:
                     case _:
                         continue
 
-        # TODO: check and warn if cert_numbers does not equal actual certificate details found
-        # TODO: put the server signature algorithm in to safe vs unsafe classification
-        # TODO: use set?
-        # TODO: update report template. model it after ssh-audit reporting
-
         # Discard testssl serial number, convert certs into a simple list
         certs = [certs[serial] for serial in sorted(certs)]
         if len(certs) != cert_numbers:
             _logger.warning('`cert_numbers` value does not match actual number of server certificate details contained in testssl document')
 
-        # Convert back to legacy output
-        # TODO: change the output format
-        return certs[0] if certs else {}
+        qs = {
+            'safe': [],
+            'unsafe': [],
+        }
+        for cert in certs:
+            cert['safe_signature_algorithm'] = Testssl.is_sig_algo_qs(cert['signature_algorithm'])
+            cert['safe_key_algorithm'] = Testssl.is_key_algo_qs(cert['key_algorithm'])
+            cert_is_qs = cert['safe_signature_algorithm'] and cert['safe_key_algorithm']
+            qs['safe' if cert_is_qs else 'unsafe'].append(cert)
+
+        return qs
