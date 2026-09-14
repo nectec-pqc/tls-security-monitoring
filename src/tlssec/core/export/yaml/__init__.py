@@ -14,10 +14,15 @@ class YamlDumper(yaml.SafeDumper):
         return super().ignore_aliases(data)
 
 
+def _represent_set_as_list(dumper, data: set):
+    try:
+        data = sorted(data)
+    except TypeError:
+        data = list(data)
+    return dumper.represent_list(data)
+
+
 YamlDumper.add_representer(
     set,
-    (
-        lambda dumper, data:
-            dumper.represent_list(sorted(data))
-    ),
+    _represent_set_as_list,
 )
