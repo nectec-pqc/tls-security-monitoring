@@ -57,7 +57,7 @@ def cli(port, server_cert_dirs):
     extra_args = {}
     if server_cert_dirs:
         extra_args['ssl_context_factory'] = (
-            # Uvicorn pass these args for to custom SSL context factory so it can extend uvicorn's default behaviour.
+            # Uvicorn pass these args for us to extend uvicorn's default SSL context construction.
             # However, we are going to replace the factory entirely and construct based only on our CLI's options.
             lambda config, default_factory:
             ssl_context_factory(server_cert_dirs)
