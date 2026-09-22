@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from types import SimpleNamespace
 
 import pandas as pd
@@ -15,7 +15,7 @@ def _ep(last_seen):
 
 def test_never_scanned_is_due():
     # last_seen is None -> the endpoint has never been scanned, always due.
-    assert not is_in_cooldown(_ep(None), COOLDOWN, datetime.now())
+    assert not is_in_cooldown(_ep(None), COOLDOWN, datetime.now(UTC))
 
 
 def test_recently_scanned_is_in_cooldown():
@@ -38,5 +38,5 @@ def test_tz_aware_last_seen_vs_naive_now_does_not_raise():
     # last_seen from Postgres is tz-aware; the run's `now` is naive. Mixed
     # awareness must be normalized rather than raise TypeError.
     now = datetime(2026, 7, 17, 12, 0, 0)
-    ep = _ep(datetime(2026, 7, 16, 12, 0, 0, tzinfo=timezone.utc))
+    ep = _ep(datetime(2026, 7, 16, 12, 0, 0, tzinfo = UTC))
     assert is_in_cooldown(ep, COOLDOWN, now)

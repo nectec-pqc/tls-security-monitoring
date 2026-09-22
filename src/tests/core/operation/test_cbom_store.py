@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 
 import pytest
@@ -21,8 +21,10 @@ def result():
 
 def _endpoint(session):
     ep = m.EndpointTable(
-        hostname='t.example.com', port=443,
-        first_seen=datetime.now(), last_seen=datetime.now(),
+        hostname = 't.example.com',
+        port = 443,
+        first_seen = datetime.now(UTC),
+        last_seen = datetime.now(UTC),
     )
     session.add(ep)
     session.flush()

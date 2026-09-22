@@ -9,7 +9,7 @@ Our own assessment is derived from the CBOM alone (proving the CBOM is a
 sufficient basis for verdicts). Vendor verdicts already present in the raw
 scan (testssl ``rating`` / ``vulnerabilities``) are captured alongside it.
 """
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 import tlssec.core.model as m
 import tlssec.standard as standard
@@ -124,7 +124,7 @@ def _certificate(document):
     expired = None
     if not_after:
         try:
-            expired = datetime.fromisoformat(not_after) < datetime.now(timezone.utc)
+            expired = datetime.fromisoformat(not_after) < datetime.now(UTC)
         except ValueError:
             expired = None
     subject, issuer = cert.get('subjectName'), cert.get('issuerName')

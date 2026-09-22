@@ -58,7 +58,7 @@ def export_report(
     from tlssec.core.export.typst import TypstTemplates
 
     state = ctx.find_object(CliState)
-    report_path = state.settings.output_dir / report_path_pattern.format(now = datetime.now())
+    report_path = state.settings.output_dir / report_path_pattern.format(now = datetime.now().astimezone())
     if report_path.is_file():
         _logger.error(
             'Can not create typst project.'

@@ -1,7 +1,6 @@
 import logging
 _logger = logging.getLogger(__name__)
 from collections import defaultdict
-from datetime import datetime
 from pathlib import Path
 import asyncio
 import ipaddress
@@ -9,6 +8,7 @@ import json
 import os
 import re
 import tempfile
+import time
 
 import yaml
 
@@ -115,14 +115,14 @@ class Testssl:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             json_path = Path(tmpdir) / 'result.json'
-            start_time = datetime.now()
+            start_time = time.perf_counter()
             completed = await self.call(
                 '--jsonfile-pretty', str(json_path),
                 *options,
                 target,
                 idle_timeout = 120,
             )
-            time_taken = round((datetime.now() - start_time).total_seconds())
+            time_taken = round(time.perf_counter() - start_time)
 
             if completed.exception is not None:
                 raise RuntimeError(

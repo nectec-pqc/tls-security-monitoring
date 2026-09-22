@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Integer, Identity, ForeignKey, String, DateTime
+from sqlalchemy import Integer, Identity, ForeignKey, String, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,8 +33,8 @@ class OpinionTable(Base):
     ruleset_version: Mapped[str] = mapped_column(String(50))
     verdict: Mapped[dict | list] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=datetime.now,
+        DateTime(timezone = True),
+        default = func.now(),
     )
 
     cbom: Mapped['CbomTable'] = relationship(back_populates='opinions')

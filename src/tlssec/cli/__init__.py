@@ -4,7 +4,7 @@ _logger = logging.getLogger(__name__)
 import asyncio
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, UTC
 
 import click
 import yaml
@@ -115,7 +115,7 @@ def scan(ctx, ids, tags, ips, hostnames, port, force, no_cbom, no_opinion):
 
     # One timestamp for the whole run: the cooldown cutoff reference and the
     # last_seen stamp written to every scanned endpoint below.
-    now = datetime.now()
+    now = datetime.now(UTC)
 
     scannable = [ep for ep in endpoints if ep.retire_at is None]
     if force:
@@ -246,6 +246,9 @@ def _layer_payload(scan, layer):
     return opinion_row.verdict if opinion_row else None
 
 
+# TODO: consider either:
+# - output timezone always. (do formatting too)
+# - or if not outputting timezone, consider converting to system timezone first.
 def _layer_created(scan, layer):
     """Create time of a layer, used for the filename; falls back to now."""
     if layer == 'raw':
@@ -255,8 +258,7 @@ def _layer_created(scan, layer):
     else:
         opinion_row = _latest_opinion(scan)
         dt = opinion_row.created_at if opinion_row else None
-    dt = dt or datetime.now()
-    return dt.replace(tzinfo=None) if dt.tzinfo else dt
+    return dt or datetime.now(UTC)
 
 
 def _unique_path(directory, base):

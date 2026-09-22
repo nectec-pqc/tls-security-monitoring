@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 import pytest
 from sqlalchemy import select
@@ -369,7 +369,7 @@ def test_edit_endpoint_rejects_invalid_tag(cli_runner, session):
 
 def test_edit_endpoint_enable_reenables_disabled(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
-    ep.retire_at = datetime.now()
+    ep.retire_at = datetime.now(UTC)
     session.flush()
 
     # Selecting by tag must still find a disabled endpoint to re-enable it.
@@ -587,7 +587,7 @@ def test_nmap_declined_endpoint_not_added(cli_runner, session, monkeypatch):
 def test_nmap_skips_disabled_endpoint(cli_runner, session, monkeypatch):
     # Only endpoint carrying the tag is disabled -> nothing scannable.
     ep = op.make_endpoint(session, 443, '127.0.0.1', 'localhost', ['network/tls'])
-    ep.retire_at = datetime.now()
+    ep.retire_at = datetime.now(UTC)
     session.flush()
 
     called = False
@@ -695,7 +695,7 @@ def test_scan_narrows_by_ip_and_port(cli_runner, session, monkeypatch):
 def test_scan_skips_disabled_endpoints(cli_runner, session, monkeypatch):
     active = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
     disabled = op.make_endpoint(session, 443, '10.0.0.2', None, ['prod'])
-    disabled.retire_at = datetime.now()
+    disabled.retire_at = datetime.now(UTC)
     session.flush()
     active_id = active.id
 
@@ -867,7 +867,7 @@ def test_scan_updates_last_seen(cli_runner, session, monkeypatch):
 
 def test_scan_skips_endpoint_in_cooldown(cli_runner, session, monkeypatch):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
-    ep.last_seen = datetime.now()  # just scanned -> inside default 7-day cooldown
+    ep.last_seen = datetime.now(UTC)  # just scanned -> inside default 7-day cooldown
     session.flush()
 
     scanned = []
@@ -882,7 +882,7 @@ def test_scan_skips_endpoint_in_cooldown(cli_runner, session, monkeypatch):
 
 def test_scan_force_bypasses_cooldown(cli_runner, session, monkeypatch):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
-    ep.last_seen = datetime.now()  # inside cooldown
+    ep.last_seen = datetime.now(UTC)  # inside cooldown
     session.flush()
 
     scanned = []
@@ -896,7 +896,7 @@ def test_scan_force_bypasses_cooldown(cli_runner, session, monkeypatch):
 
 def test_scan_due_endpoint_past_cooldown_is_scanned(cli_runner, session, monkeypatch):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
-    ep.last_seen = datetime.now() - timedelta(days=30)  # past 7-day cooldown
+    ep.last_seen = datetime.now(UTC) - timedelta(days=30)  # past 7-day cooldown
     session.flush()
 
     scanned = []

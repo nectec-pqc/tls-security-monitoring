@@ -1,7 +1,7 @@
 import logging
 _logger = logging.getLogger(__name__)
 
-from datetime import datetime
+from datetime import datetime, UTC
 
 from sqlalchemy import Engine, select, or_, func
 from sqlalchemy.orm import Session
@@ -201,7 +201,7 @@ def set_endpoints_disabled(
     clears ``retire_at`` back to None. A non-empty ``retire_at`` therefore means
     "disabled", and empty means "active".
     """
-    now = datetime.now()
+    now = datetime.now(UTC)
     for endpoint in endpoints:
         if disabled:
             if endpoint.retire_at is None:
@@ -277,7 +277,7 @@ def make_endpoint(session, port, ip, hostname, tags=()):
             port=port,
             ip=ip,
             hostname=hostname,
-            first_seen=datetime.now(),
+            first_seen=datetime.now(UTC),
             # last_seen is left NULL until the first recorded scan, so a freshly
             # added endpoint is due immediately instead of sitting in cooldown.
         )

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Integer, Identity, ForeignKey, String, DateTime
+from sqlalchemy import Integer, Identity, ForeignKey, String, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -38,8 +38,8 @@ class CbomTable(Base):
     builder_version: Mapped[str] = mapped_column(String(50))
     document: Mapped[dict] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=datetime.now,
+        DateTime(timezone = True),
+        default = func.now(),
     )
 
     scan: Mapped['ScanTable'] = relationship(back_populates='cbom')

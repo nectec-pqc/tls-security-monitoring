@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import datetime
+import time
 from importlib.metadata import version, PackageNotFoundError
 
 import tlssec.core.model as m
@@ -63,9 +63,9 @@ class SshAudit:
             raise ValueError('endpoint has neither hostname nor ip to scan')
         target = f'{host}:{endpoint.port}'
 
-        start_time = datetime.now()
+        start_time = time.perf_counter()
         completed = await self.call('--json', '-p', str(endpoint.port), host)
-        time_taken = round((datetime.now() - start_time).total_seconds())
+        time_taken = round(time.perf_counter() - start_time)
           
         if completed.exception is not None:
             raise RuntimeError(

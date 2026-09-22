@@ -220,7 +220,7 @@ class Nmap:
         def xml_path_context():
             if base_output_dir:
                 xml_path = base_output_dir / xml_path_template.format(
-                    datestring = datetime.now().replace(microsecond = 0).isoformat(),
+                    datestring = datetime.now().astimezone().replace(microsecond = 0).isoformat(),
                     target = cls.encode_target_for_filename(target),
                 )
                 if xml_path.exists():

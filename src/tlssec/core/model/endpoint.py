@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Optional
 from enum import StrEnum, auto
 
@@ -81,13 +81,14 @@ class Endpoint(BaseModel):
     last_seen: datetime | None = None
     retire_at: datetime | None = None
 
+    # TODO: why isn't this just a default value?
     @model_validator(mode = 'after')
     def default_first_seen(self):
         # first_seen marks when tracking began, so default it to now. last_seen is
         # intentionally NOT defaulted: leaving it None keeps a fresh endpoint "due"
         # (never scanned) instead of looking just-scanned to the cooldown filter.
         if self.first_seen is None:
-            self.first_seen = datetime.now()
+            self.first_seen = datetime.now(UTC)
         return self
 
 
