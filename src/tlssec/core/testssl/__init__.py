@@ -8,13 +8,13 @@ import json
 import os
 import re
 import tempfile
-import time
 
 import yaml
 
 import tlssec.core.model as m
-from tlssec.asyncio import run_subprocess, CompletedProcess
 import tlssec.standard as standard
+from tlssec.asyncio import run_subprocess, CompletedProcess
+from tlssec.timer import Timer
 
 
 class Testssl:
@@ -115,14 +115,13 @@ class Testssl:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             json_path = Path(tmpdir) / 'result.json'
-            start_time = time.perf_counter()
-            completed = await self.call(
-                '--jsonfile-pretty', str(json_path),
-                *options,
-                target,
-                idle_timeout = 120,
-            )
-            time_taken = round(time.perf_counter() - start_time)
+            with Timer() as timer:
+                completed = await self.call(
+                    '--jsonfile-pretty', str(json_path),
+                    *options,
+                    target,
+                    idle_timeout = 120,
+                )
 
             if completed.exception is not None:
                 raise RuntimeError(
@@ -145,8 +144,8 @@ class Testssl:
             observed_ip = self._observed_ip(result),
             # testssl scans by hostname when available, sending it as SNI.
             sni = endpoint.hostname,
-            start_time = start_time,
-            time_taken = time_taken,
+            start_time = timer.start_time,
+            time_taken = round(timer.elapsed),
         )
 
     @staticmethod
