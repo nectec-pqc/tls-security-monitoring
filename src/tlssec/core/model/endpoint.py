@@ -75,21 +75,21 @@ class Endpoint(BaseModel):
             ' String "none" means there is no TLS.'
         ),
     )
-    first_seen: datetime = None
-    # last_seen is the last *scan* time (the cooldown clock). It stays None until
-    # the first recorded scan, so a newly tracked endpoint reads as never-scanned.
-    last_seen: datetime | None = None
+    first_seen: datetime = PydanticField(
+        default_factory = lambda: datetime.now(UTC),
+        description = (
+            'Marks when endpoint first get tracked in system, so it defaults to now'
+        ),
+    )
+    last_seen: datetime | None = PydanticField(
+        default = None,
+        description = (
+            'The last scan time. Stays None until the first recorded scan.'
+            ' Newly tracked endpoint set last_seen to None to indicate it was never scanned.'
+            ' Will be checked against cooldown time if the endpoint is due to be re-scanned.'
+        ),
+    )
     retire_at: datetime | None = None
-
-    # TODO: why isn't this just a default value?
-    @model_validator(mode = 'after')
-    def default_first_seen(self):
-        # first_seen marks when tracking began, so default it to now. last_seen is
-        # intentionally NOT defaulted: leaving it None keeps a fresh endpoint "due"
-        # (never scanned) instead of looking just-scanned to the cooldown filter.
-        if self.first_seen is None:
-            self.first_seen = datetime.now(UTC)
-        return self
 
 
 class EndpointTable(Base):
