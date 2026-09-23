@@ -180,7 +180,7 @@ class Nmap:
         target: str,
         *,
         base_output_dir: Path | None = None,
-        xml_path_template: str = 'nmap/{datestring}_{target}.nmap.xml',
+        xml_path_template: str = 'nmap/{now:%Y-%m-%dT%H%M%S%z}_{target}.nmap.xml',
         # `-sV` is required for reliable implicit-vs-explicit TLS detection:
         # nmap only emits tunnel="ssl" (positive wrapped-TLS evidence) under
         # version detection. It can be slow on services returning
@@ -220,7 +220,7 @@ class Nmap:
         def xml_path_context():
             if base_output_dir:
                 xml_path = base_output_dir / xml_path_template.format(
-                    datestring = datetime.now().astimezone().replace(microsecond = 0).isoformat(),
+                    now = datetime.now().astimezone(),
                     target = cls.encode_target_for_filename(target),
                 )
                 if xml_path.exists():
