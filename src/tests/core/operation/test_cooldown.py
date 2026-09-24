@@ -2,41 +2,66 @@ from datetime import datetime, timedelta, UTC
 from types import SimpleNamespace
 
 import pandas as pd
+import pytest
 
 from tlssec.core.operation import is_in_cooldown
 
 
-COOLDOWN = pd.Timedelta('7 days')
+def mock_endpoint(last_seen):
+    return SimpleNamespace(last_seen = last_seen)
 
 
-def _ep(last_seen):
-    return SimpleNamespace(last_seen=last_seen)
-
-
-def test_never_scanned_is_due():
-    # last_seen is None -> the endpoint has never been scanned, always due.
-    assert not is_in_cooldown(_ep(None), COOLDOWN, datetime.now(UTC))
-
-
-def test_recently_scanned_is_in_cooldown():
-    now = datetime(2026, 7, 17, 12, 0, 0)
-    assert is_in_cooldown(_ep(now - timedelta(days=1)), COOLDOWN, now)
-
-
-def test_scanned_before_cooldown_is_due():
-    now = datetime(2026, 7, 17, 12, 0, 0)
-    assert not is_in_cooldown(_ep(now - timedelta(days=8)), COOLDOWN, now)
-
-
-def test_boundary_exactly_at_cooldown_is_due():
-    now = datetime(2026, 7, 17, 12, 0, 0)
-    # last == now - cooldown, comparison is strict (last > cutoff), so due.
-    assert not is_in_cooldown(_ep(now - COOLDOWN.to_pytimedelta()), COOLDOWN, now)
-
-
-def test_tz_aware_last_seen_vs_naive_now_does_not_raise():
-    # last_seen from Postgres is tz-aware; the run's `now` is naive. Mixed
-    # awareness must be normalized rather than raise TypeError.
-    now = datetime(2026, 7, 17, 12, 0, 0)
-    ep = _ep(datetime(2026, 7, 16, 12, 0, 0, tzinfo = UTC))
-    assert is_in_cooldown(ep, COOLDOWN, now)
+@pytest.mark.parametrize(
+    'kwargs, expected',
+    [
+        pytest.param(
+            {
+                'endpoint': mock_endpoint(None),
+                'cooldown': pd.Timedelta('7 days'),
+                'now': datetime.now(UTC),
+            },
+            False,
+            id = 'endpoint that has never been scanned is never in cooldown'
+        ),
+        pytest.param(
+            {
+                'endpoint': mock_endpoint(last_seen := pd.Timestamp('2026-07-16')),
+                'cooldown': pd.Timedelta('7 days'),
+                'now': last_seen + pd.Timedelta('1 days'),
+            },
+            True,
+            id = 'naive time, in cooldown'
+        ),
+        pytest.param(
+            {
+                'endpoint': mock_endpoint(last_seen := pd.Timestamp('2026-07-16')),
+                'cooldown': pd.Timedelta('7 days'),
+                'now': last_seen + pd.Timedelta('8 days'),
+            },
+            False,
+            id = 'naive time, out of cooldown'
+        ),
+        pytest.param(
+            {
+                'endpoint': mock_endpoint(last_seen := pd.Timestamp('2026-07-16')),
+                'cooldown': (cooldown := pd.Timedelta('7 days')),
+                'now': last_seen + cooldown,
+            },
+            False,
+            id = 'naive time, exactly at cooldown boundary is considered out of cooldown'
+        ),
+        # TODO: Need to check tz awareness more rigurously
+        pytest.param(
+            {
+                'endpoint': mock_endpoint(pd.Timestamp('2026-07-16')),
+                'cooldown': pd.Timedelta('7 days'),
+                'now': pd.Timestamp('2026-07-17', tz = UTC),
+            },
+            True,
+            id = 'only check that mixed tz awareness does not raise exception'
+        ),
+    ],
+)
+def test_is_in_cooldown(kwargs, expected):
+    result = is_in_cooldown(**kwargs)
+    assert result == expected
