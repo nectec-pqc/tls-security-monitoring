@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 from datetime import datetime, timedelta, UTC
 from types import SimpleNamespace
 
@@ -12,7 +13,7 @@ def mock_endpoint(last_seen):
 
 
 @pytest.mark.parametrize(
-    'kwargs, expected',
+    'kwargs, expectation',
     [
         pytest.param(
             {
@@ -20,7 +21,7 @@ def mock_endpoint(last_seen):
                 'cooldown': pd.Timedelta('7 days'),
                 'now': datetime.now(UTC),
             },
-            False,
+            nullcontext(False),
             id = 'endpoint that has never been scanned is never in cooldown'
         ),
         pytest.param(
@@ -29,7 +30,7 @@ def mock_endpoint(last_seen):
                 'cooldown': pd.Timedelta('7 days'),
                 'now': last_seen + pd.Timedelta('1 days'),
             },
-            True,
+            nullcontext(True),
             id = 'naive time, in cooldown'
         ),
         pytest.param(
@@ -38,7 +39,7 @@ def mock_endpoint(last_seen):
                 'cooldown': pd.Timedelta('7 days'),
                 'now': last_seen + pd.Timedelta('8 days'),
             },
-            False,
+            nullcontext(False),
             id = 'naive time, out of cooldown'
         ),
         pytest.param(
@@ -47,21 +48,40 @@ def mock_endpoint(last_seen):
                 'cooldown': (cooldown := pd.Timedelta('7 days')),
                 'now': last_seen + cooldown,
             },
-            False,
+            nullcontext(False),
             id = 'naive time, exactly at cooldown boundary is considered out of cooldown'
         ),
-        # TODO: Need to check tz awareness more rigurously
         pytest.param(
             {
                 'endpoint': mock_endpoint(pd.Timestamp('2026-07-16')),
                 'cooldown': pd.Timedelta('7 days'),
                 'now': pd.Timestamp('2026-07-17', tz = UTC),
             },
-            True,
-            id = 'only check that mixed tz awareness does not raise exception'
+            pytest.raises(TypeError),
+            id = 'Mixed tz awareness is not allowed'
+        ),
+        pytest.param(
+            {
+                'endpoint': mock_endpoint(pd.Timestamp('2026-07-16T12:00', tz = '+07:00')),
+                'cooldown': pd.Timedelta('2 hours'),
+                'now': pd.Timestamp('2026-07-16T15:00', tz = '+09:00'),
+            },
+            nullcontext(True),
+            id = 'In cooldown only if both timezone are not ignored'
+        ),
+        pytest.param(
+            {
+                'endpoint': mock_endpoint(pd.Timestamp('2026-07-16T12:00', tz = '+07:00')),
+                'cooldown': pd.Timedelta('2 hours'),
+                'now': pd.Timestamp('2026-07-16T13:00', tz = '+05:00'),
+            },
+            nullcontext(False),
+            id = 'Out of cooldown only if both timezone are not ignored'
         ),
     ],
 )
-def test_is_in_cooldown(kwargs, expected):
-    result = is_in_cooldown(**kwargs)
-    assert result == expected
+def test_is_in_cooldown(kwargs, expectation):
+    with expectation as expected:
+        result = is_in_cooldown(**kwargs)
+        if isinstance(expected, bool):
+            assert result == expected
