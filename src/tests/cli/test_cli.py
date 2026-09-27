@@ -851,18 +851,20 @@ def test_scan_dispatches_ssh_endpoint_to_sshaudit(cli_runner, session, monkeypat
 
 # --- scan cooldown ---------------------------------------------------------
 
+
 def test_scan_updates_last_seen(cli_runner, session, monkeypatch):
+    # long ago -> due for scanning
+    previous_last_seen = datetime(2000, 1, 1, tzinfo = UTC)
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
-    ep.last_seen = datetime(2000, 1, 1)  # long ago -> due for scanning
+    ep.last_seen = previous_last_seen
     session.flush()
     monkeypatch.setattr(Testssl, 'scan', _fake_scan_factory([]))
 
     result = cli_runner.invoke(cli, ['scan', '--tag', 'prod'])
     assert result.exit_code == 0, result.output
 
-    # last_seen is bumped to the run time (tolerate any session tz offset).
-    updated = _by_ip(session)['10.0.0.1'].last_seen
-    assert updated.replace(tzinfo=None) > datetime(2020, 1, 1)
+    current_last_seen = _by_ip(session)['10.0.0.1'].last_seen
+    assert current_last_seen > previous_last_seen
 
 
 def test_scan_skips_endpoint_in_cooldown(cli_runner, session, monkeypatch):
@@ -908,8 +910,10 @@ def test_scan_due_endpoint_past_cooldown_is_scanned(cli_runner, session, monkeyp
 
 
 def test_scan_does_not_update_last_seen_on_failure(cli_runner, session, monkeypatch):
+    # old -> due, but the scan will fail
+    previous_last_seen = datetime(2000, 1, 1, tzinfo = UTC)
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['prod'])
-    ep.last_seen = datetime(2000, 1, 1)  # old -> due, but the scan will fail
+    ep.last_seen = previous_last_seen
     session.flush()
 
     async def fake_scan(self, endpoint):
@@ -921,7 +925,8 @@ def test_scan_does_not_update_last_seen_on_failure(cli_runner, session, monkeypa
     assert result.exit_code == 0, result.output
     assert 'failed' in result.output
     # A failed scan records nothing, so last_seen must not advance.
-    assert _by_ip(session)['10.0.0.1'].last_seen.replace(tzinfo=None) < datetime(2010, 1, 1)
+    current_last_seen = _by_ip(session)['10.0.0.1'].last_seen
+    assert current_last_seen == previous_last_seen
 
 
 def test_newly_added_endpoint_is_immediately_scannable(cli_runner, session, monkeypatch):

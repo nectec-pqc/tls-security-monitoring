@@ -1,5 +1,5 @@
 from contextlib import nullcontext
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, UTC
 from types import SimpleNamespace
 
 import pandas as pd
