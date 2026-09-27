@@ -6,16 +6,12 @@ import pytest
 import tlssec.core.model as m
 import tlssec.core.cbom as cbom
 
-FIXTURE = (
-    Path(__file__).parents[1]
-    / 'testssl/result_cases/current_openssl_server/success.pretty.json'
-)
-
 
 @pytest.fixture
-def document():
-    result = json.loads(FIXTURE.read_text())
-    return cbom.build(m.Scan(result=result, scanner=m.Scanner.testssl)).document
+def document(tests_root):
+    path = tests_root / 'core/testssl/result_cases/current_openssl_server/success.pretty.json'
+    result = json.loads(path.read_text())
+    return cbom.build(m.Scan(result = result, scanner = m.Scanner.testssl)).document
 
 
 def _by_type(doc):

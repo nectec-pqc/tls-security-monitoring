@@ -8,15 +8,11 @@ import tlssec.core.model as m
 import tlssec.core.operation as op
 import tlssec.core.cbom as cbom
 
-FIXTURE = (
-    Path(__file__).parents[1]
-    / 'testssl/result_cases/current_openssl_server/success.pretty.json'
-)
-
 
 @pytest.fixture
-def result():
-    return json.loads(FIXTURE.read_text())
+def result(tests_root):
+    path = tests_root / 'core/testssl/result_cases/current_openssl_server/success.pretty.json'
+    return json.loads(path.read_text())
 
 
 def _endpoint(session):

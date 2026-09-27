@@ -6,15 +6,12 @@ import pytest
 import tlssec.core.model as m
 import tlssec.core.cbom as cbom
 
-FIXTURE = (
-    Path(__file__).parents[1] / 'sshaudit/result_cases/openssh_server.json'
-)
-
 
 @pytest.fixture
-def document():
-    result = json.loads(FIXTURE.read_text())
-    return cbom.build(m.Scan(result=result, scanner=m.Scanner.ssh_audit)).document
+def document(tests_root):
+    path = tests_root / 'core/sshaudit/result_cases/openssh_server.json'
+    result = json.loads(path.read_text())
+    return cbom.build(m.Scan(result = result, scanner = m.Scanner.ssh_audit)).document
 
 
 def _by_type(doc):

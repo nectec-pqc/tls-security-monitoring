@@ -7,18 +7,14 @@ import tlssec.core.model as m
 import tlssec.core.cbom as cbom
 import tlssec.core.opinion as opinion
 
-FIXTURE = (
-    Path(__file__).parents[1]
-    / 'testssl/result_cases/current_openssl_server/success.pretty.json'
-)
-
 
 @pytest.fixture
-def scan():
+def scan(tests_root):
+    path = tests_root / 'core/testssl/result_cases/current_openssl_server/success.pretty.json'
     return m.Scan(
-        result=json.loads(FIXTURE.read_text()),
-        scanner=m.Scanner.testssl,
-        id=1,
+        result = json.loads(path.read_text()),
+        scanner = m.Scanner.testssl,
+        id = 1,
     )
 
 
