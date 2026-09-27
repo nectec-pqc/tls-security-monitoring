@@ -986,7 +986,10 @@ def test_view_no_match(cli_runner, session):
 
 
 def test_view_prints_requested_layers(cli_runner, session):
-    _make_scanned(session, '10.0.0.1', ['v'], start_time=datetime(2026, 7, 18, 2, 9, 44))
+    _make_scanned(
+        session, '10.0.0.1', ['v'],
+        start_time = datetime(2026, 7, 18, 2, 9, 44, tzinfo = UTC),
+    )
 
     result = cli_runner.invoke(cli, ['view', '--tag', 'v', '--raw', '--cbom', '--opinion'])
     assert result.exit_code == 0, result.output
@@ -1001,7 +1004,9 @@ def test_view_reports_missing_layer(cli_runner, session):
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['v'])
     session.flush()
     session.add(model.ScanTable(
-        result={'x': 1}, start_time=datetime(2026, 7, 18), belong_to_endpoint_id=ep.id,
+        result = {'x': 1},
+        start_time = datetime(2026, 7, 18, tzinfo = UTC),
+        belong_to_endpoint_id = ep.id,
     ))
     session.flush()
 
@@ -1012,8 +1017,11 @@ def test_view_reports_missing_layer(cli_runner, session):
 
 def test_view_outputs_files_named_by_time_layer_and_filter(cli_runner, session, tmp_path, monkeypatch):
     monkeypatch.setenv('TLSSEC_OUTPUT_DIR', str(tmp_path))
-    _make_scanned(session, '10.0.0.1', ['v'], start_time=datetime(2026, 7, 18, 2, 9, 44),
-                  result={'scanResult': []})
+    _make_scanned(
+        session, '10.0.0.1', ['v'],
+        start_time = datetime(2026, 7, 18, 2, 9, 44, tzinfo = UTC),
+        result = {'scanResult': []},
+    )
 
     result = cli_runner.invoke(cli, ['view', '--ip', '10.0.0.1', '--raw', '--opinion', '--output'])
     assert result.exit_code == 0, result.output
@@ -1034,9 +1042,14 @@ def test_view_emits_all_scans_of_an_endpoint(cli_runner, session, tmp_path, monk
     monkeypatch.setenv('TLSSEC_OUTPUT_DIR', str(tmp_path))
     ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['v'])
     session.flush()
-    for t in (datetime(2026, 7, 10, 1, 0, 0), datetime(2026, 7, 18, 2, 0, 0)):
+    for t in (
+        datetime(2026, 7, 10, 1, 0, 0, tzinfo = UTC),
+        datetime(2026, 7, 18, 2, 0, 0, tzinfo = UTC),
+    ):
         session.add(model.ScanTable(
-            result={'day': t.day}, start_time=t, belong_to_endpoint_id=ep.id,
+            result = {'day': t.day},
+            start_time = t,
+            belong_to_endpoint_id = ep.id,
         ))
     session.flush()
 
