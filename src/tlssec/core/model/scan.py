@@ -3,7 +3,12 @@ from datetime import datetime
 from enum import StrEnum, auto
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, IPvAnyAddress
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field as PydanticField,
+    IPvAnyAddress,
+)
 from sqlalchemy import Integer, Identity, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -31,12 +36,22 @@ class Scan(BaseModel):
     result: dict | list
     scanner: Scanner = Scanner.testssl
     scanner_version: str | None = None
-    # The IP the scanner actually connected to, and the server name (SNI) it
-    # sent. observed_ip can differ from the endpoint's own IP behind a load
-    # balancer / round-robin DNS, so it is recorded per scan rather than assumed
-    # equal to the endpoint. sni is None for protocols without SNI (e.g. SSH).
-    observed_ip: IPvAnyAddress | None = None
-    sni: str | None = None
+    observed_ip: IPvAnyAddress | None = PydanticField(
+        default = None,
+        description = (
+            'The IP the scanner actually connected to.'
+            " There are situations where `observed_ip` is different from endpoint's IP"
+            ' such as when the endpoint is behind a loadbalancer or a round-robin DNS.'
+            ' Therefore, `observed_ip` needs to be recorded per scan.'
+        ),
+    )
+    sni: str | None = PydanticField(
+        default = None,
+        description = (
+            'The hostname or domain name used for Server Name Indication (SNI) the scanner sent out.'
+            ' `sni` is None for protocols without SNI (e.g. SSH).'
+        ),
+    )
     start_time: datetime | None = None
     time_taken: int | None = None
     belong_to_endpoint_id: int | None = None
