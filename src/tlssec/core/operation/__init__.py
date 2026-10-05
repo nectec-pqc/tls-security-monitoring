@@ -340,9 +340,9 @@ def store_cbom_for_scan(
         session.flush()
     record = cbom.build(scan_row)
     cbom_row = m.CbomTable(
-        scan_id=scan_row.id,
-        builder_version=record.builder_version,
-        document=record.document,
+        scan_id = scan_row.id,
+        builder_version = record.builder_version,
+        document = record.document,
     )
     session.add(cbom_row)
     session.flush()
@@ -358,6 +358,7 @@ def scans_needing_cbom(session: Session) -> list[m.ScanTable]:
         .outerjoin(m.CbomTable, m.CbomTable.scan_id == m.ScanTable.id)
         .where(or_(
             m.CbomTable.id.is_(None),
+            # TODO: Use semver comparison. Higher version of cbom might not need replacing.
             m.CbomTable.builder_version != cbom.BUILDER_VERSION,
         ))
     ).all())
@@ -377,7 +378,12 @@ def backfill_cboms(session: Session, *, with_opinion: bool = True) -> int:
     """(Re)build CBOMs for every raw scan lacking a current one. Returns count."""
     scans = scans_needing_cbom(session)
     for scan_row in scans:
-        store_cbom_for_scan(session, scan_row, with_opinion=with_opinion, replace=True)
+        store_cbom_for_scan(
+            session,
+            scan_row,
+            with_opinion = with_opinion,
+            replace = True,
+        )
     return len(scans)
 
 

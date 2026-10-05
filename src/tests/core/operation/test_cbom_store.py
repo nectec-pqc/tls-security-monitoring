@@ -29,7 +29,9 @@ def _endpoint(session):
 
 def _raw_scan(session, result, ep):
     row = m.ScanTable(
-        result=result, scanner=m.Scanner.testssl, belong_to_endpoint_id=ep.id,
+        result = result,
+        scanner = m.Scanner.testssl,
+        belong_to_endpoint_id = ep.id,
     )
     session.add(row)
     session.flush()
@@ -69,7 +71,11 @@ def test_backfill_is_idempotent(session, result):
 def test_backfill_rebuilds_stale_cbom(session, result):
     scan_row = _raw_scan(session, result, _endpoint(session))
     # A CBOM produced by an older builder version must be rebuilt in place.
-    stale = m.CbomTable(scan_id=scan_row.id, builder_version='0.0.0-old', document={})
+    stale = m.CbomTable(
+        scan_id = scan_row.id,
+        builder_version = '0.0.0-old',
+        document = {},
+    )
     session.add(stale)
     session.flush()
     stale_id = stale.id
