@@ -28,15 +28,15 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "devtools>=0.12.2",
     "jsonschema>=4.26.0",
+    "pdbr>=0.9.8",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
     "textual-dev>=1.8.0",
 ]
 
 [project.scripts]
-tlssec = "tlssec.cli:cli"
+tlssec = "tlssec.cli:entrypoint"
 
 [project.optional-dependencies]
 analysis = [
@@ -57,7 +57,10 @@ exclude-newer = "7 days"
 [tool.pytest]
 testpaths = ["src/tests"]
 # Deselect slow tests by default. Use `-m ''` to include slow tests.
-addopts = ["-m", "not slow"]
+addopts = [
+    "-m", "not slow",
+    "--pdbcls", "pdbr:RichPdb",
+]
 strict = true
 markers = [
     "slow: take a long time to run",

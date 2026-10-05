@@ -524,20 +524,6 @@ wheels = [
 ]
 
 [[package]]
-name = "devtools"
-version = "0.12.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "asttokens" },
-    { name = "executing" },
-    { name = "pygments" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/84/75/b78198620640d394bc435c17bb49db18419afdd6cfa3ed8bcfe14034ec80/devtools-0.12.2.tar.gz", hash = "sha256:efceab184cb35e3a11fa8e602cc4fadacaa2e859e920fc6f87bf130b69885507", size = 75005, upload-time = "2023-09-03T16:57:00.679Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d1/ae/afb1487556e2dc827a17097aac8158a25b433a345386f0e249f6d2694ccb/devtools-0.12.2-py3-none-any.whl", hash = "sha256:c366e3de1df4cdd635f1ad8cbcd3af01a384d7abda71900e68d43b04eb6aaca7", size = 19411, upload-time = "2023-09-03T16:56:59.049Z" },
-]
-
-[[package]]
 name = "dnspython"
 version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1808,6 +1794,19 @@ wheels = [
 ]
 
 [[package]]
+name = "pdbr"
+version = "0.9.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyreadline3", marker = "sys_platform == 'win32'" },
+    { name = "rich" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ae/d6/a1fb430ce78bea31796c79f89b0708613e9275ae6f720272774495a4b2ea/pdbr-0.9.8.tar.gz", hash = "sha256:0c523dd8f2356926739a7b0e5703a23abd923da0b989c929ac6b062a8142dcc3", size = 30429, upload-time = "2026-07-15T08:57:39.251Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/03/b5/cc93c545e3b705c8af7c6b99c015c3a665d9ccfe6ebed905559f41ca740d/pdbr-0.9.8-py3-none-any.whl", hash = "sha256:8808ce919a483a03ce70e515fb78c2362ab8bc91b1e77f64c400ccd1613a1cce", size = 29326, upload-time = "2026-07-15T08:57:40.224Z" },
+]
+
+[[package]]
 name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2173,6 +2172,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f3/91/9c6ee907786a473bf81c5f53cf703ba0957b23ab84c264080fb5a450416f/pyparsing-3.3.2.tar.gz", hash = "sha256:c777f4d763f140633dcb6d8a3eda953bf7a214dc4eff598413c070bcdc117cbc", size = 6851574, upload-time = "2026-01-21T03:57:59.36Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl", hash = "sha256:850ba148bd908d7e2411587e247a1e4f0327839c40e2e5e6d05a007ecc69911d", size = 122781, upload-time = "2026-01-21T03:57:55.912Z" },
+]
+
+[[package]]
+name = "pyreadline3"
+version = "3.5.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b6/6d/f94028646d7bbe6d9d873c47ee7c246f2d29129d253f0d96cb6fcab70733/pyreadline3-3.5.6.tar.gz", hash = "sha256:61e53218b99656091ddb077df9e71f25850e72e030b6183b39c9b7e6e4f4a9bf", size = 100368, upload-time = "2026-05-14T17:55:04.471Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f7/5e/35c856e186b74678c24927847ad9895a51f1bc02a0c6126477a6c6040064/pyreadline3-3.5.6-py3-none-any.whl", hash = "sha256:8449b734232e42a5dcd74048e39b60db2839a4c38cf3ae2bf7707d58b5389c0d", size = 85243, upload-time = "2026-05-14T17:55:03.262Z" },
 ]
 
 [[package]]
@@ -2770,8 +2778,8 @@ analysis = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "devtools" },
     { name = "jsonschema" },
+    { name = "pdbr" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "textual-dev" },
@@ -2805,8 +2813,8 @@ provides-extras = ["analysis"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "devtools", specifier = ">=0.12.2" },
     { name = "jsonschema", specifier = ">=4.26.0" },
+    { name = "pdbr", specifier = ">=0.9.8" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "textual-dev", specifier = ">=1.8.0" },

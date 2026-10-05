@@ -24,6 +24,12 @@ from tlssec.core.testssl import Testssl
 from tlssec.core.sshaudit import SshAudit
 
 
+def entrypoint():
+    from rich.traceback import install
+    install(show_locals = True)
+    cli()
+
+
 @click.group(
     'tlssec',
     cls = ColoredGroup,
