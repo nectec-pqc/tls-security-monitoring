@@ -35,8 +35,13 @@ class Tui(App):
     # (page id, sidebar label) -- order = sidebar order
     PAGES = [
         ("endpoints", "Endpoints"),
-        ("scans", "Scans"),
         ("tags", "Tags"),
+        ("scans", "Scans"),
+        ("cboms", "CBOMs"),
+        ("opinions", "Opinions"),
+        ("statistics", "Statistics"),
+        ("import", "Import"),
+        ("export", "Export"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -51,8 +56,10 @@ class Tui(App):
             )
             with ContentSwitcher(initial = "endpoints", id = "pages"):
                 yield EndpointsPage(id = "endpoints")
-                yield PlaceholderPage("Scans", id = "scans")
-                yield PlaceholderPage("Tags", id = "tags")
+                for pid, label in self.PAGES:
+                    if pid in ['endpoints']:
+                        continue
+                    yield PlaceholderPage(label, id = pid)
         yield Footer()
 
     def on_mount(self) -> None:

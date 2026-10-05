@@ -78,11 +78,11 @@ def load_endpoints() -> list[EndpointRow]:
     # -----------------------------------------------------------------------
     now = datetime.now()
     return [  # demo data so the app runs out of the box
-        EndpointRow(1, "10.0.0.5", "api.example.com", 443, "/", "tcp", "https",
-                    "nginx 1.25", "strict", _fmt_dt(now), _fmt_dt(now)),
-        EndpointRow(2, "10.0.0.6", "db.example.com", 5432, "/extremely-long-path/enough-to-overflow/terminal-width", "tcp", "postgres",
-                    "PostgreSQL 16", "optional", _fmt_dt(now), "-"),
-        EndpointRow(3, "192.168.1.20", "", 22, "/", "tcp", "ssh",
+        EndpointRow(68, "10.0.0.5", "api.example.com", 443, "/v2", "tcp", "https",
+                    "nginx 1.25", "implicit", _fmt_dt(now), _fmt_dt(now)),
+        EndpointRow(69, "10.0.0.6", "db.example.com", 5432, "/", "tcp", "postgres",
+                    "PostgreSQL 16", "explicit", _fmt_dt(now), "-"),
+        EndpointRow(70, "10.0.0.5", "", 22, "/", "tcp", "ssh",
                     "OpenSSH 9.6", "", _fmt_dt(now), _fmt_dt(now)),
     ]
 
