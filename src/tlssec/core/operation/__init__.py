@@ -106,6 +106,10 @@ def find_new_endpoints(
     ]
 
 
+# TODO: add sorting
+# TODO: add start from
+# TODO: add limit
+# TODO: add `required: true | false | None` filtering
 def select_endpoints(
     session: Session,
     ids: list[int] = (),
@@ -117,10 +121,13 @@ def select_endpoints(
     """Select endpoints matching ALL of the given criteria (intersection).
 
     Each provided option adds a constraint the endpoint must satisfy:
-    ``ids``/``ips``/``hostnames`` match when the endpoint's value is one of the
-    listed values (OR within a single option), ``tag_paths`` requires the
-    endpoint to carry ALL listed tags, and ``port`` pins the port. Because the
-    options are ANDed together, combining e.g. ``ips`` + ``hostnames`` + ``port``
+
+    - `ids`, `ips`, `hostnames` match when the endpoint's value is one of the
+      listed values (OR within a single option)
+    - `tag_paths` requires the endpoint to carry ALL listed tags
+    - `port` pins the port
+
+    Because the options are ANDed together, combining e.g. `ips` + `hostnames` + `port`
     narrows down toward a single endpoint rather than widening the match.
     Disabled (retired) endpoints are included so they can be re-enabled.
 
