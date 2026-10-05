@@ -696,3 +696,10 @@ def nmap(ctx, tag, ports):
 
     session.commit()
     click.echo('\nDone.')
+
+
+@cli.command(cls = ColoredCommand)
+def tui():
+    """Starts TLSSEC terminal user interface (TUI) app"""
+    from tlssec.tui.tui import Tui
+    Tui().run()

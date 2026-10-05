@@ -15,11 +15,19 @@ x-tlssec-base-service: &tlssec-base-service
     init:
       condition: service_completed_successfully
 
+x-host-env-passthrough-for-cli: &host-env-passthrough-for-cli
+  COLORTERM:
+  TERM: ${TERM:-xterm-256color}
+
 services:
   cli:
     <<: *tlssec-base-service
     entrypoint:
     - bash
+    environment:
+      <<:
+      - *tlssec-env
+      - *host-env-passthrough-for-cli
     profiles:
     - cli
   dev-cli:
@@ -31,7 +39,9 @@ services:
     entrypoint:
     - bash
     environment:
-      <<: *tlssec-env
+      <<:
+      - *tlssec-env
+      - *host-env-passthrough-for-cli
       TLSSEC_DEPLOYMENT_MODE: development
     volumes:
     - ./workdir:/home/tlssec
