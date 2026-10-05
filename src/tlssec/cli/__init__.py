@@ -699,7 +699,28 @@ def nmap(ctx, tag, ports):
 
 
 @cli.command(cls = ColoredCommand)
-def tui():
+@click.option(
+    '--serve',
+    is_flag = True,
+    help = (
+        'Serve TUI as Web UI on local machine.'
+        ' For accessing the same TUI on web browser instead of the terminal.'
+        ' Available at http://locahost:8000 on default settings.'
+        ' Not suitable for exposing as public service.'
+    ),
+    # TODO: change this to subcommand "serve" instead?
+    # with default command to being "run".
+)
+def tui(serve):
     """Starts TLSSEC terminal user interface (TUI) app"""
-    from tlssec.tui.tui import Tui
-    Tui().run()
+    if serve:
+        from textual_serve.server import Server
+        server = Server(
+            'python -m tlssec.tui',
+            host = '0.0.0.0',
+            title = 'TLSSEC',
+        )
+        server.serve()
+    else:
+        from tlssec.tui.tui import Tui
+        Tui().run()

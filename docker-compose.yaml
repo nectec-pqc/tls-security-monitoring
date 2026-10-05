@@ -8,6 +8,9 @@ x-tlssec-base-service: &tlssec-base-service
   environment: &tlssec-env
     TLSSEC_DB__HOST: db
     TLSSEC_DB__PASSWORD: local-test-password-PZ9dVzwew3Xe
+  ports:
+  # default port for serving textual TUI locally using `tlssec tui --serve`
+  - 8000:8000
   volumes:
   # Persist working directory
   - ./workdir:/home/tlssec
