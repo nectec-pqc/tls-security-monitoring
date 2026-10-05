@@ -71,6 +71,16 @@ class Tui(App):
         sidebar = self.query_one("#sidebar", OptionList)
         sidebar.highlighted = sidebar.get_option_index(page_id)
 
+    def on_option_list_option_selected(
+        self, event: OptionList.OptionSelected
+    ) -> None:
+        if event.option_list.id == "sidebar" and event.option.id:
+            # NOTE: `on_option_list_option_highlighted` should already switch
+            # current page so switching now is not necessary, but it is here to
+            # guard against future changes so it can work independently.
+            self.query_one(ContentSwitcher).current = event.option.id
+            self.screen.focus_next("#pages *")
+
     def action_focus_search(self) -> None:
         if self.query_one(ContentSwitcher).current == "endpoints":
             self.query_one(EndpointsPage).focus_search()
