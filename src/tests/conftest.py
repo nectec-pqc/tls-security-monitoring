@@ -10,6 +10,13 @@ from tlssec.database.database import Database
 import tlssec.core.model as model
 
 
+def pytest_configure(config):
+    # Ad hoc fix for [issue in pdbr interaction with mutiple breakpoints used in pytest](https://github.com/cansarigol/pdbr/issues/96)
+    import os
+    import pdbr
+    os.environ.pop("PYTHONBREAKPOINT", None)
+
+
 def pytest_addoption(parser):
     parser.addoption(
         '--regen-case',
