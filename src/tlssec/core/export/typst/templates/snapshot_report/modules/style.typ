@@ -1,4 +1,4 @@
-#import "@preview/ansi-render:0.9.1": ansi-render as original-ansi-render
+#import "@preview/ansi-render:0.9.2": ansi-render as original-ansi-render
 
 
 #let raw_boxing = state("raw_boxing", true)
@@ -42,7 +42,6 @@
 
 
 #let ansi-render(string, ..args) = {
-  string = string.replace("\u{1b}[m", "\u{1b}[0m")
   [
     #raw_boxing.update(false)
     #original-ansi-render(string, ..args)
