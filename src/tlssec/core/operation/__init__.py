@@ -133,8 +133,10 @@ def select_endpoints(
 
     Raises ValueError if any explicitly requested id does not exist.
     """
+    # TODO: Reduce roundtrip to database. Don't query per ID.
     missing = [
-        endpoint_id for endpoint_id in ids
+        endpoint_id
+        for endpoint_id in ids
         if session.get(m.EndpointTable, endpoint_id) is None
     ]
     if missing:
