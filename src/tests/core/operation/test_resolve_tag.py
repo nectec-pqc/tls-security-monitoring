@@ -10,7 +10,8 @@ import tlssec.core.model as m
 
 
 @dataclass
-class TestStep:
+class Step:
+    """A step in testing of resolve_tag"""
     requested_tag: str
     create: bool = True
     expected: type[Exception] | Literal['found', 'not-found'] = 'found'
@@ -21,7 +22,7 @@ class TestStep:
     [
         pytest.param(
             [
-                TestStep(
+                Step(
                     requested_tag = '',
                     expected = ValueError,
                 ),
@@ -29,20 +30,20 @@ class TestStep:
             id = 'empty tag name is invalid',
         ),
         pytest.param(
-            [TestStep(requested_tag = 'name')],
+            [Step(requested_tag = 'name')],
             id = 'valid single-part tag',
         ),
         pytest.param(
-            [TestStep(requested_tag = 'valid/tag/name')],
+            [Step(requested_tag = 'valid/tag/name')],
             id = 'valid multi-part tag',
         ),
         pytest.param(
-            [TestStep(requested_tag = '/valid/tag/name')],
+            [Step(requested_tag = '/valid/tag/name')],
             id = 'valid multi-part tag that starts with /',
         ),
         pytest.param(
             [
-                TestStep(
+                Step(
                     requested_tag = 'name',
                     create = False,
                     expected = 'not-found',
@@ -52,8 +53,8 @@ class TestStep:
         ),
         pytest.param(
             [
-                TestStep(requested_tag = 'root/parent/child'),
-                TestStep(
+                Step(requested_tag = 'root/parent/child'),
+                Step(
                     requested_tag = 'child',
                     create = False,
                     expected = 'not-found',
@@ -63,11 +64,11 @@ class TestStep:
         ),
         pytest.param(
             [
-                TestStep(requested_tag = 'root/parent/child'),
-                TestStep(requested_tag = 'root/parent/child/tag'),
-                TestStep(requested_tag = 'root', create = False),
-                TestStep(requested_tag = 'root/parent', create = False),
-                TestStep(requested_tag = 'root/parent/child'),
+                Step(requested_tag = 'root/parent/child'),
+                Step(requested_tag = 'root/parent/child/tag'),
+                Step(requested_tag = 'root', create = False),
+                Step(requested_tag = 'root/parent', create = False),
+                Step(requested_tag = 'root/parent/child'),
             ],
             id = 'repeated overlapping paths',
         ),
