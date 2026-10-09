@@ -35,8 +35,20 @@ def import_scan(
 def resolve_tag(
     session: Session, 
     full_tag: str,
-    create_non_existing_tag: bool = True,
-):
+    create: bool = True,
+) -> m.TagTable | None:
+    """Get ORM object corresponding to tag path
+
+    Parameters
+    ----------
+    create: bool
+        Whether to create the tag and its parents if any didn't already exist.
+
+    Returns
+    -------
+    The ORM object corresponding to tag path.
+    Or return `None` if tag does not exist and `create = False`.
+    """
     tags = full_tag.split("/")
     parent_tag = None
     for tag in tags:
@@ -45,7 +57,7 @@ def resolve_tag(
             .where(m.TagTable.parent_id == (parent_tag.id if parent_tag else None))
             .where(m.TagTable.name == tag))
         if existing is None:
-            if create_non_existing_tag:
+            if create:
                 # Validate the segment name (charset/length) before persisting so
                 # a malformed tag never lands in the database.
                 m.Tag(name=tag)
@@ -152,7 +164,7 @@ def select_endpoints(
     if port is not None:
         query = query.where(m.EndpointTable.port == port)
     for tag_path in tag_paths:
-        tag_row = resolve_tag(session, tag_path, create_non_existing_tag=False)
+        tag_row = resolve_tag(session, tag_path, create = False)
         if tag_row is None:
             # A required tag does not exist, so nothing can match all criteria.
             return []
@@ -171,7 +183,7 @@ def add_endpoint_tag(session: Session, endpoint: m.EndpointTable, tag_path: str)
 
 def remove_endpoint_tag(session: Session, endpoint: m.EndpointTable, tag_path: str) -> bool:
     """Detach ``tag_path`` from ``endpoint``. Returns True if a tag was removed."""
-    tag = resolve_tag(session, tag_path, create_non_existing_tag=False)
+    tag = resolve_tag(session, tag_path, create = False)
     if tag is not None and tag in endpoint.tags:
         endpoint.tags.remove(tag)
         return True
