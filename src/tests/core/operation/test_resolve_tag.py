@@ -1,5 +1,6 @@
 from contextlib import nullcontext
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 from typing import Literal
 
 import pytest
@@ -38,10 +39,6 @@ class TestStep:
         pytest.param(
             [TestStep(requested_tag = '/valid/tag/name')],
             id = 'valid multi-part tag that starts with /',
-            marks = pytest.mark.xfail(
-                reason = 'TODO: Wants absolute tag path to be supported'
-                ' but current implementation cut that out of scope.'
-            ),
         ),
         pytest.param(
             [
@@ -100,7 +97,7 @@ def test_resolve_tag(
                     # This assumes we can trust `m.TagTable.fullpath` to actually
                     # reflect the structure of the tag in database. Meaning, this test
                     # depends on the test of `m.TagTable.fullpath` to be passed first.
-                    assert str(result.fullpath.relative_to('/')) == step.requested_tag
+                    assert result.fullpath == '/' / PurePosixPath(step.requested_tag)
                 case 'not-found':
                     assert result == None
 

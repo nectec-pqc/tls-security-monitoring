@@ -2,6 +2,7 @@ import logging
 _logger = logging.getLogger(__name__)
 
 from datetime import datetime, timedelta, UTC
+from pathlib import PurePosixPath
 
 from sqlalchemy import Engine, select, or_, func
 from sqlalchemy.orm import Session
@@ -34,7 +35,7 @@ def import_scan(
 
 def resolve_tag(
     session: Session, 
-    full_tag: str,
+    path: PurePosixPath | str,
     create: bool = True,
 ) -> m.TagTable | None:
     """Get ORM object corresponding to tag path
@@ -49,7 +50,10 @@ def resolve_tag(
     The ORM object corresponding to tag path.
     Or return `None` if tag does not exist and `create = False`.
     """
-    tags = full_tag.split("/")
+    path = '/' / PurePosixPath(path)
+    tags = path.parts[1:]
+    if not tags:
+        raise ValueError('Tag path can not be empty')
     parent_tag = None
     for tag in tags:
         existing = session.scalar(
@@ -68,6 +72,7 @@ def resolve_tag(
                 return None
         parent_tag = existing
     return parent_tag
+
 
 def get_endpoints_by_tag(
     session: Session,
