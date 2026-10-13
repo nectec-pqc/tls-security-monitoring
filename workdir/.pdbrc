@@ -1,0 +1,4 @@
+from sqlalchemy import select
+import pandas as pd
+alias read_table pd.read_sql(select(%1), session.connection())
+alias rt read_table %1
