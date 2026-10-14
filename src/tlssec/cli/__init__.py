@@ -689,7 +689,7 @@ def nmap(ctx, tag, ports):
                 session.add(row)
                 session.flush()
                 for t in tag:
-                    row.tags.append(op.resolve_tag(session, t))
+                    row.tags.add(op.resolve_tag(session, t))
 
     session.commit()
     click.echo('\nDone.')

@@ -138,9 +138,9 @@ class EndpointTable(Base):
         nullable = True,
     )
 
-    tags: Mapped[list['TagTable']] = relationship(
-        secondary='endpoint_tag_map',
-        back_populates='endpoints',
+    tags: Mapped[set['TagTable']] = relationship(
+        secondary = 'endpoint_tag_map',
+        back_populates = 'endpoints',
     )
     scans: Mapped[list['ScanTable']] = relationship(back_populates='endpoint')
 

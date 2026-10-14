@@ -191,9 +191,7 @@ def add_endpoint_tag(
     # TODO: Should receive `m.Tag` instead of `PurePosixPath | str`
     leaf_tag = resolve_tag(session, path)
     for tag in leaf_tag.lineage:
-        # TODO: Make endpoint.tags a set and remove this guard
-        if tag not in endpoint.tags:
-            endpoint.tags.append(tag)
+        endpoint.tags.add(tag)
 
 
 def remove_endpoint_tag(
