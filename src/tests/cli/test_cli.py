@@ -30,7 +30,7 @@ def test_add_endpoint_by_ip_with_tag(cli_runner, session):
     ep = endpoints[0]
     assert str(ep.ip) == '10.0.0.1'
     assert ep.port == 8443
-    assert {str(t.fullpath) for t in ep.tags} == {'/network/tls'}
+    assert {str(t.fullpath) for t in ep.tags} == {'/network', '/network/tls'}
 
 
 def test_add_endpoint_by_hostname(cli_runner, session):
@@ -136,33 +136,20 @@ def test_edit_endpoint_add_tag(cli_runner, session):
         ['edit', 'endpoint', '--id', str(ep_id), '--add-tag', 'network/tls'],
     )
     assert result.exit_code == 0, result.output
-    assert _tag_paths(_by_ip(session)['10.0.0.1']) == {'/web', '/network/tls'}
+    assert _tag_paths(_by_ip(session)['10.0.0.1']) == {'/web', '/network', '/network/tls'}
 
 
 def test_edit_endpoint_remove_tag(cli_runner, session):
-    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web', 'network/tls'])
+    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web', 'visibility/private', 'visibility/public'])
     session.flush()
     ep_id = ep.id
 
     result = cli_runner.invoke(
         cli,
-        ['edit', 'endpoint', '--id', str(ep_id), '--remove-tag', 'web'],
+        ['edit', 'endpoint', '--id', str(ep_id), '--remove-tag', 'visibility'],
     )
     assert result.exit_code == 0, result.output
-    assert _tag_paths(_by_ip(session)['10.0.0.1']) == {'/network/tls'}
-
-
-def test_edit_endpoint_change_tag(cli_runner, session):
-    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
-    session.flush()
-    ep_id = ep.id
-
-    result = cli_runner.invoke(
-        cli,
-        ['edit', 'endpoint', '--id', str(ep_id), '--change-tag', 'web', 'network/tls'],
-    )
-    assert result.exit_code == 0, result.output
-    assert _tag_paths(_by_ip(session)['10.0.0.1']) == {'/network/tls'}
+    assert _tag_paths(_by_ip(session)['10.0.0.1']) == {'/web'}
 
 
 def test_edit_endpoint_disable_by_tag(cli_runner, session):
@@ -219,7 +206,7 @@ def test_edit_endpoint_select_by_hostname(cli_runner, session):
     assert result.exit_code == 0, result.output
 
     by_host = {ep.hostname: ep for ep in _endpoints(session)}
-    assert _tag_paths(by_host['a.example.com']) == {'/prod', '/network/tls'}
+    assert _tag_paths(by_host['a.example.com']) == {'/prod', '/network', '/network/tls'}
     assert _tag_paths(by_host['b.example.com']) == {'/prod'}
 
 
@@ -320,21 +307,6 @@ def test_edit_endpoint_redisable_keeps_original_timestamp(cli_runner, session):
     result = cli_runner.invoke(cli, ['edit', 'endpoint', '--tag', 'prod', '--disable'])
     assert result.exit_code == 0, result.output
     assert _by_ip(session)['10.0.0.1'].retire_at == first
-
-
-def test_edit_endpoint_change_missing_tag_does_not_add(cli_runner, session):
-    ep = op.make_endpoint(session, 443, '10.0.0.1', None, ['web'])
-    session.flush()
-    ep_id = ep.id
-
-    result = cli_runner.invoke(
-        cli,
-        ['edit', 'endpoint', '--id', str(ep_id), '--change-tag', 'nope', 'network/tls'],
-    )
-    assert result.exit_code == 0, result.output
-    assert 'no tag "nope"' in result.output
-    # network/tls must NOT have been added since 'nope' was not present.
-    assert _tag_paths(_by_ip(session)['10.0.0.1']) == {'/web'}
 
 
 def test_edit_endpoint_select_by_port_only(cli_runner, session):

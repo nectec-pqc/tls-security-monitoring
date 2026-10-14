@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from pathlib import PurePosixPath
 from typing import Optional
 
@@ -63,19 +64,22 @@ class TagTable(Base):
         super().__init__(**kwargs)
 
     @property
-    def fullpath(self) -> PurePosixPath:
+    def lineage(self) -> Iterator[Self]:
+        """Iterate over this tag and up its lineage."""
         cursor = self
-        lineage = []
         visited = set()
         while cursor is not None:
             if id(cursor) in visited:
-                raise ValueError(f'tag loop detected: {lineage}')
-            lineage.append(cursor)
+                raise ValueError(f'tag loop detected: {visited}')
+            yield cursor
             visited.add(id(cursor))
             cursor = cursor.parent
+
+    @property
+    def fullpath(self) -> PurePosixPath:
         return PurePosixPath(
             '/',
-            *(tag.name for tag in reversed(lineage)),
+            *(tag.name for tag in reversed(list(self.lineage))),
         )
 
 

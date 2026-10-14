@@ -415,7 +415,7 @@ def add_commit(ctx, results, **kwargs):
 
 
 @add.command(cls = ColoredCommand)
-@click.option('--tag', multiple=True, help='Tag path e.g. network/tls')
+@click.option('--tag', multiple=True, help='Tag path e.g. company/department')
 @click.option('--from_file', type=click.File('r'))
 @click.option('--port', type=int, default=443)
 @click.option('--ip', type=str, default=None)
@@ -449,7 +449,9 @@ def endpoint(ctx, tag, from_file, port, ip, hostname):
                 ep = model.EndpointTable(**ep_model.model_dump(exclude={'id'}))
                 session.add(ep)
                 session.flush()
-            op.add_endpoint_tags(session, ep, list(tag) + tags)
+            # TODO: --from-file option shouldn't mix with others. it's confusing.
+            for t in (*tag, *tags):
+                op.add_endpoint_tag(session, ep, t)
     else:
         ep = op.make_endpoint(session, port, ip, hostname, list(tag))
 
@@ -480,18 +482,12 @@ def edit_commit(ctx, results, **kwargs):
 @click.option('--add-tag', 'add_tags', multiple=True, help='Attach this tag to selected endpoints')
 @click.option('--remove-tag', 'remove_tags', multiple=True, help='Detach this tag from selected endpoints')
 @click.option(
-    '--change-tag', 'change_tags',
-    multiple=True, nargs=2,
-    metavar='OLD NEW',
-    help='Replace tag OLD with NEW on selected endpoints',
-)
-@click.option(
     '--disable/--enable', 'disabled',
     default=None,
     help='Disable (skip on scan) or re-enable selected endpoints',
 )
 @click.pass_context
-def endpoint(ctx, ids, tags, ips, hostnames, port, add_tags, remove_tags, change_tags, disabled):
+def endpoint(ctx, ids, tags, ips, hostnames, port, add_tags, remove_tags, disabled):
     """Edit endpoint(s): retag or toggle scan participation.
 
     Select endpoints with --id, --tag, --ip, --hostname and/or --port. All
@@ -506,9 +502,9 @@ def endpoint(ctx, ids, tags, ips, hostnames, port, add_tags, remove_tags, change
 
     if not (ids or tags or ips or hostnames or port is not None):
         raise click.UsageError('select endpoints with --id, --tag, --ip, --hostname and/or --port')
-    if not (add_tags or remove_tags or change_tags or disabled is not None):
+    if not (add_tags or remove_tags or disabled is not None):
         raise click.UsageError(
-            'nothing to do: pass --add-tag/--remove-tag/--change-tag/--disable/--enable'
+            'nothing to do: pass --add-tag/--remove-tag/--disable/--enable'
         )
 
     try:
@@ -529,11 +525,6 @@ def endpoint(ctx, ids, tags, ips, hostnames, port, add_tags, remove_tags, change
 
     try:
         for ep in endpoints:
-            for old, new in change_tags:
-                if not op.change_endpoint_tag(session, ep, old, new):
-                    click.echo(
-                        f'  endpoint {ep.id}: no tag "{old}", not adding "{new}"'
-                    )
             for t in remove_tags:
                 op.remove_endpoint_tag(session, ep, t)
             for t in add_tags:

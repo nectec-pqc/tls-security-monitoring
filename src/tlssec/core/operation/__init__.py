@@ -178,40 +178,42 @@ def select_endpoints(
     return list(session.scalars(query).all())
 
 
-def add_endpoint_tag(session: Session, endpoint: m.EndpointTable, tag_path: str):
-    """Attach ``tag_path`` to ``endpoint`` (idempotent)."""
-    tag = resolve_tag(session, tag_path)
-    if tag not in endpoint.tags:
-        endpoint.tags.append(tag)
-    return tag
-
-
-def remove_endpoint_tag(session: Session, endpoint: m.EndpointTable, tag_path: str) -> bool:
-    """Detach ``tag_path`` from ``endpoint``. Returns True if a tag was removed."""
-    tag = resolve_tag(session, tag_path, create = False)
-    if tag is not None and tag in endpoint.tags:
-        endpoint.tags.remove(tag)
-        return True
-    return False
-
-
-def change_endpoint_tag(
+def add_endpoint_tag(
     session: Session,
     endpoint: m.EndpointTable,
-    old_tag_path: str,
-    new_tag_path: str,
-) -> bool:
-    """Replace ``old_tag_path`` with ``new_tag_path`` on ``endpoint``.
+    path: PurePosixPath | str,
+):
+    """Attach each tag to `endpoint`
 
-    Only adds the new tag if the old one was actually present, so a mistyped
-    old tag does not silently attach an unrelated new tag. Returns True when
-    the replacement happened, False when ``old_tag_path`` was not on the
-    endpoint (in which case nothing is changed).
+    - Idempotent
+    - Parent tags along given path are also attached
     """
-    if not remove_endpoint_tag(session, endpoint, old_tag_path):
+    # TODO: Should receive `m.Tag` instead of `PurePosixPath | str`
+    leaf_tag = resolve_tag(session, path)
+    for tag in leaf_tag.lineage:
+        # TODO: Make endpoint.tags a set and remove this guard
+        if tag not in endpoint.tags:
+            endpoint.tags.append(tag)
+
+
+def remove_endpoint_tag(
+    session: Session,
+    endpoint: m.EndpointTable,
+    path: PurePosixPath | str,
+) -> bool:
+    """Detach tag and its children tags from `endpoint`.
+
+    Returns True if a tag was removed.
+    """
+    tag = resolve_tag(session, path, create = False)
+    if tag is None:
         return False
-    add_endpoint_tag(session, endpoint, new_tag_path)
-    return True
+    any_removal = False
+    for existing_tag in tuple(endpoint.tags):
+        if tag in existing_tag.lineage:
+            endpoint.tags.remove(existing_tag)
+            any_removal = True
+    return any_removal
 
 
 def set_endpoints_disabled(
@@ -282,14 +284,6 @@ def find_endpoint_by_identity(
     )
 
 
-def add_endpoint_tags(session: Session, endpoint: m.EndpointTable, tags):
-    """Attach each tag path in ``tags`` to ``endpoint`` (idempotent)."""
-    for tag in tags:
-        leaf_tag = resolve_tag(session, tag)
-        if leaf_tag not in endpoint.tags:
-            endpoint.tags.append(leaf_tag)
-
-
 def make_endpoint(session, port, ip, hostname, tags=()):
     """Create the endpoint, or reuse the one with the same scan identity.
 
@@ -309,7 +303,8 @@ def make_endpoint(session, port, ip, hostname, tags=()):
         )
         session.add(endpoint)
         session.flush()
-    add_endpoint_tags(session, endpoint, tags)
+    for tag in tags:
+        add_endpoint_tag(session, endpoint, tag)
     return endpoint
 
 
