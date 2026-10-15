@@ -10,6 +10,7 @@ from textual.widgets import (
 )
 from textual.widgets.option_list import Option
 
+from tlssec.app_state import AppState
 from .page.endpoints import EndpointsPage
 from .page.placeholder import PlaceholderPage
 
@@ -43,6 +44,10 @@ class Tui(App):
         ("import", "Import"),
         ("export", "Export"),
     ]
+
+    def __init__(self, state: AppState, **kwargs):
+        super().__init__(**kwargs)
+        self.state = state
 
     def compose(self) -> ComposeResult:
         yield Header()

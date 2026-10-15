@@ -16,75 +16,12 @@ from textual.widgets import (
     Select,
 )
 
-@dataclass(slots = True)
-class EndpointRow:
-    """Plain snapshot of an endpoint, so the UI never touches ORM objects
-    (avoids detached-instance errors and keeps DB work off the UI thread)."""
-
-    id: int
-    ip: str
-    hostname: str
-    port: int
-    path: str
-    transport: str
-    app_proto: str
-    service_info: str
-    tls_mode: str
-    first_seen: str
-    last_seen: str
-
-    @property
-    def label(self) -> str:
-        return f"{self.hostname or self.ip or '?'}:{self.port}{self.path}"
-
-    def haystack(self) -> str:
-        """Lower-cased text the search box matches against."""
-        return " ".join(
-            str(v)
-            for v in (
-                self.id, self.ip, self.hostname, self.port, self.path,
-                self.transport, self.app_proto, self.service_info, self.tls_mode,
-            )
-        ).lower()
+import tlssec.core.operation as op
+import tlssec.core.model as m
 
 
 def _fmt_dt(dt: datetime | None) -> str:
     return dt.strftime("%Y-%m-%d %H:%M") if dt else "-"
-
-
-def load_endpoints() -> list[EndpointRow]:
-    """Blocking DB call -- always run it in a worker thread."""
-    # --- Replace this stub with the real query: ---------------------------
-    # with SessionLocal() as session:
-    #     rows = session.scalars(
-    #         select(EndpointTable).order_by(EndpointTable.id)
-    #     ).all()
-    #     return [
-    #         EndpointRow(
-    #             id=e.id,
-    #             ip=str(e.ip) if e.ip else "",
-    #             hostname=e.hostname or "",
-    #             port=e.port,
-    #             path=e.path,
-    #             transport=e.transport_protocol,
-    #             app_proto=e.application_protocol or "",
-    #             service_info=e.service_info or "",
-    #             tls_mode=getattr(e.tls_mode, "value", str(e.tls_mode or "")),
-    #             first_seen=_fmt_dt(e.first_seen),
-    #             last_seen=_fmt_dt(e.last_seen),
-    #         )
-    #         for e in rows
-    #     ]
-    # -----------------------------------------------------------------------
-    now = datetime.now()
-    return [  # demo data so the app runs out of the box
-        EndpointRow(68, "10.0.0.5", "api.example.com", 443, "/v2", "tcp", "https",
-                    "nginx 1.25", "implicit", _fmt_dt(now), _fmt_dt(now)),
-        EndpointRow(69, "10.0.0.6", "db.example.com", 5432, "/", "tcp", "postgres",
-                    "PostgreSQL 16", "explicit", _fmt_dt(now), "-"),
-        EndpointRow(70, "10.0.0.5", "", 22, "/", "tcp", "ssh",
-                    "OpenSSH 9.6", "", _fmt_dt(now), _fmt_dt(now)),
-    ]
 
 
 class RelatedModal(ModalScreen[str | None]):
@@ -104,7 +41,7 @@ class RelatedModal(ModalScreen[str | None]):
     RelatedModal Label { margin-bottom: 1; }
     """
 
-    def __init__(self, endpoint: EndpointRow) -> None:
+    def __init__(self, endpoint: m.Endpoint) -> None:
         super().__init__()
         self.endpoint = endpoint
 
@@ -142,7 +79,7 @@ class EndpointsPage(Vertical):
         "Hostname",
         "Port",
         "Path",
-        "Proto",
+        "Transport",
         "App",
         "Service",
         "TLS",
@@ -152,7 +89,7 @@ class EndpointsPage(Vertical):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self._rows: dict[int, EndpointRow] = {}
+        self._rows: dict[int, m.Endpoint] = {}
 
     def compose(self) -> ComposeResult:
         yield Input(
@@ -172,25 +109,62 @@ class EndpointsPage(Vertical):
     # -- loading -----------------------------------------------------------
     @work(thread = True, exclusive = True)
     def refresh_data(self) -> None:
-        rows = load_endpoints()
+        # TODO: filter, page, limit
+        rows = op.select_endpoints(self.app.state.db.session)
+        rows = [
+            # TODO: bring sqlmodel back to use **row.model_dump()
+            m.Endpoint(
+                id = row.id,
+                ip = row.ip,
+                hostname = row.hostname,
+                port = row.port,
+                path = row.path,
+                transport_protocol = row.transport_protocol,
+                application_protocol = row.application_protocol,
+                service_info = row.service_info,
+                tls_mode = row.tls_mode,
+                first_seen = row.first_seen,
+                last_seen = row.last_seen,
+                retire_at = row.retire_at,
+            )
+            for row in rows
+        ]
         self.app.call_from_thread(self._set_rows, rows)
 
-    def _set_rows(self, rows: list[EndpointRow]) -> None:
+    def _set_rows(self, rows: list[m.Endpoint]) -> None:
         self._rows = {r.id: r for r in rows}
         self._apply_filter(self.query_one(Input).value)
 
     # -- filtering ---------------------------------------------------------
     def _apply_filter(self, text: str) -> None:
-        terms = text.lower().split()  # every word must match somewhere
+        terms = text.lower().split()
         table = self.query_one(DataTable)
         table.clear()
         for r in self._rows.values():
-            hay = r.haystack()
-            if all(t in hay for t in terms):
+            haystack = ' '.join(map(str, (
+                r.id,
+                r.ip,
+                r.hostname,
+                r.port,
+                r.path,
+                r.transport_protocol,
+                r.application_protocol,
+                r.service_info,
+                r.tls_mode,
+            ))).lower()
+            if all(t in haystack for t in terms):
                 table.add_row(
-                    r.id, r.ip, r.hostname, r.port, r.path, r.transport,
-                    r.app_proto, r.service_info, r.tls_mode,
-                    r.first_seen, r.last_seen,
+                    r.id,
+                    r.ip,
+                    r.hostname,
+                    r.port,
+                    r.path,
+                    r.transport_protocol,
+                    r.application_protocol,
+                    r.service_info,
+                    r.tls_mode,
+                    r.first_seen,
+                    r.last_seen,
                     key = str(r.id),
                 )
 

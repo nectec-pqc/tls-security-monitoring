@@ -35,17 +35,22 @@ def entrypoint():
     cls = ColoredGroup,
 )
 @click.option(
-    '--config', 'config_file',
-    default=None,
-    type=click.File('r'),
-    help='Override configurations with values from JSON or YAML file',
+    '--config', 'config_path',
+    type = click.Path(
+        exists = True,
+        dir_okay = False,
+        path_type = Path,
+    ),
+    help = 'Override configurations with values from JSON or YAML file',
 )
 @click.pass_context
-def cli(ctx, config_file):
+def cli(ctx, config_path):
     """TLS security monitoring toolkit"""
     state = ctx.ensure_object(AppState)
-    if config_file:
-        setting_overrides = yaml.safe_load(config_file)
+    if config_path:
+        state.config_path = config_path
+        with open(config_path, 'r') as f:
+            setting_overrides = yaml.safe_load(f)
     else:
         setting_overrides = {}
     state.settings = Settings(**setting_overrides)
@@ -708,16 +713,24 @@ def nmap(ctx, tag, ports):
     # TODO: change this to subcommand "serve" instead?
     # with default command to being "run".
 )
-def tui(serve):
+@click.pass_context
+def tui(ctx, serve):
     """Starts TLSSEC terminal user interface (TUI) app"""
+    state = ctx.find_object(AppState)
     if serve:
         from textual_serve.server import Server
+        import shlex
+        config_args = (
+            ('--config', str(state.config_path))
+            if state.config_path
+            else tuple()
+        )
         server = Server(
-            'python -m tlssec.tui',
+            shlex.join(('tlssec', *config_args, 'tui')),
             host = '0.0.0.0',
             title = 'TLSSEC',
         )
         server.serve()
     else:
         from tlssec.tui.tui import Tui
-        Tui().run()
+        Tui(state).run()
