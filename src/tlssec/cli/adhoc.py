@@ -8,12 +8,12 @@ import pandas as pd
 import yaml
 
 import tlssec.core.model as m
+from tlssec.app_state import AppState
 from tlssec.core.nmap import Nmap
 from tlssec.core.testssl import Testssl
 from tlssec.core.ssh_audit import SshAudit
 from tlssec.core.export.yaml import YamlDumper
 from .colored_help import ColoredGroup, ColoredCommand
-from .cli_state import CliState
 
 
 @click.group(cls = ColoredGroup)
@@ -57,7 +57,7 @@ def export_report(
     import subprocess
     from tlssec.core.export.typst import TypstTemplates
 
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     report_path = state.settings.output_dir / report_path_pattern.format(now = datetime.now().astimezone())
     if report_path.is_file():
         _logger.error(

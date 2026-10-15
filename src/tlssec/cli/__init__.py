@@ -10,12 +10,12 @@ import click
 import yaml
 from pydantic import ValidationError
 
+from tlssec.app_state import AppState
 from tlssec.settings import Settings
 from tlssec.database.database import Database
 import tlssec.core.model as model
 import tlssec.core.operation as op
 from .colored_help import ColoredGroup, ColoredCommand
-from .cli_state import CliState
 from .show import show
 from .import_group import import_group
 from .adhoc import adhoc
@@ -43,7 +43,7 @@ def entrypoint():
 @click.pass_context
 def cli(ctx, config_file):
     """TLS security monitoring toolkit"""
-    state = ctx.ensure_object(CliState)
+    state = ctx.ensure_object(AppState)
     if config_file:
         setting_overrides = yaml.safe_load(config_file)
     else:
@@ -69,7 +69,7 @@ def cli(ctx, config_file):
 @click.pass_context
 def init(ctx, reset):
     """Initialize database"""
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     if reset:
         op.drop_database(state.db.engine)
     op.initialize_database(state.db.engine)
@@ -104,7 +104,7 @@ def scan(ctx, ids, tags, ips, hostnames, port, force, no_cbom, no_opinion):
     Each recorded raw scan is normalized into a CycloneDX CBOM and an opinion
     by default; use --no-cbom / --no-opinion to store the raw scan only.
     """
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     session = state.db.session
 
     try:
@@ -301,7 +301,7 @@ def view(ctx, ids, tags, ips, hostnames, port, want_raw, want_cbom, want_opinion
     output_dir as <create-time>_<layer>_<selection>.json, e.g.
     2026-07-18T02-09-44_opinion_hostname-100m.forest.go.th.json
     """
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     session = state.db.session
 
     layers = [name for name, want in zip(_VIEW_LAYERS, (want_raw, want_cbom, want_opinion)) if want]
@@ -380,7 +380,7 @@ def cbom_build(ctx, no_opinion):
     version, then derives opinions for CBOMs missing a current-ruleset opinion.
     Safe to run repeatedly; it only touches what is missing or stale.
     """
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     session = state.db.session
     n_cbom = op.backfill_cboms(session, with_opinion=not no_opinion)
     n_opinion = 0 if no_opinion else op.backfill_opinions(session)
@@ -410,7 +410,7 @@ def add(ctx):
 @add.result_callback()
 @click.pass_context
 def add_commit(ctx, results, **kwargs):
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     state.db.session.commit()
 
 
@@ -423,7 +423,7 @@ def add_commit(ctx, results, **kwargs):
 @click.pass_context
 def endpoint(ctx, tag, from_file, port, ip, hostname):
     """Add an endpoint"""
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     session = state.db.session
 
     if from_file and (ip or hostname):
@@ -469,7 +469,7 @@ def edit(ctx):
 @edit.result_callback()
 @click.pass_context
 def edit_commit(ctx, results, **kwargs):
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     state.db.session.commit()
 
 
@@ -497,7 +497,7 @@ def endpoint(ctx, ids, tags, ips, hostnames, port, add_tags, remove_tags, disabl
     endpoints are skipped by scans but keep their tags and history, so the
     disabled state is independent from last_seen used for scheduling.
     """
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     session = state.db.session
 
     if not (ids or tags or ips or hostnames or port is not None):
@@ -552,7 +552,7 @@ def delete(ctx):
 @delete.result_callback()
 @click.pass_context
 def delete_commit(ctx, results, **kwargs):
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     state.db.session.commit()
 
 
@@ -574,7 +574,7 @@ def endpoint(ctx, ids, tags, ips, hostnames, port, yes):
     retired (disabled) so their history is preserved while they stop being
     scanned; history-free endpoints are removed outright.
     """
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     session = state.db.session
 
     if not (ids or tags or ips or hostnames or port is not None):
@@ -638,7 +638,7 @@ def endpoint(ctx, ids, tags, ips, hostnames, port, yes):
 @click.pass_context
 def nmap(ctx, tag, ports):
     """Scan endpoints matching tag(s) with nmap and report new discoveries."""
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     session = state.db.session
 
     existing = op.get_endpoints_by_tag(session, list(tag))

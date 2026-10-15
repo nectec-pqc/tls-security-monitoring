@@ -5,6 +5,6 @@ from tlssec.database.database import Database
 
 
 @dataclass
-class CliState:
+class AppState:
     settings: Settings | None = None
     db: Database | None = None

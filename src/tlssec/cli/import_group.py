@@ -6,8 +6,8 @@ import click
 
 import tlssec.core.model as model
 import tlssec.core.operation as op
+from tlssec.app_state import AppState
 from .colored_help import ColoredGroup, ColoredCommand
-from .cli_state import CliState
 
 
 @click.group(
@@ -47,7 +47,7 @@ def scan(
     if not paths:
         _logger.warning('No paths given to import scans from')
         return
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     fails = []
     # NOTE: If slow, try batch commit.
     for path in paths:

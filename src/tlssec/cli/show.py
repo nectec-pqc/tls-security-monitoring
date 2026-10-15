@@ -1,7 +1,7 @@
 import click
 
+from tlssec.app_state import AppState
 from .colored_help import ColoredGroup, ColoredCommand
-from .cli_state import CliState
 
 
 @click.group(cls = ColoredGroup)
@@ -27,5 +27,5 @@ def show_settings(ctx):
 
     (after merging defaults, environment variable, cli options together.)
     """
-    state = ctx.find_object(CliState)
+    state = ctx.find_object(AppState)
     print(state.settings.model_dump_json(indent=2))
