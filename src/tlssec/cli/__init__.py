@@ -57,10 +57,21 @@ def cli(ctx, config_path):
     state.db = Database(state.settings)
     ctx.with_resource(state.db.session)
 
-    logging.basicConfig(
-        format='%(asctime)s %(name)s %(levelname)s: %(message)s',
-        level=logging.INFO,
+    log_handler = (
+        logging.FileHandler(state.settings.log_file)
+        if state.settings.log_file
+        else (
+            logging.NullHandler()
+            if ctx.invoked_subcommand == "tui"
+            else logging.StreamHandler()
+        )
     )
+    log_handler.setFormatter(
+        logging.Formatter('%(asctime)s %(name)s %(levelname)s: %(message)s'),
+    )
+    root_logger = logging.getLogger()
+    root_logger.addHandler(log_handler)
+    root_logger.setLevel(logging.INFO)
     if state.settings.deployment_mode == 'development':
         logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 

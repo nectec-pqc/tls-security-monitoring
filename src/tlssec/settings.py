@@ -34,6 +34,14 @@ class Settings(BaseSettings):
         default_factory = Path.cwd,
         description = 'Base directory for storing outputs',
     )
+    log_file: Path | None = Field(
+        default = None,
+        description = (
+            'File where logs will be written into.'
+            ' Path is resolved relative to `output_dir`.'
+            ' Leave empty to use stderr for CLI and discard log for TUI.'
+        )
+    )
     endpoint_cooldown: PandasTimedelta('seconds') = Field(
         default = '7 days',
         description = 'Seconds to wait from last successful scan before getting scanned again',
