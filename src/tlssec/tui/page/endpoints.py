@@ -113,20 +113,7 @@ class EndpointsPage(Vertical):
         rows = op.select_endpoints(self.app.state.db.session)
         rows = [
             # TODO: bring sqlmodel back to use **row.model_dump()
-            m.Endpoint(
-                id = row.id,
-                ip = row.ip,
-                hostname = row.hostname,
-                port = row.port,
-                path = row.path,
-                transport_protocol = row.transport_protocol,
-                application_protocol = row.application_protocol,
-                service_info = row.service_info,
-                tls_mode = row.tls_mode,
-                first_seen = row.first_seen,
-                last_seen = row.last_seen,
-                retire_at = row.retire_at,
-            )
+            m.Endpoint.model_validate(row)
             for row in rows
         ]
         self.app.call_from_thread(self._set_rows, rows)
