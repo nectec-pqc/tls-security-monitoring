@@ -10,11 +10,10 @@ from pydantic import (
     model_validator,
 )
 from sqlalchemy import (
-    Integer,
     Identity,
-    String,
-    DateTime,
     Index,
+    Integer,
+    String,
     func,
 )
 from sqlalchemy.orm import (
@@ -26,6 +25,7 @@ from sqlalchemy.orm import (
 from tlssec.database.base import Base
 from tlssec.database.types import InetType
 from tlssec.core.model.validator import UrlPath
+from .validator import EmptyToNoneStr
 
 
 class TlsMode(StrEnum):
@@ -35,11 +35,11 @@ class TlsMode(StrEnum):
 
 
 class Endpoint(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes = True)
 
     id: int | None = None
     ip: IPvAnyAddress | None = None
-    hostname: str | None = PydanticField(
+    hostname: EmptyToNoneStr = PydanticField(
         min_length = 1,
         max_length = 253,
     )
@@ -57,13 +57,13 @@ class Endpoint(BaseModel):
         min_length = 1,
         max_length = 10,
     )
-    application_protocol: str | None = PydanticField(
+    application_protocol: EmptyToNoneStr = PydanticField(
         default = 'https',
         examples = ['http', 'https', 'ftp', 'smtp', 'dns', 'postgres', 'mysql'],
         min_length = 1,
         max_length = 40,
     )
-    service_info: str | None = PydanticField(
+    service_info: EmptyToNoneStr = PydanticField(
         default = None,
         min_length = 1,
         max_length = 100,
@@ -75,12 +75,16 @@ class Endpoint(BaseModel):
             ' String "none" means there is no TLS.'
         ),
     )
-    first_seen: datetime = PydanticField(
-        default_factory = lambda: datetime.now(UTC),
+    # TODO: rename to first_tracked or created_at
+    first_seen: datetime | None = PydanticField(
+        default = None,
         description = (
-            'Marks when endpoint first get tracked in system, so it defaults to now'
+            'Marks when endpoint first get tracked in database.'
+            ' Python side defaults to None, DB server defaults to now.'
         ),
     )
+    # TODO: rename to last_scanned? ... or even remove entirely as it can be inferred by joining with ScanTable.
+    # However, storing last_scanned time directly could make some query faster.
     last_seen: datetime | None = PydanticField(
         default = None,
         description = (
@@ -123,26 +127,23 @@ class EndpointTable(Base):
         String(100),
         default = None,
     )
-    tls_mode: Mapped[TlsMode] = mapped_column(
-        nullable = True,
+    tls_mode: Mapped[Optional[TlsMode]] = mapped_column(
         default = None,
     )
-    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone = True))
+    first_seen: Mapped[datetime] = mapped_column(
+        server_default = func.now(),
+    )
     # Nullable: unset until the first recorded scan (the cooldown clock).
-    last_seen: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone = True),
-        nullable = True,
-    )
-    retire_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone = True),
-        nullable = True,
-    )
+    last_seen: Mapped[Optional[datetime]]
+    retire_at: Mapped[Optional[datetime]]
 
     tags: Mapped[set['TagTable']] = relationship(
         secondary = 'endpoint_tag_map',
         back_populates = 'endpoints',
     )
-    scans: Mapped[list['ScanTable']] = relationship(back_populates='endpoint')
+    scans: Mapped[list['ScanTable']] = relationship(
+        back_populates = 'endpoint',
+    )
 
 
 # Scan identity: an endpoint is uniquely (hostname-or-ip, port, transport). This

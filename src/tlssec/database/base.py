@@ -1,5 +1,9 @@
+from datetime import datetime
 import re
 
+from sqlalchemy import (
+    DateTime,
+)
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import DeclarativeBase, declared_attr
 
@@ -9,12 +13,17 @@ def to_snake_case(name: str) -> str:
 
 
 class Base(DeclarativeBase):
-    """SQLAlchemy declarative base.
+    """Customized SQLAlchemy declarative base.
 
     - Names tables with snake_case automatically
     - Strips _table suffix from class name
     - Add pretty representations
+    - Customized type mapping
     """
+    type_annotation_map = {
+        datetime: DateTime(timezone = True),
+    }
+
     @declared_attr.directive
     def __tablename__(cls) -> str:
         return to_snake_case(cls.__name__).removesuffix('_table')

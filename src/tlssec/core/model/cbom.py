@@ -1,8 +1,19 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Integer, Identity, ForeignKey, String, DateTime, func
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field as PydanticField,
+)
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Identity,
+    Integer,
+    String,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,33 +29,42 @@ class Cbom(BaseModel):
     builder produced it, which is what makes "rebuild only what is stale"
     correct.
     """
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes = True)
 
     id: int | None = None
     scan_id: int | None = None
-    builder_version: str
+    builder_version: str = PydanticField(
+        max_length = 50,
+    )
     document: dict
     created_at: datetime | None = None
 
 
 class CbomTable(Base):
-    id: Mapped[int] = mapped_column(Integer, Identity(always=True), primary_key=True)
+    id: Mapped[int] = mapped_column(
+        Integer,
+        Identity(always = True),
+        primary_key = True,
+    )
     # 1:1 with the raw scan it was built from.
     scan_id: Mapped[int] = mapped_column(
         ForeignKey('scan.id'),
-        unique=True,
-        index=True,
+        unique = True,
+        index = True,
     )
-    builder_version: Mapped[str] = mapped_column(String(50))
+    builder_version: Mapped[str] = mapped_column(
+        String(50),
+    )
     document: Mapped[dict] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone = True),
         default = func.now(),
     )
 
-    scan: Mapped['ScanTable'] = relationship(back_populates='cbom')
+    scan: Mapped['ScanTable'] = relationship(
+        back_populates = 'cbom',
+    )
     # Derived opinions are kept as history (versioned by ruleset), newest wins.
     opinions: Mapped[list['OpinionTable']] = relationship(
-        back_populates='cbom',
-        cascade='all, delete-orphan',
+        back_populates = 'cbom',
+        cascade = 'all, delete-orphan',
     )

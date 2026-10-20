@@ -9,7 +9,12 @@ from pydantic import (
     Field as PydanticField,
     IPvAnyAddress,
 )
-from sqlalchemy import Integer, Identity, ForeignKey, String
+from sqlalchemy import (
+    ForeignKey,
+    Identity,
+    Integer,
+    String,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import yaml
@@ -30,7 +35,7 @@ class Scanner(StrEnum):
 
 class Scan(BaseModel):
     """A record about a single execution of scan."""
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes = True)
 
     id: int | None = None
     result: dict | list
@@ -72,13 +77,27 @@ class Scan(BaseModel):
 
 
 class ScanTable(Base):
-    id: Mapped[int] = mapped_column(Integer, Identity(always=True), primary_key=True)
+    id: Mapped[int] = mapped_column(
+        Integer,
+        Identity(always = True),
+        primary_key = True,
+    )
     result: Mapped[dict | list] = mapped_column(JSONB)
-    scanner: Mapped[Scanner] = mapped_column(default=Scanner.testssl)
-    scanner_version: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    observed_ip: Mapped[Optional[str]] = mapped_column(InetType, nullable=True)
-    sni: Mapped[Optional[str]] = mapped_column(String(253), nullable=True)
-    start_time: Mapped[Optional[datetime]] = mapped_column(nullable=True, index=True)
+    scanner: Mapped[Scanner] = mapped_column(
+        default = Scanner.testssl,
+    )
+    scanner_version: Mapped[Optional[str]] = mapped_column(
+        String(50)
+    )
+    observed_ip: Mapped[Optional[str]] = mapped_column(
+        InetType
+    )
+    sni: Mapped[Optional[str]] = mapped_column(
+        String(253)
+    )
+    start_time: Mapped[Optional[datetime]] = mapped_column(
+        index = True,
+    )
     time_taken: Mapped[Optional[int]] = mapped_column(nullable=True)
     belong_to_endpoint_id: Mapped[Optional[int]] = mapped_column(ForeignKey('endpoint.id'), index=True)
 
