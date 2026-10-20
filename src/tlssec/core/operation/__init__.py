@@ -4,7 +4,7 @@ _logger = logging.getLogger(__name__)
 from datetime import datetime, timedelta, UTC
 from pathlib import PurePosixPath
 
-from sqlalchemy import Engine, select, or_, func
+import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from tlssec.database.base import Base
@@ -13,9 +13,19 @@ import tlssec.core.cbom as cbom
 import tlssec.core.opinion as opinion
 
 
-def drop_database(engine: Engine):
-    _logger.info('dropping all existing tables and its content')
-    Base.metadata.drop_all(engine)
+def drop_database(
+    engine: sa.Engine,
+    *,
+    entire_schema: bool = True,
+):
+    if entire_schema:
+        _logger.info('dropping the entire database schema')
+        with engine.begin() as connection:
+            connection.execute(sa.text("DROP SCHEMA IF EXISTS public CASCADE"))
+            connection.execute(sa.text("CREATE SCHEMA public"))
+    else:
+        _logger.info('dropping database objects managed by tlssec')
+        Base.metadata.drop_all(engine)
 
 
 def initialize_database(engine: Engine):
@@ -57,7 +67,7 @@ def resolve_tag(
     parent_tag = None
     for tag in tags:
         existing = session.scalar(
-            select(m.TagTable)
+            sa.select(m.TagTable)
             .where(m.TagTable.parent_id == (parent_tag.id if parent_tag else None))
             .where(m.TagTable.name == tag))
         if existing is None:
@@ -79,7 +89,7 @@ def get_endpoints_by_tag(
     tag_paths: list[str],
 ) -> list[m.EndpointTable]:
     """Return endpoints that have ALL of the given exact tags."""
-    query = select(m.EndpointTable)
+    query = sa.select(m.EndpointTable)
     for tag_path in tag_paths:
         tag_row = resolve_tag(session, tag_path, False)
         if tag_row is None:
@@ -159,7 +169,7 @@ def select_endpoints(
     if missing:
         raise ValueError(f'no endpoint with id(s): {", ".join(map(str, missing))}')
 
-    query = select(m.EndpointTable)
+    query = sa.select(m.EndpointTable)
     if ids:
         query = query.where(m.EndpointTable.id.in_(ids))
     if ips:
@@ -239,7 +249,7 @@ def set_endpoints_disabled(
 def endpoint_has_scans(session: Session, endpoint: m.EndpointTable) -> bool:
     """Return True if ``endpoint`` has any recorded scan history."""
     return session.scalar(
-        select(m.ScanTable.id)
+        sa.select(m.ScanTable.id)
         .where(m.ScanTable.belong_to_endpoint_id == endpoint.id)
         .limit(1)
     ) is not None
@@ -274,8 +284,8 @@ def find_endpoint_by_identity(
     if host is None:
         return None
     return session.scalar(
-        select(m.EndpointTable).where(
-            func.coalesce(m.EndpointTable.hostname, func.host(m.EndpointTable.ip)) == host,
+        sa.select(m.EndpointTable).where(
+            sa.func.coalesce(m.EndpointTable.hostname, sa.func.host(m.EndpointTable.ip)) == host,
             m.EndpointTable.port == port,
             m.EndpointTable.transport_protocol == transport_protocol,
         )
@@ -373,9 +383,9 @@ def store_cbom_for_scan(
 def scans_needing_cbom(session: Session) -> list[m.ScanTable]:
     """Raw scans with no CBOM, or a CBOM built by a different builder version."""
     return list(session.scalars(
-        select(m.ScanTable)
+        sa.select(m.ScanTable)
         .outerjoin(m.CbomTable, m.CbomTable.scan_id == m.ScanTable.id)
-        .where(or_(
+        .where(sa.or_(
             m.CbomTable.id.is_(None),
             # TODO: Use semver comparison. Higher version of cbom might not need replacing.
             m.CbomTable.builder_version != cbom.BUILDER_VERSION,
@@ -385,11 +395,11 @@ def scans_needing_cbom(session: Session) -> list[m.ScanTable]:
 
 def cboms_needing_opinion(session: Session) -> list[m.CbomTable]:
     """CBOMs lacking an opinion at the current ruleset version."""
-    current = select(m.OpinionTable.cbom_id).where(
+    current = sa.select(m.OpinionTable.cbom_id).where(
         m.OpinionTable.ruleset_version == opinion.RULESET_VERSION
     )
     return list(session.scalars(
-        select(m.CbomTable).where(m.CbomTable.id.not_in(current))
+        sa.select(m.CbomTable).where(m.CbomTable.id.not_in(current))
     ).all())
 
 
