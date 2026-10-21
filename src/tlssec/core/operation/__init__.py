@@ -299,21 +299,24 @@ def make_endpoint(session, port, ip, hostname, tags=()):
     duplicated (see ``find_endpoint_by_identity`` / ``uq_endpoint_identity``) and
     only ``tags`` not already present are attached.
     """
-    endpoint = find_endpoint_by_identity(session, ip=ip, hostname=hostname, port=port)
-    if endpoint is None:
-        endpoint = m.EndpointTable(
-            port=port,
-            ip=ip,
-            hostname=hostname,
-            first_seen=datetime.now(UTC),
-            # last_seen is left NULL until the first recorded scan, so a freshly
-            # added endpoint is due immediately instead of sitting in cooldown.
-        )
-        session.add(endpoint)
+    endpoint = m.Endpoint(
+        port = port,
+        ip = ip,
+        hostname = hostname,
+    )
+    endpoint_row = find_endpoint_by_identity(
+        session,
+        ip = endpoint.ip,
+        hostname = endpoint.hostname,
+        port = endpoint.port,
+    )
+    if endpoint_row is None:
+        endpoint_row = m.EndpointTable(**endpoint.model_dump())
+        session.add(endpoint_row)
         session.flush()
     for tag in tags:
-        add_endpoint_tag(session, endpoint, tag)
-    return endpoint
+        add_endpoint_tag(session, endpoint_row, tag)
+    return endpoint_row
 
 
 def is_in_cooldown(

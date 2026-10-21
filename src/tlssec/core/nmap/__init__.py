@@ -189,7 +189,7 @@ class Nmap:
         detect_version: bool = True,
         host_discovery: bool = False,
         ports: str | None = None,
-    ):
+    ) -> tuple[CompletedProcess, list[m.Endpoint]]:
         """From given nmap `target`, discover open ports, services.
 
         This will
