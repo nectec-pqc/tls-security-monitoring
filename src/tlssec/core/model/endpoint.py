@@ -95,6 +95,12 @@ class Endpoint(BaseModel):
     )
     retire_at: datetime | None = None
 
+    @model_validator(mode = 'after')
+    def check_at_least_ip_or_hostname_is_specified(self):
+        if self.ip is None and self.hostname is None:
+            raise ValueError('Endpoint must specify at least IP or hostname')
+        return self
+
 
 class EndpointTable(Base):
     id: Mapped[int] = mapped_column(

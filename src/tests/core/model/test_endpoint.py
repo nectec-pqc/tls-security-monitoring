@@ -33,6 +33,7 @@ VALID_ENDPOINT_ARGS = dict(
         pytest.param({'ip': '::1'}, nullcontext(), id='with IPv6'),
         pytest.param({'retire_at': LATER}, nullcontext(), id='with retire_at'),
         pytest.param({'hostname': 'x' * 254}, pytest.raises(ValidationError), id='hostname too long'),
+        pytest.param({'hostname': None}, pytest.raises(ValidationError), id='hostname and ip are both missing'),
         pytest.param({'port': 0}, pytest.raises(ValidationError), id='port zero'),
         pytest.param({'port': 65536}, pytest.raises(ValidationError), id='port too large'),
         pytest.param({'path': 'no-leading-slash'}, pytest.raises(ValidationError), id='path missing leading slash'),

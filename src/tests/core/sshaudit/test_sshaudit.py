@@ -44,12 +44,6 @@ async def test_scan_nonzero_returncode_is_not_failure(monkeypatch):
     assert scan.result == {'banner': {}}
 
 
-async def test_scan_requires_host():
-    ep = m.Endpoint(ip=None, hostname=None, port=22)
-    with pytest.raises(ValueError, match='hostname nor ip'):
-        await SshAudit().scan(ep)
-
-
 async def test_scan_unparseable_output_raises(monkeypatch):
     async def fake_call(self, *args, **kwargs):
         return CompletedProcess(args=args, returncode=0, stdout=['not json'], stderr=[])

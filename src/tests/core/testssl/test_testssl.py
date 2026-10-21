@@ -258,13 +258,6 @@ def test_starttls_mapper_values_are_official():
     assert not ({'smtps', 'imaps', 'pop3s', 'ftps', 'ldaps'} & set(Testssl.STARTTLS_PROTOCOLS))
 
 
-async def test_scan_requires_host():
-    ts = Testssl()
-    ep = m.Endpoint(ip=None, hostname=None, port=443)
-    with pytest.raises(ValueError, match='hostname nor ip'):
-        await ts.scan(ep)
-
-
 @pytest.mark.slow
 async def test_scan_real_local(testssl, current_openssl_server):
     """End-to-end: really run testssl against the local openssl server."""
