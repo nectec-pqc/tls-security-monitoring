@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS base
+FROM ghcr.io/astral-sh/uv:python3.15-trixie-slim AS base
 RUN \
   groupadd --gid 1000 tlssec && \
   useradd \
@@ -70,7 +70,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # Final production image is as small as possible.
 # No uv in final image.
-FROM python:3.14-slim-trixie AS prod
+FROM python:3.15-slim-trixie AS prod
 COPY --from=base-prod /opt/app /opt/app
 ENV PATH="/opt/app/.venv/bin:$PATH"
 USER 1000:1000
