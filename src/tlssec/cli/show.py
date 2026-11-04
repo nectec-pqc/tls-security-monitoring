@@ -1,6 +1,6 @@
 import click
 
-from tlssec.app_state import AppState
+lazy from tlssec.app_state import AppState
 from .colored_help import ColoredGroup, ColoredCommand
 
 

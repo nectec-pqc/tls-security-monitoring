@@ -4,10 +4,10 @@ from pathlib import Path
 
 import click
 
-import tlssec.core.model as model
-import tlssec.core.operation as op
-from tlssec.app_state import AppState
-from .colored_help import ColoredGroup, ColoredCommand
+lazy import tlssec.core.model as model
+lazy import tlssec.core.operation as op
+lazy from tlssec.app_state import AppState
+lazy from .colored_help import ColoredGroup, ColoredCommand
 
 
 @click.group(

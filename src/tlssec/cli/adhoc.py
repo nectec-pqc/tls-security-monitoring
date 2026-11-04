@@ -1,18 +1,18 @@
 import logging
 _logger = logging.getLogger(__name__)
 from pathlib import Path
-from datetime import datetime
+lazy from datetime import datetime
 
 import click
-import pandas as pd
-import yaml
+lazy import pandas as pd
+lazy import yaml
 
-import tlssec.core.model as m
-from tlssec.app_state import AppState
-from tlssec.core.nmap import Nmap
-from tlssec.core.testssl import Testssl
-from tlssec.core.ssh_audit import SshAudit
-from tlssec.core.export.yaml import YamlDumper
+lazy import tlssec.core.model as m
+lazy from tlssec.app_state import AppState
+lazy from tlssec.core.nmap import Nmap
+lazy from tlssec.core.testssl import Testssl
+lazy from tlssec.core.ssh_audit import SshAudit
+lazy from tlssec.core.export.yaml import YamlDumper
 from .colored_help import ColoredGroup, ColoredCommand
 
 

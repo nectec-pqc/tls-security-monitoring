@@ -1,27 +1,27 @@
 import logging
 _logger = logging.getLogger(__name__)
 
-import asyncio
-import json
+lazy import asyncio
+lazy import json
 from pathlib import Path
-from datetime import datetime, UTC
+lazy from datetime import datetime, UTC
 
 import click
-import yaml
-from pydantic import ValidationError
+lazy import yaml
+lazy from pydantic import ValidationError
 
-from tlssec.app_state import AppState
-from tlssec.settings import Settings
-from tlssec.database.database import Database
-import tlssec.core.model as model
-import tlssec.core.operation as op
+lazy from tlssec.app_state import AppState
+lazy from tlssec.settings import Settings
+lazy from tlssec.database.database import Database
+lazy import tlssec.core.model as model
+lazy import tlssec.core.operation as op
 from .colored_help import ColoredGroup, ColoredCommand
 from .show import show
 from .import_group import import_group
 from .adhoc import adhoc
-from tlssec.core.nmap import Nmap
-from tlssec.core.testssl import Testssl
-from tlssec.core.sshaudit import SshAudit
+lazy from tlssec.core.nmap import Nmap
+lazy from tlssec.core.testssl import Testssl
+lazy from tlssec.core.sshaudit import SshAudit
 
 
 def entrypoint():
