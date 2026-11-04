@@ -22,6 +22,7 @@ wheels/
 !/workdir/.bashrc
 !/workdir/.pdbrc
 !/workdir/.tlssec-bash-autocomplete.bash
+!/workdir/autocomplete-perf-test.sh
 !/workdir/notebooks/
 !/workdir/.ipython/
 !/workdir/.jupyter/
