@@ -65,5 +65,5 @@ def test_load_external_document(
 ):
     path = tests_root / path
     with expectation as expected_type:
-        filetype, doc = external_document_loader.run(path)
-        assert filetype == expected_type
+        doc = external_document_loader.run(path)
+        assert doc.kind == expected_type

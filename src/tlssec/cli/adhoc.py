@@ -88,10 +88,10 @@ def compile_data_sources(sources: list[Path], outdir: Path):
     extracts = defaultdict(list)
     for source in sources:
         _logger.info(f'extracting from {source}')
-        filetype, content  = external_document_loader.run(source)
-        match filetype:
+        doc  = external_document_loader.run(source)
+        match doc.kind:
             case 'testssl-pretty':
-                new_extracts = Testssl.extract_json(content)
+                new_extracts = Testssl.extract_json(doc.data)
                 if not new_extracts:
                     continue
                 stdout_path = source.with_suffix('.stdout')
@@ -100,14 +100,14 @@ def compile_data_sources(sources: list[Path], outdir: Path):
                     # TODO: Customize YAML dumper to use anchor for duplicated long string.
                     for extract in new_extracts:
                         extract['raw_text'] = stdout_text
-                extracts[filetype].extend(new_extracts)
+                extracts[doc.kind].extend(new_extracts)
             case 'ssh-audit':
-                extracts[filetype].append(
-                    SshAudit.extract_json(content)
+                extracts[doc.kind].append(
+                    SshAudit.extract_json(doc.data)
                 )
             case 'nmap':
-                extracts[filetype].extend(
-                    Nmap.extract_endpoints_from_xml(content)
+                extracts[doc.kind].extend(
+                    Nmap.extract_endpoints_from_xml(doc.data)
                 )
 
     # post-processing endpoints from nmap to extracts

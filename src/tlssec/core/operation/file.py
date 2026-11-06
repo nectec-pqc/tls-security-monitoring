@@ -4,6 +4,7 @@ from typing import Any
 import bs4
 import yaml
 
+from tlssec.core.model import Document
 from tlssec.core.nmap import Nmap
 from tlssec.core.ssh_audit import SshAudit
 from tlssec.core.testssl import Testssl
@@ -31,22 +32,31 @@ def ReadXml(content: str) -> bs4.PageElement:
         raise ValueError('Can not read content as XML') from e
 
 
-# TODO: Have special classes to represent each kind of document.
+# TODO: Each scanner should return its Document subclass directly.
 
 
 @as_task(dependency = ReadXml)
 def ReadNmapXml(doc):
-    return 'nmap', Nmap.try_parse(doc)
+    return Document(
+        kind = 'nmap',
+        data = Nmap.try_parse(doc),
+    )
 
 
 @as_task(dependency = ReadYaml)
 def ReadTestsslJsonPretty(doc):
-    return 'testssl-pretty', Testssl.try_parse(doc)
+    return Document(
+        kind = 'testssl-pretty',
+        data = Testssl.try_parse(doc),
+    )
 
 
 @as_task(dependency = ReadYaml)
 def ReadSshAudit(doc):
-    return 'ssh-audit', SshAudit.try_parse(doc)
+    return Document(
+        kind = 'ssh-audit',
+        data = SshAudit.try_parse(doc),
+    )
 
 
 external_document_loader = FirstSuccessTaskGroup(
