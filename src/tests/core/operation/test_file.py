@@ -3,8 +3,13 @@ from pathlib import Path
 
 import pytest
 
-from tlssec.core.operation.file import external_document_loader
+from tlssec.core.operation.file import FiletypeRegistry
 from tlssec.task import AllAlternativesFailledError
+
+
+@pytest.fixture(scope = 'module')
+def filetype_registry():
+    return FiletypeRegistry()
 
 
 @pytest.mark.parametrize(
@@ -61,9 +66,10 @@ from tlssec.task import AllAlternativesFailledError
 )
 def test_load_external_document(
     path, expectation,
+    filetype_registry,
     tests_root,
 ):
     path = tests_root / path
     with expectation as expected_type:
-        doc = external_document_loader.run(path)
+        doc = filetype_registry.load_file(path)
         assert doc.kind == expected_type

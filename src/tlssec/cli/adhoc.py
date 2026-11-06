@@ -1,6 +1,7 @@
 import logging
 _logger = logging.getLogger(__name__)
 from pathlib import Path
+lazy from collections import defaultdict
 lazy from datetime import datetime
 
 import click
@@ -69,7 +70,7 @@ def export_report(
     report_path.mkdir(parents = True, exist_ok = True)
     TypstTemplates.init('snapshot_report', report_path)
 
-    compile_data_sources(sources, report_path / 'data')
+    compile_data_sources(state, sources, report_path / 'data')
 
     _logger.info('compiling report')
     completed_process = subprocess.run(
@@ -81,14 +82,12 @@ def export_report(
         ctx.exit(2)
 
 
-def compile_data_sources(sources: list[Path], outdir: Path):
+def compile_data_sources(state: AppState, sources: list[Path], outdir: Path):
     # TODO: combine extracts into single file? Do this after revising document format.
-    from collections import defaultdict
-    from tlssec.core.operation.file import external_document_loader
     extracts = defaultdict(list)
     for source in sources:
         _logger.info(f'extracting from {source}')
-        doc  = external_document_loader.run(source)
+        doc  = state.filetype_registry.load_file(source)
         match doc.kind:
             case 'testssl-pretty':
                 new_extracts = Testssl.extract_json(doc.data)
@@ -97,7 +96,6 @@ def compile_data_sources(sources: list[Path], outdir: Path):
                 stdout_path = source.with_suffix('.stdout')
                 if stdout_path.exists():
                     stdout_text = stdout_path.read_text()
-                    # TODO: Customize YAML dumper to use anchor for duplicated long string.
                     for extract in new_extracts:
                         extract['raw_text'] = stdout_text
                 extracts[doc.kind].extend(new_extracts)
