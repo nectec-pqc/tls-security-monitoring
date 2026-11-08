@@ -61,8 +61,7 @@ class FirstSuccessTaskGroup:
       before moving on to the next task in the given order.
     - This can be visualized as doing depth-first search (DFS) from the root
       of dependency tree for the first task that will be successful.
-    - DFS order allow cached result to be  is a deliberate choice to minimize memory footprint used for
-      caching intermediate results.
+    - DFS order allow cached result to be reused while minimizing memory footprint.
     """
     def __init__(
         self,
@@ -83,13 +82,9 @@ class FirstSuccessTaskGroup:
         self.targets = []
         self.skippable = skippable
         self.children = defaultdict(list)
-        # FIXME: task that are prefix of another are getting forgotten.
-        # - prefix task that comes before its children should make the children ignorable
-        # - prefix task that comes after its children can become fallback for children
         for task in targets:
             self.add_task(task)
 
-    # FIXME: if task hash is deep, then it means we might not need to traverse up?
     def add_task(self, task: Task) -> bool:
         # If any ancestor is already a target (which it must have higher priority than new task too),
         # then just don't register the new task (because the new task would be unreachable anyway).
