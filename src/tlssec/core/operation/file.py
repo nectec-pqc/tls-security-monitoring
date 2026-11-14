@@ -4,7 +4,7 @@ from typing import Any
 import bs4
 import yaml
 
-from tlssec.core.model import Document
+import tlssec.core.model as m
 from tlssec.core.nmap import Nmap
 from tlssec.core.ssh_audit import SshAudit
 from tlssec.core.testssl import Testssl
@@ -25,38 +25,26 @@ def ReadYaml(content: str) -> Any:
 
 
 @as_task(dependency = ReadTextFile)
-def ReadXml(content: str) -> bs4.PageElement:
+def ReadXml(content: str) -> bs4.Tag:
     try:
         return bs4.BeautifulSoup(content, 'xml')
     except Exception as e:
         raise ValueError('Can not read content as XML') from e
 
 
-# TODO: Each scanner should return its Document subclass directly.
-
-
 @as_task(dependency = ReadXml)
-def ReadNmapXml(doc) -> Document:
-    return Document(
-        kind = 'nmap',
-        data = Nmap.try_parse(doc),
-    )
+def ReadNmapXml(doc) -> m.ExternalDocument:
+    return Nmap.try_parse(doc)
 
 
 @as_task(dependency = ReadYaml)
-def ReadTestsslJsonPretty(doc) -> Document:
-    return Document(
-        kind = 'testssl-pretty',
-        data = Testssl.try_parse(doc),
-    )
+def ReadTestsslJsonPretty(doc) -> m.ExternalDocument:
+    return Testssl.try_parse(doc)
 
 
 @as_task(dependency = ReadYaml)
-def ReadSshAudit(doc) -> Document:
-    return Document(
-        kind = 'ssh-audit',
-        data = SshAudit.try_parse(doc),
-    )
+def ReadSshAudit(doc) -> m.ExternalDocument:
+    return SshAudit.try_parse(doc)
 
 
 class FiletypeRegistry:

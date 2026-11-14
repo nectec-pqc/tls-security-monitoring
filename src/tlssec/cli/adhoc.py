@@ -87,10 +87,12 @@ def compile_data_sources(state: AppState, sources: list[Path], outdir: Path):
     extracts = defaultdict(list)
     for source in sources:
         _logger.info(f'extracting from {source}')
-        doc  = state.filetype_registry.load_file(source)
-        match doc.kind:
+        doc = state.filetype_registry.load_file(source)
+        if doc.kind != 'external':
+            continue
+        match doc.data.type:
             case 'testssl-pretty':
-                new_extracts = Testssl.extract_json(doc.data)
+                new_extracts = Testssl.extract_json(doc.data.content)
                 if not new_extracts:
                     continue
                 stdout_path = source.with_suffix('.stdout')
@@ -101,11 +103,11 @@ def compile_data_sources(state: AppState, sources: list[Path], outdir: Path):
                 extracts[doc.kind].extend(new_extracts)
             case 'ssh-audit':
                 extracts[doc.kind].append(
-                    SshAudit.extract_json(doc.data)
+                    SshAudit.extract_json(doc.data.content)
                 )
             case 'nmap':
                 extracts[doc.kind].extend(
-                    Nmap.extract_endpoints_from_xml(doc.data)
+                    Nmap.extract_endpoints_from_xml(doc.data._bs4)
                 )
 
     # post-processing endpoints from nmap to extracts

@@ -1,14 +1,63 @@
 import tempfile
-from pathlib import Path
-from datetime import datetime
-import re
 import unicodedata
+from collections.abc import Mapping
 from contextlib import contextmanager
+from datetime import datetime
+from pathlib import Path
+from typing import (
+    Annotated,
+    Any,
+    Literal,
+    Self,
+)
 
 import bs4
+from pydantic import (
+    Field,
+    model_validator,
+)
 
+from tlssec.asyncio import CompletedProcess, run_subprocess
 import tlssec.core.model as m
-from tlssec.asyncio import run_subprocess, CompletedProcess
+
+
+class NmapRaw(m.TextRaw):
+    type: Literal['nmap'] = 'nmap'
+    content: str
+
+    # Cache the bs4-parsed version of xml string in `content` field.
+    # Should not be mutated.
+    _bs4: bs4.Tag
+
+    # NOTE: can't use BeforeFieldValidator or `model_validator(mode = 'before')
+    # because we can't set new attribute on model in their contexts
+    @model_validator(mode = 'wrap')
+    @classmethod
+    def accept_content_as_bs4_tag(cls, data: Any, handler) -> Self:
+        tag = None
+        if (
+            isinstance(data, Mapping)
+            and isinstance(data.get('content'), bs4.Tag)
+        ):
+            tag = data['content']
+            data = {**data, 'content': str(tag)}
+        self = handler(data)
+        if tag is None:
+            tag = bs4.BeautifulSoup(self.content, 'xml')
+        self._bs4 = tag
+        return self
+
+    # TODO: check model_validator ordering.
+    @model_validator(mode = 'after')
+    def sniff_nmap_xml_format(self) -> Self:
+        doctype = next((x for x in self._bs4.contents if isinstance(x, bs4.Doctype)), None)
+        if doctype is None:
+            raise ValueError('XML Source is missing `nmaprun` doctype')
+
+        nmaprun_tag = self._bs4.find('nmaprun', recursive = False)
+        if nmaprun_tag is None:
+            raise ValueError('XML Source is missing `nmaprun` tag')
+        return self
 
 
 class Nmap:
@@ -76,7 +125,7 @@ class Nmap:
         return s
 
     @staticmethod
-    def extract_ordered_hostnames(soup: bs4.PageElement) -> list[bs4.PageElement]:
+    def extract_ordered_hostnames(soup: bs4.Tag) -> list[bs4.Tag]:
         """List children <host> tag ordered by preferred type first
 
         Nmap can list multiple hostnames for a single host it scanned.
@@ -102,28 +151,24 @@ class Nmap:
 
     @staticmethod
     def try_parse(
-        source: bs4.PageElement | Path,
-    ) -> bs4.PageElement:
-        if not isinstance(source, bs4.PageElement):
+        source: bs4.Tag | Path,
+    ) -> bs4.Tag:
+        if not isinstance(source, bs4.Tag):
             with open(source) as f:
                 source = bs4.BeautifulSoup(f, 'xml')
 
-        doctype = next((x for x in source.contents if isinstance(x, bs4.Doctype)), None)
-        if doctype is None:
-            raise ValueError('XML Source is missing `nmaprun` doctype')
-
-        nmaprun_tag = source.find('nmaprun', recursive = False)
-        if nmaprun_tag is None:
-            raise ValueError('XML Source is missing `nmaprun` tag')
-
-        return source
+        return m.ExternalDocument(
+            data = NmapRaw(
+                type = 'nmap',
+                content = source,
+            ),
+        )
 
     @classmethod
     def extract_endpoints_from_xml(
         cls,
-        source: bs4.PageElement | Path,
+        source: bs4.Tag,
     ) -> list[m.Endpoint]:
-        source = cls.try_parse(source)
         endpoints = []
         for host in source.find_all('host'):
             host_start = host.attrs.get('starttime', None)
@@ -235,6 +280,7 @@ class Nmap:
         with xml_path_context() as xml_path:
             options += ('-oX', str(xml_path))
             completed_process = await run_subprocess('nmap', *options, target)
-            endpoints = cls.extract_endpoints_from_xml(xml_path)
+            raw = NmapRaw(content = xml_path.read_text())
+            endpoints = cls.extract_endpoints_from_xml(raw._bs4)
 
         return completed_process, endpoints

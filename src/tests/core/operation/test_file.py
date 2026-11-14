@@ -72,4 +72,5 @@ def test_load_external_document(
     path = tests_root / path
     with expectation as expected_type:
         doc = filetype_registry.load_file(path)
-        assert doc.kind == expected_type
+        assert doc.kind == 'external'
+        assert doc.data.type == expected_type

@@ -3,11 +3,13 @@ from pathlib import Path
 from typing import Literal
 from dataclasses import dataclass, field
 
+from pydantic import JsonValue
 import yaml
 from ssh_audit.ssh2_kexdb import SSH2_KexDB
 
 import tlssec.standard as standard
 from tlssec.asyncio import run_subprocess, CompletedProcess
+import tlssec.core.model as m
 
 
 class SshAudit:
@@ -51,7 +53,7 @@ class SshAudit:
     @staticmethod
     def try_parse(
         source: dict | os.PathLike,
-    ) -> dict:
+    ) -> m.ExternalDocument:
         if not isinstance(source, dict):
             with open(source) as f:
                 source = yaml.safe_load(f)
@@ -70,15 +72,18 @@ class SshAudit:
                 pass
             case _:
                 raise ValueError('Content does not seem to be produced by `ssh-audit --json`')
-        return source
+        return m.ExternalDocument(
+            data = m.StructuredRaw(
+                type = 'ssh-audit',
+                content = source,
+            ),
+        )
 
     @classmethod
     def extract_json(
         cls,
-        source: dict | os.PathLike,
+        source: JsonValue,
     ) -> dict:
-        source = cls.try_parse(source)
-
         # FIXME ssh-audit only record scan target as unparsed str in json.
         # To re-parse the target specification, one must follow the logic in:
         # https://github.com/jtesta/ssh-audit/blob/c63c4a712be1ddae051c806a17171d661d352ff8/src/ssh_audit/utils.py#L132

@@ -9,6 +9,7 @@ import os
 import re
 import tempfile
 
+from pydantic import JsonValue
 import yaml
 
 import tlssec.core.model as m
@@ -183,7 +184,7 @@ class Testssl:
     @staticmethod
     def try_parse(
         source: dict | list | os.PathLike,
-    ) -> dict:
+    ) -> m.ExternalDocument:
         if not isinstance(source, dict | list):
             with open(source) as f:
                 source = yaml.safe_load(f)
@@ -209,14 +210,18 @@ class Testssl:
                 pass
             case _:
                 raise ValueError('Content does not seem to be produced by `testssl --json-pretty`')
-        return source
+        return m.ExternalDocument(
+            data = m.StructuredRaw(
+                type = 'testssl-pretty',
+                content = source,
+            ),
+        )
 
     @classmethod
     def extract_json(
         cls,
-        source: dict | list | os.PathLike,
+        source: JsonValue,
     ) -> list[dict]:
-        source = cls.try_parse(source)
         extracts = []
         for scan in source['scanResult']:
             extract = {
