@@ -12,3 +12,4 @@ from .external_document import (
     StructuredRaw,
     TextRaw,
 )
+from .document_union import AnyDocument

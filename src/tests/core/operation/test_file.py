@@ -2,7 +2,9 @@ from contextlib import nullcontext
 from pathlib import Path
 
 import pytest
+import yaml
 
+from tlssec.core.export.yaml import YamlDumper
 from tlssec.core.operation.file import FiletypeRegistry
 from tlssec.task import AllAlternativesFailledError
 
@@ -74,3 +76,27 @@ def test_load_external_document(
         doc = filetype_registry.load_file(path)
         assert doc.kind == 'external'
         assert doc.data.type == expected_type
+
+
+@pytest.mark.parametrize(
+    'path',
+    [
+        'core/testssl/result_cases/minihttp/1cert.pretty.json',
+        'core/ssh_audit/result_cases/successful_scan_fail_audit.ssh_audit.json',
+        'core/nmap/result_cases/success_find_both_ssh_and_ssl.nmap.xml',
+    ],
+)
+def test_roundtrip_wrapped_external_document(
+    path,
+    tests_root,
+    filetype_registry,
+    cache_dir,
+):
+    path = tests_root / path
+    doc = filetype_registry.load_file(path)
+    outpath = cache_dir / 'roundtrip_wrapped_external_document/tmp.yaml'
+    outpath.parent.mkdir(parents = True, exist_ok = True)
+    with open(outpath, 'w') as f:
+        yaml.dump(doc.model_dump(), f, Dumper = YamlDumper)
+    reloaded_doc = filetype_registry.load_file(outpath)
+    assert doc == reloaded_doc

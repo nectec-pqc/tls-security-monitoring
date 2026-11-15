@@ -32,6 +32,11 @@ def ReadXml(content: str) -> bs4.Tag:
         raise ValueError('Can not read content as XML') from e
 
 
+@as_task(dependency = ReadYaml)
+def ReadTlssecNativeDocument(doc) -> m.Document:
+    return m.AnyDocument.model_validate(doc)
+
+
 @as_task(dependency = ReadXml)
 def ReadNmapXml(doc) -> m.ExternalDocument:
     return Nmap.try_parse(doc)
@@ -56,6 +61,7 @@ class FiletypeRegistry:
         # TODO: discover tlssec extensions and register filetypes they enabled
         self._loader = FirstSuccessTaskGroup(
             [
+                ReadTlssecNativeDocument,
                 ReadTestsslJsonPretty,
                 ReadSshAudit,
                 ReadNmapXml,
