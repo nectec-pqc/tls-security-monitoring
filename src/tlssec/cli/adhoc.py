@@ -107,7 +107,7 @@ def compile_data_sources(state: AppState, sources: list[Path], outdir: Path):
                 )
             case 'nmap':
                 extracts[doc.kind].extend(
-                    Nmap.extract_endpoints_from_xml(doc.data._bs4)
+                    Nmap.extract_endpoints_from_xml(doc.data.soup)
                 )
 
     # post-processing endpoints from nmap to extracts

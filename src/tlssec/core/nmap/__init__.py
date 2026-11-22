@@ -1,11 +1,9 @@
 import tempfile
 import unicodedata
-from collections.abc import Mapping
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import (
-    Annotated,
     Any,
     Literal,
     Self,
@@ -21,40 +19,17 @@ from tlssec.asyncio import CompletedProcess, run_subprocess
 import tlssec.core.model as m
 
 
-class NmapRaw(m.TextRaw):
+class NmapRaw(m.XmlRaw):
     type: Literal['nmap'] = 'nmap'
-    content: str
-
-    # Cache the bs4-parsed version of xml string in `content` field.
-    # Should not be mutated.
-    _bs4: bs4.Tag
-
-    # NOTE: can't use BeforeFieldValidator or `model_validator(mode = 'before')
-    # because we can't set new attribute on model in their contexts
-    @model_validator(mode = 'wrap')
-    @classmethod
-    def accept_content_as_bs4_tag(cls, data: Any, handler) -> Self:
-        tag = None
-        if (
-            isinstance(data, Mapping)
-            and isinstance(data.get('content'), bs4.Tag)
-        ):
-            tag = data['content']
-            data = {**data, 'content': str(tag)}
-        self = handler(data)
-        if tag is None:
-            tag = bs4.BeautifulSoup(self.content, 'xml')
-        self._bs4 = tag
-        return self
 
     # TODO: check model_validator ordering.
     @model_validator(mode = 'after')
     def sniff_nmap_xml_format(self) -> Self:
-        doctype = next((x for x in self._bs4.contents if isinstance(x, bs4.Doctype)), None)
+        doctype = next((x for x in self.soup.contents if isinstance(x, bs4.Doctype)), None)
         if doctype is None:
             raise ValueError('XML Source is missing `nmaprun` doctype')
 
-        nmaprun_tag = self._bs4.find('nmaprun', recursive = False)
+        nmaprun_tag = self.soup.find('nmaprun', recursive = False)
         if nmaprun_tag is None:
             raise ValueError('XML Source is missing `nmaprun` tag')
         return self
@@ -147,21 +122,6 @@ class Nmap:
         return sorted(
             hostnames_tag.find_all('hostname'),
             key = key,
-        )
-
-    @staticmethod
-    def try_parse(
-        source: bs4.Tag | Path,
-    ) -> bs4.Tag:
-        if not isinstance(source, bs4.Tag):
-            with open(source) as f:
-                source = bs4.BeautifulSoup(f, 'xml')
-
-        return m.ExternalDocument(
-            data = NmapRaw(
-                type = 'nmap',
-                content = source,
-            ),
         )
 
     @classmethod
@@ -281,6 +241,6 @@ class Nmap:
             options += ('-oX', str(xml_path))
             completed_process = await run_subprocess('nmap', *options, target)
             raw = NmapRaw(content = xml_path.read_text())
-            endpoints = cls.extract_endpoints_from_xml(raw._bs4)
+            endpoints = cls.extract_endpoints_from_xml(raw.soup)
 
         return completed_process, endpoints

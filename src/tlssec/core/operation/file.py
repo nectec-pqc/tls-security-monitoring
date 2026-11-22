@@ -5,7 +5,7 @@ import bs4
 import yaml
 
 import tlssec.core.model as m
-from tlssec.core.nmap import Nmap
+from tlssec.core.nmap import NmapRaw
 from tlssec.core.ssh_audit import SshAudit
 from tlssec.core.testssl import Testssl
 from tlssec.task import as_task, FirstSuccessTaskGroup
@@ -25,11 +25,11 @@ def ReadYaml(content: str) -> Any:
 
 
 @as_task(dependency = ReadTextFile)
-def ReadXml(content: str) -> bs4.Tag:
-    try:
-        return bs4.BeautifulSoup(content, 'xml')
-    except Exception as e:
-        raise ValueError('Can not read content as XML') from e
+def ReadXml(content: str) -> m.XmlRaw:
+    return m.XmlRaw(
+        type = 'xml',
+        content = content,
+    )
 
 
 @as_task(dependency = ReadYaml)
@@ -38,8 +38,13 @@ def ReadTlssecNativeDocument(doc) -> m.Document:
 
 
 @as_task(dependency = ReadXml)
-def ReadNmapXml(doc) -> m.ExternalDocument:
-    return Nmap.try_parse(doc)
+def ReadNmapXml(doc: m.XmlRaw) -> m.ExternalDocument:
+    return m.ExternalDocument(
+        data = NmapRaw(
+            content = doc.content,
+            soup = doc.soup,
+        ),
+    )
 
 
 @as_task(dependency = ReadYaml)

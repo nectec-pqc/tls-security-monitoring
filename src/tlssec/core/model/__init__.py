@@ -11,5 +11,6 @@ from .external_document import (
     ExternalRaw,
     StructuredRaw,
     TextRaw,
+    XmlRaw,
 )
 from .document_union import AnyDocument
