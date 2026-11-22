@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field
 from pydantic_extra_types.semver import _VersionPydanticAnnotation as SemVer
 import yaml
 
+from tlssec.core.export.yaml import YamlDumper
+
 
 class Document(BaseModel):
     """Document format originated from tlssec
@@ -35,9 +37,10 @@ class Document(BaseModel):
     def to_file(self, path: Path):
         """Write this document to file at the given path."""
         with path.open('w') as f:
-            yaml.safe_dump(
+            yaml.dump(
                 self.model_dump(mode = "json"),
                 f,
+                Dumper = YamlDumper,
             )
 
     @classmethod

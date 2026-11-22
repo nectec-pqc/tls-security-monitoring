@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tlssec.core.export.yaml import YamlDumper
 from tlssec.core.operation.file import FiletypeRegistry
 from tlssec.task import AllAlternativesFailledError
 
@@ -96,7 +95,6 @@ def test_roundtrip_wrapped_external_document(
     doc = filetype_registry.load_file(path)
     outpath = cache_dir / 'roundtrip_wrapped_external_document/tmp.yaml'
     outpath.parent.mkdir(parents = True, exist_ok = True)
-    with open(outpath, 'w') as f:
-        yaml.dump(doc.model_dump(), f, Dumper = YamlDumper)
+    doc.to_file(outpath)
     reloaded_doc = filetype_registry.load_file(outpath)
     assert doc == reloaded_doc
