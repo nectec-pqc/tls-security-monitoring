@@ -16,11 +16,17 @@ from tlssec.task import as_task, FirstSuccessTaskGroup
 
 
 @as_task()
-def ReadTextFile(path: Path) -> str:
-    return path.read_text()
+def ReadText(source: Path | str) -> str:
+    match source:
+        case Path():
+            return source.read_text()
+        case str():
+            return source
+        case _:
+            raise TypeError('source of text must either be a file path to read from, or string content to be used directly')
 
 
-@as_task(dependency = ReadTextFile)
+@as_task(dependency = ReadText)
 def ReadYaml(content: str) -> Any:
     try:
         return yaml.safe_load(content)
@@ -28,7 +34,7 @@ def ReadYaml(content: str) -> Any:
         raise ValueError('Content is not a valid YAML') from e
 
 
-@as_task(dependency = ReadTextFile)
+@as_task(dependency = ReadText)
 def ReadXml(content: str) -> m.XmlRaw:
     return m.XmlRaw(
         type = 'xml',
@@ -92,5 +98,5 @@ class FiletypeRegistry:
             skippable = ValueError,
         )
 
-    def load_file(self, path: Path) -> m.Document:
+    def load(self, path: Path | str) -> m.Document:
         return self._loader.run(path)

@@ -87,7 +87,7 @@ def compile_data_sources(state: AppState, sources: list[Path], outdir: Path):
     extracts = defaultdict(list)
     for source in sources:
         _logger.info(f'extracting from {source}')
-        doc = state.filetype_registry.load_file(source)
+        doc = state.filetype_registry.load(source)
         if doc.kind != 'external':
             continue
         match doc.data.type:

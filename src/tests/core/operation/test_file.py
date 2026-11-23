@@ -72,7 +72,7 @@ def test_load_external_document(
 ):
     path = tests_root / path
     with expectation as expected_type:
-        doc = filetype_registry.load_file(path)
+        doc = filetype_registry.load(path)
         assert doc.kind == 'external'
         assert doc.data.type == expected_type
 
@@ -89,12 +89,9 @@ def test_roundtrip_wrapped_external_document(
     path,
     tests_root,
     filetype_registry,
-    cache_dir,
 ):
     path = tests_root / path
-    doc = filetype_registry.load_file(path)
-    outpath = cache_dir / 'roundtrip_wrapped_external_document/tmp.yaml'
-    outpath.parent.mkdir(parents = True, exist_ok = True)
-    doc.to_file(outpath)
-    reloaded_doc = filetype_registry.load_file(outpath)
+    doc = filetype_registry.load(path)
+    serialized = doc.dump()
+    reloaded_doc = filetype_registry.load(serialized)
     assert doc == reloaded_doc

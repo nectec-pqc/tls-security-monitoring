@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 from importlib.metadata import version
 from typing import (
     Any,
@@ -34,21 +35,25 @@ class Document[D](BaseModel):
         description = 'Main content of the document. Subclass should further specify structure of `data`.',
     )
 
-    def to_file(self, path: Path):
-        """Write this document to file at the given path."""
-        with path.open('w') as f:
-            yaml.dump(
+    def dump(self, path: Path | None = None) -> str | None:
+        """Serialize this document (and write to file if given a path)
+
+        Every kind of `Document` can be dumped the same way using this method.
+        However, loading serialized `Document` correctly depends on what
+        filetypes are enabled for the session. Therefore, use
+        `tlssec.app_state.filetype_registry.load` for loading instead.
+        """
+        stream_context = (
+            nullcontext(None)
+            if path is None
+            else path.open('w')
+        )
+        with stream_context as stream:
+            return yaml.dump(
                 self.model_dump(mode = "json"),
-                f,
+                stream,
                 Dumper = YamlDumper,
             )
-
-    @classmethod
-    def from_file(cls, path: Path) -> Self:
-        """Load document from file at the given path."""
-        with path.open('r') as f:
-            content = yaml.safe_load(f)
-        return cls.model_validate(base_content)
 
 
 class DocumentList[D](Document[list[Document[D]]]):
