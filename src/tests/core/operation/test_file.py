@@ -95,3 +95,23 @@ def test_roundtrip_wrapped_external_document(
     serialized = doc.dump()
     reloaded_doc = filetype_registry.load(serialized)
     assert doc == reloaded_doc
+
+
+def test_nmap_specific_invalidation(
+    tests_root,
+    filetype_registry,
+):
+    path = tests_root / 'core/nmap/result_cases/success_find_both_ssh_and_ssl.nmap.xml'
+    valid = filetype_registry.load(path)
+
+    invalid = valid.model_copy(deep = True)
+    invalid.data.soup.find('nmaprun').name = 'notnmaprun'
+    invalid.data.content = str(invalid.data.soup)
+
+    with pytest.raises(AllAlternativesFailledError) as excinfo_invalid_content:
+        reloaded_from_invalid_content = filetype_registry.load(invalid.data.content)
+    assert excinfo_invalid_content.group_contains(ValueError, match = 'missing `nmaprun` tag')
+
+    with pytest.raises(AllAlternativesFailledError) as excinfo_invalid_doc:
+        reloaded_from_invalid_doc = filetype_registry.load(invalid.dump())
+    assert excinfo_invalid_doc.group_contains(ValueError, match = 'missing `nmaprun` tag')

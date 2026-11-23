@@ -51,13 +51,7 @@ def ReadTlssecNativeDocument(doc) -> m.Document:
     ]
     # There are native docs that are not just wrapper of external document
     # TODO: Add more native document types here
-    NativeDocument = m.ExternalDocument[
-        Annotated[
-            # Fallback to generic raw types.
-            ConcreteExternalRaw | m.ExternalRaw,
-            Field(union_mode = 'left_to_right'),
-        ]
-    ]
+    NativeDocument = m.ExternalDocument[ConcreteExternalRaw]
     return NativeDocument.model_validate(doc)
 
 
