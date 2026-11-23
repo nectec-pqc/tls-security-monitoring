@@ -1,7 +1,11 @@
 from pathlib import Path
-from typing import Any
+from typing import (
+    Annotated,
+    Any,
+)
 
 import bs4
+from pydantic import Field
 import yaml
 
 import tlssec.core.model as m
@@ -34,12 +38,26 @@ def ReadXml(content: str) -> m.XmlRaw:
 
 @as_task(dependency = ReadYaml)
 def ReadTlssecNativeDocument(doc) -> m.Document:
-    return m.AnyDocument.model_validate(doc)
+    ConcreteExternalRaw = Annotated[
+        # TODO: Add more concrete raw types here
+        NmapRaw,
+        Field(discriminator = 'type'),
+    ]
+    # There are native docs that are not just wrapper of external document
+    # TODO: Add more native document types here
+    NativeDocument = m.ExternalDocument[
+        Annotated[
+            # Fallback to generic raw types.
+            ConcreteExternalRaw | m.ExternalRaw,
+            Field(union_mode = 'left_to_right'),
+        ]
+    ]
+    return NativeDocument.model_validate(doc)
 
 
 @as_task(dependency = ReadXml)
-def ReadNmapXml(doc: m.XmlRaw) -> m.ExternalDocument:
-    return m.ExternalDocument(
+def ReadNmapXml(doc: m.XmlRaw) -> m.ExternalDocument[NmapRaw]:
+    return m.ExternalDocument[NmapRaw](
         data = NmapRaw(
             content = doc.content,
             soup = doc.soup,
@@ -74,5 +92,5 @@ class FiletypeRegistry:
             skippable = ValueError,
         )
 
-    def load_file(self, path: Path) -> Document:
+    def load_file(self, path: Path) -> m.Document:
         return self._loader.run(path)

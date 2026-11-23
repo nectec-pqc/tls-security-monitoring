@@ -13,4 +13,3 @@ from .external_document import (
     TextRaw,
     XmlRaw,
 )
-from .document_union import AnyDocument

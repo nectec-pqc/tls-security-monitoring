@@ -20,7 +20,7 @@ from pydantic import (
 from .document import Document
 
 
-class BaseExternalRaw(BaseModel, ABC):
+class BaseExternalRaw[C](BaseModel, ABC):
     """Raw data of an external format.
 
     - The data maybe classified as either structured, unstructured text, or binary.
@@ -32,21 +32,19 @@ class BaseExternalRaw(BaseModel, ABC):
     representation: str = Field(
         description = 'How content is represented or encoded in content field',
     )
-    content: Any
+    content: C
 
 
-class StructuredRaw(BaseExternalRaw):
+class StructuredRaw(BaseExternalRaw[JsonValue]):
     """Used when raw data is already structured (e.g., JSON, YAML, or TOML)."""
     representation: Literal['structured'] = 'structured'
-    content: JsonValue
 
 
-class XmlRaw(BaseExternalRaw):
+class XmlRaw(BaseExternalRaw[str]):
     """Used when raw data is XML."""
     model_config = ConfigDict(arbitrary_types_allowed = True)
 
     representation: Literal['xml'] = 'xml'
-    content: str
     soup: bs4.Tag = Field(
         default = None,
         exclude = True,
@@ -78,16 +76,14 @@ class XmlRaw(BaseExternalRaw):
         return self
 
 
-class TextRaw(BaseExternalRaw):
+class TextRaw(BaseExternalRaw[str]):
     """Used when raw data is text, but with structure that is incompatible with JSON."""
     representation: Literal['text'] = 'text'
-    content: str
 
 
-class BinaryRaw(BaseExternalRaw):
+class BinaryRaw(BaseExternalRaw[Base64Bytes]):
     """Used as a last resort to represent raw data as base64-encoded string."""
     representation: Literal['binary'] = 'binary'
-    content: Base64Bytes
 
 
 ExternalRaw = Annotated[
@@ -96,7 +92,6 @@ ExternalRaw = Annotated[
 ]
 
 
-class ExternalDocument(Document):
+class ExternalDocument[D = ExternalRaw](Document[D]):
     """Document that is actually just a wrapper around external data format."""
     kind: Literal['external'] = 'external'
-    data: ExternalRaw

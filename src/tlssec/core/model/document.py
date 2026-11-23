@@ -12,7 +12,7 @@ import yaml
 from tlssec.core.export.yaml import YamlDumper
 
 
-class Document(BaseModel):
+class Document[D](BaseModel):
     """Document format originated from tlssec
 
     - Documents are self-describing.
@@ -30,7 +30,7 @@ class Document(BaseModel):
     # NOTE: k8s objects have [metadata](https://kubernetes.io/docs/reference/kubernetes-api/definitions/object-meta-v1-meta) field.
     # Should we have metadata field?
     # It could contain: creation datetime, annotation, ...
-    data: Any = Field(
+    data: D = Field(
         description = 'Main content of the document. Subclass should further specify structure of `data`.',
     )
 
@@ -51,7 +51,7 @@ class Document(BaseModel):
         return cls.model_validate(base_content)
 
 
-class DocumentList(Document):
+class DocumentList[D](Document[list[Document[D]]]):
     """Document that is a list of other documents"""
     kind: Literal['list'] = 'list'
-    data: list[Document] = []
+    data: list[Document[D]] = []
