@@ -27,6 +27,26 @@ from tlssec.core.export.yaml import YamlDumper
             '- a0123456789\n- a0123456789\n',
             id = 'short strings are allowed to be duplicated',
         ),
+        pytest.param(
+            {'raw': 'first line\nsecond line\n'},
+            'raw: |\n  first line\n  second line\n',
+            id = 'multi-line string uses `|` block style',
+        ),
+        pytest.param(
+            {'raw': 'first line\nsecond line'},
+            'raw: |-\n  first line\n  second line\n',
+            id = 'multi-line string without ending newline uses `|-` block style',
+        ),
+        pytest.param(
+            {'raw': 'first line\nsecond line\n\n'},
+            'raw: |+\n  first line\n  second line\n\n...\n',
+            id = 'multi-line string with many ending newlines uses `|+` block style',
+        ),
+        pytest.param(
+            'first line\nsecond line\n',
+            '|\n  first line\n  second line\n',
+            id = 'multi-line string at root',
+        ),
     ],
 )
 def test_yaml_dumper(data, expected):

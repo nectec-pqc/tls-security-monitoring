@@ -26,3 +26,16 @@ YamlDumper.add_representer(
     set,
     _represent_set_as_list,
 )
+
+
+def _represent_multi_line_string_in_block_style(dumper, data: str):
+    node = dumper.represent_str(data)
+    if '\n' in data:
+        node.style = '|'
+    return node
+
+
+YamlDumper.add_representer(
+    str,
+    _represent_multi_line_string_in_block_style,
+)
