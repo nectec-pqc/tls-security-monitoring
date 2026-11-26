@@ -125,18 +125,20 @@ def test_testssl_specific_invalidation(
     path = tests_root / 'core/testssl/result_cases/no_service.pretty.json'
     valid = filetype_registry.load(path)
 
-    invalid = valid.model_copy(deep = True)
-    del invalid.data.content['scanResult']
+    invalid = valid.model_dump(mode = 'json')
+    del invalid['data']['content']['scanResult']
 
     with pytest.raises(AllAlternativesFailledError) as excinfo_invalid_content:
         reloaded_from_invalid_content = filetype_registry.load(
-            json.dumps(invalid.data.content)
+            json.dumps(invalid['data']['content'])
         )
-    assert excinfo_invalid_content.group_contains(ValueError, match = 'testssl --json-pretty')
+    assert excinfo_invalid_content.group_contains(ValueError, match = '\ndata\\.content\\.scanResult\n')
 
     with pytest.raises(AllAlternativesFailledError) as excinfo_invalid_doc:
-        reloaded_from_invalid_doc = filetype_registry.load(invalid.dump())
-    assert excinfo_invalid_doc.group_contains(ValueError, match = 'testssl --json-pretty')
+        reloaded_from_invalid_doc = filetype_registry.load(
+            json.dumps(invalid)
+        )
+    assert excinfo_invalid_doc.group_contains(ValueError, match = '\ndata\\.content\\.scanResult\n')
 
 
 def test_ssh_audit_specific_invalidation(

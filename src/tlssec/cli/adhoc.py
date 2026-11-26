@@ -92,7 +92,7 @@ def compile_data_sources(state: AppState, sources: list[Path], outdir: Path):
             continue
         match doc.data.type:
             case 'testssl-pretty':
-                new_extracts = Testssl.extract_json(doc.data.content)
+                new_extracts = doc.data.content.extract_adhoc_summary()
                 if not new_extracts:
                     continue
                 stdout_path = source.with_suffix('.stdout')

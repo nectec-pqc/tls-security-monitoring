@@ -2,6 +2,10 @@ import logging
 _logger = logging.getLogger(__name__)
 from collections import defaultdict
 from pathlib import Path
+from typing import (
+    Any,
+    Literal,
+)
 import asyncio
 import ipaddress
 import json
@@ -9,13 +13,93 @@ import os
 import re
 import tempfile
 
-from pydantic import JsonValue
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    model_validator,
+)
 import yaml
 
 import tlssec.core.model as m
 import tlssec.standard as standard
 from tlssec.asyncio import run_subprocess, CompletedProcess
 from tlssec.timer import Timer
+
+
+class TestsslPrettyRawContent(BaseModel):
+    model_config = ConfigDict(extra = 'allow')
+
+    Invocation: str
+    at: str
+    version: str
+    openssl: str
+    startTime: str
+    scanResult: list
+    # int in normal case. str when interrupted.
+    scanTime: int | str
+
+    @model_validator(mode = 'before')
+    @classmethod
+    def custom_error_if_suspected_non_pretty(cls, data: Any) -> Any:
+        if isinstance(data, list):
+            raise ValueError(
+                'Top-level `testssl --json-pretty` document must be a mapping, not an array.'
+                ' Was this produced from `testssl --json`?'
+            )
+        return data
+
+    def extract_adhoc_summary(self) -> list[dict]:
+        extracts = []
+        for scan in self.scanResult:
+            extract = {
+                'ip': scan['ip'],
+                'port': int(scan['port']),
+                'raw': scan,
+                'qs': {
+                    'key_establishment': {
+                        'safe': set(),
+                        'unsafe': set(),
+                    },
+                    'symmetric_encryption': {
+                        'safe': set(),
+                        'unsafe': set(),
+                    },
+                    # TODO: should this extraction be part of raw model too?
+                    'server_certificate': Testssl.extract_qs_server_certificate(scan),
+                },
+            }
+
+            for fs_item in scan.get('fs', []):
+                # NOTE: Repeated match on the same ID shouldn't exists, but if it does, the findings will be concatenated.
+                match fs_item:
+                    case {
+                        'id': 'FS_KEMs' | 'FS_ECDHE_curves' | 'DH_groups' as item_id,
+                        'finding': str(params),
+                    }:
+                        if item_id == 'FS_KEMs' and params == 'No KEMs offered':
+                            continue
+                        if item_id == 'DH_groups' and 'ffdhe' not in params:
+                            # CAUTION: When testssl output DH_groups findings,
+                            # the finding may not be a list of parameter names separated by spaces like other cases.
+                            # This happen when DH group found is not one of RFC 7919.
+                            # When this happens, the whole finding is a decription of DH group which may contain spaces inside.
+                            # See https://github.com/testssl/testssl.sh/blob/9fdf8028baba86d83218db294a5776384ec8c332/testssl.sh#L11838-L11864
+                            params = params.replace(' ', '_')
+                        for param in params.split():
+                            extract['qs']['key_establishment']['safe' if param in standard.tls.quantum_safe_kems else 'unsafe'].add(param)
+                    case {'id': 'FS_ciphers', 'finding': str(ciphers)}:
+                        for cipher in ciphers.split():
+                            symenc = standard.tls.guess_symenc_from_openssl_cipher_name(cipher)
+                            qs_safe = standard.tls.is_symenc_quantum_safe(symenc)
+                            extract['qs']['symmetric_encryption']['safe' if qs_safe else 'unsafe'].add(symenc)
+
+            extracts.append(extract)
+
+        return extracts
+
+
+class TestsslPrettyRaw(m.StructuredRaw[TestsslPrettyRawContent]):
+    type: Literal['testssl-pretty'] = 'testssl-pretty'
 
 
 class Testssl:
@@ -180,94 +264,6 @@ class Testssl:
             return str(ipaddress.ip_address(scan_results[0].get('ip')))
         except (ValueError, TypeError):
             return None
-
-    @staticmethod
-    def try_parse(
-        source: dict | list | os.PathLike,
-    ) -> m.ExternalDocument:
-        if not isinstance(source, dict | list):
-            with open(source) as f:
-                source = yaml.safe_load(f)
-        if isinstance(source, list):
-            raise ValueError(
-                'This might be because the file is produced by testssl --json instead of --json-pretty.'
-                ' We do not support --json format yet.'
-            );
-        if not isinstance(source, dict):
-            raise ValueError('Testssl content should be dictionary at this point')
-        # TODO: Use pydantic if you want to report validation error in details.
-        match source:
-            case {
-                "Invocation": str(),
-                "at": str(),
-                "version": str(),
-                "openssl": str(),
-                "startTime": str(),
-                "scanResult": list(),
-                # int in normal case. str when interrupted.
-                "scanTime": int() | str(),
-            }:
-                pass
-            case _:
-                raise ValueError('Content does not seem to be produced by `testssl --json-pretty`')
-        return m.ExternalDocument(
-            data = m.StructuredRaw(
-                type = 'testssl-pretty',
-                content = source,
-            ),
-        )
-
-    @classmethod
-    def extract_json(
-        cls,
-        source: JsonValue,
-    ) -> list[dict]:
-        extracts = []
-        for scan in source['scanResult']:
-            extract = {
-                'ip': scan['ip'],
-                'port': int(scan['port']),
-                'raw': scan,
-                'qs': {
-                    'key_establishment': {
-                        'safe': set(),
-                        'unsafe': set(),
-                    },
-                    'symmetric_encryption': {
-                        'safe': set(),
-                        'unsafe': set(),
-                    },
-                    'server_certificate': cls.extract_qs_server_certificate(scan),
-                },
-            }
-
-            for fs_item in scan.get('fs', []):
-                # NOTE: Repeated match on the same ID shouldn't exists, but if it does, the findings will be concatenated.
-                match fs_item:
-                    case {
-                        'id': 'FS_KEMs' | 'FS_ECDHE_curves' | 'DH_groups' as item_id,
-                        'finding': str(params),
-                    }:
-                        if item_id == 'FS_KEMs' and params == 'No KEMs offered':
-                            continue
-                        if item_id == 'DH_groups' and 'ffdhe' not in params:
-                            # CAUTION: When testssl output DH_groups findings,
-                            # the finding may not be a list of parameter names separated by spaces like other cases.
-                            # This happen when DH group found is not one of RFC 7919.
-                            # When this happens, the whole finding is a decription of DH group which may contain spaces inside.
-                            # See https://github.com/testssl/testssl.sh/blob/9fdf8028baba86d83218db294a5776384ec8c332/testssl.sh#L11838-L11864
-                            params = params.replace(' ', '_')
-                        for param in params.split():
-                            extract['qs']['key_establishment']['safe' if param in standard.tls.quantum_safe_kems else 'unsafe'].add(param)
-                    case {'id': 'FS_ciphers', 'finding': str(ciphers)}:
-                        for cipher in ciphers.split():
-                            symenc = standard.tls.guess_symenc_from_openssl_cipher_name(cipher)
-                            qs_safe = standard.tls.is_symenc_quantum_safe(symenc)
-                            extract['qs']['symmetric_encryption']['safe' if qs_safe else 'unsafe'].add(symenc)
-            
-            extracts.append(extract)
-
-        return extracts
 
     @staticmethod
     def is_sig_algo_qs(name: str) -> bool:

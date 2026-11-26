@@ -14,7 +14,7 @@ import yaml
 import tlssec.core.model as m
 from tlssec.core.nmap import NmapRaw
 from tlssec.core.ssh_audit import SshAuditRaw
-from tlssec.core.testssl import Testssl
+from tlssec.core.testssl import TestsslPrettyRaw
 from tlssec.task import as_task, FirstSuccessTaskGroup
 
 
@@ -48,10 +48,10 @@ def ReadXml(content: str) -> m.XmlRaw:
 @as_task(dependency = ReadYaml)
 def ReadTlssecNativeDocument(doc) -> m.Document:
     ConcreteExternalRaw = Annotated[
-        # TODO: Add more concrete raw types here
         Union[
             NmapRaw,
             SshAuditRaw,
+            TestsslPrettyRaw,
         ],
         Field(discriminator = 'type'),
     ]
@@ -72,8 +72,10 @@ def ReadNmapXml(doc: m.XmlRaw) -> m.ExternalDocument[NmapRaw]:
 
 
 @as_task(dependency = ReadYaml)
-def ReadTestsslJsonPretty(doc) -> m.ExternalDocument:
-    return Testssl.try_parse(doc)
+def ReadTestsslJsonPretty(doc) -> m.ExternalDocument[TestsslPrettyRaw]:
+    return m.ExternalDocument[TestsslPrettyRaw](
+        data = {'content': doc},
+    )
 
 
 @as_task(dependency = ReadYaml)
