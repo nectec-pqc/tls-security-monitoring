@@ -146,15 +146,17 @@ def test_ssh_audit_specific_invalidation(
     path = tests_root / 'core/ssh_audit/result_cases/successful_scan_fail_audit.ssh_audit.json'
     valid = filetype_registry.load(path)
 
-    invalid = valid.model_copy(deep = True)
-    del invalid.data.content['enc']
+    invalid = valid.model_dump(mode = 'json')
+    del invalid['data']['content']['enc']
 
     with pytest.raises(AllAlternativesFailledError) as excinfo_invalid_content:
         reloaded_from_invalid_content = filetype_registry.load(
-            json.dumps(invalid.data.content)
+            json.dumps(invalid['data']['content'])
         )
-    assert excinfo_invalid_content.group_contains(ValueError, match = 'ssh-audit --json')
+    assert excinfo_invalid_content.group_contains(ValueError, match = '\ndata\\.content\\.enc\n')
 
     with pytest.raises(AllAlternativesFailledError) as excinfo_invalid_doc:
-        reloaded_from_invalid_doc = filetype_registry.load(invalid.dump())
-    assert excinfo_invalid_doc.group_contains(ValueError, match = 'ssh-audit --json')
+        reloaded_from_invalid_doc = filetype_registry.load(
+            json.dumps(invalid)
+        )
+    assert excinfo_invalid_doc.group_contains(ValueError, match = '\ndata\\.content\\.enc\n')

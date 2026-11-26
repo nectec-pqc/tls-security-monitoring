@@ -22,7 +22,6 @@ import tlssec.core.model as m
 class NmapRaw(m.XmlRaw):
     type: Literal['nmap'] = 'nmap'
 
-    # TODO: check model_validator ordering.
     @model_validator(mode = 'after')
     def sniff_nmap_xml_format(self) -> Self:
         doctype = next((x for x in self.soup.contents if isinstance(x, bs4.Doctype)), None)

@@ -1,16 +1,19 @@
 from pathlib import Path
 from typing import (
     Annotated,
-    Any,
+    Union,
 )
 
 import bs4
-from pydantic import Field
+from pydantic import (
+    Field,
+    JsonValue,
+)
 import yaml
 
 import tlssec.core.model as m
 from tlssec.core.nmap import NmapRaw
-from tlssec.core.ssh_audit import SshAudit
+from tlssec.core.ssh_audit import SshAuditRaw
 from tlssec.core.testssl import Testssl
 from tlssec.task import as_task, FirstSuccessTaskGroup
 
@@ -27,7 +30,7 @@ def ReadText(source: Path | str) -> str:
 
 
 @as_task(dependency = ReadText)
-def ReadYaml(content: str) -> Any:
+def ReadYaml(content: str) -> JsonValue:
     try:
         return yaml.safe_load(content)
     except yaml.YAMLError as e:
@@ -46,7 +49,10 @@ def ReadXml(content: str) -> m.XmlRaw:
 def ReadTlssecNativeDocument(doc) -> m.Document:
     ConcreteExternalRaw = Annotated[
         # TODO: Add more concrete raw types here
-        NmapRaw,
+        Union[
+            NmapRaw,
+            SshAuditRaw,
+        ],
         Field(discriminator = 'type'),
     ]
     # There are native docs that are not just wrapper of external document
@@ -58,10 +64,10 @@ def ReadTlssecNativeDocument(doc) -> m.Document:
 @as_task(dependency = ReadXml)
 def ReadNmapXml(doc: m.XmlRaw) -> m.ExternalDocument[NmapRaw]:
     return m.ExternalDocument[NmapRaw](
-        data = NmapRaw(
-            content = doc.content,
-            soup = doc.soup,
-        ),
+        data = {
+            'content': doc.content,
+            'soup': doc.soup,
+        },
     )
 
 
@@ -71,8 +77,10 @@ def ReadTestsslJsonPretty(doc) -> m.ExternalDocument:
 
 
 @as_task(dependency = ReadYaml)
-def ReadSshAudit(doc) -> m.ExternalDocument:
-    return SshAudit.try_parse(doc)
+def ReadSshAudit(doc) -> m.ExternalDocument[SshAuditRaw]:
+    return m.ExternalDocument[SshAuditRaw](
+        data = {'content': doc},
+    )
 
 
 class FiletypeRegistry:

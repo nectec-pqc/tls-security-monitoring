@@ -103,7 +103,7 @@ def compile_data_sources(state: AppState, sources: list[Path], outdir: Path):
                 extracts[doc.kind].extend(new_extracts)
             case 'ssh-audit':
                 extracts[doc.kind].append(
-                    SshAudit.extract_json(doc.data.content)
+                    doc.data.content.extract_adhoc_summary()
                 )
             case 'nmap':
                 extracts[doc.kind].extend(

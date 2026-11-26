@@ -35,7 +35,9 @@ class BaseExternalRaw[C](BaseModel, ABC):
     content: C
 
 
-class StructuredRaw(BaseExternalRaw[JsonValue]):
+# NOTE: Would love to restrict type variable C to only JsonValue or model that
+# can be losslessly dump to JsonValue.
+class StructuredRaw[C = JsonValue](BaseExternalRaw[C]):
     """Used when raw data is already structured (e.g., JSON, YAML, or TOML)."""
     representation: Literal['structured'] = 'structured'
 
